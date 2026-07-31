@@ -19,4 +19,10 @@
     <ProjectReference Include="..\FSH.Starter.DbMigrator\FSH.Starter.DbMigrator.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Blazor WASM apps — ensure they exist in AppHost's project graph so AddProject<Projects.FSH_Admin_Wasm>() resolves -->
+    <ProjectReference Include="..\..\..\clients\admin-blazor\FSH.Admin.Wasm\FSH.Admin.Wasm.csproj" />
+    <ProjectReference Include="..\..\..\clients\dashboard-blazor\FSH.Dashboard.Wasm\FSH.Dashboard.Wasm.csproj" />
+  </ItemGroup>
+
 </Project>

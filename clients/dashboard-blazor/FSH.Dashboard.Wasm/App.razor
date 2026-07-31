@@ -1,0 +1,26 @@
+<MudThemeProvider Theme="FshMudTheme.CreateDashboard()" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+                <Authorizing>
+                    <MudOverlay Visible="true">
+                        <MudProgressCircular Indeterminate="true" />
+                    </MudOverlay>
+                </Authorizing>
+            </AuthorizeRouteView>
+        </Found>
+        <NotFound>
+            <PageTitle>Not Found</PageTitle>
+            <MudContainer Class="d-flex align-center justify-center" Style="min-height: 100vh">
+                <MudText Typo="Typo.h4">404 — Page not found</MudText>
+            </MudContainer>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

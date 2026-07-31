@@ -1,0 +1,31 @@
+@namespace FSH.BlazorShared.Components
+@inject IDialogService DialogService
+
+<MudButton OnClick="OpenAsync" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete">
+    Delete
+</MudButton>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Confirm";
+    [Parameter] public string Message { get; set; } = "Are you sure?";
+    [Parameter] public string ConfirmText { get; set; } = "Delete";
+    [Parameter] public string CancelText { get; set; } = "Cancel";
+    [Parameter] public EventCallback OnConfirmed { get; set; }
+
+    private async Task OpenAsync()
+    {
+        var parameters = new DialogParameters
+        {
+            { "Message", Message },
+            { "ConfirmText", ConfirmText },
+            { "CancelText", CancelText },
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<FshConfirmDialogContent>(Title, parameters, options);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled)
+        {
+            await OnConfirmed.InvokeAsync();
+        }
+    }
+}

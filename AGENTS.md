@@ -1,6 +1,6 @@
 # FullStackHero .NET Starter Kit
 
-> A production-ready modular .NET 10 monolith + two React 19 apps, built for enterprise SaaS.
+> A production-ready modular .NET 10 monolith + two React 19 apps + two Blazor WASM apps + MAUI Hybrid, built for enterprise SaaS.
 
 This file is the canonical guide for **all** AI coding tools (Claude Code, Gemini CLI, Cursor, Codex, …).
 `CLAUDE.md` and `GEMINI.md` are thin bridges that import this file — edit conventions **here**, not there.
@@ -15,8 +15,8 @@ front-ends and a CLI. Multitenancy, auth, auditing, billing, files, chat and mor
 
 - **Backend** — .NET 10, EF Core 10, PostgreSQL, Redis, JWT + ASP.NET Identity, Finbuckle multitenancy,
   Hangfire, OpenAPI/Scalar, Serilog + OpenTelemetry, .NET Aspire.
-- **Frontends** — `clients/admin` (operator-facing) and `clients/dashboard` (tenant-facing): React 19,
-  Vite 7, TypeScript, TanStack Query v5, React Router 7, Radix + Tailwind v4 (shadcn-style), SignalR/SSE.
+- **Frontends** — `clients/admin` + `clients/dashboard` (React 19, Vite 7, TanStack Query v5, Radix + Tailwind v4 shadcn-style).  
+  Also **Blazor WASM** twins at `clients/admin-blazor` + `clients/dashboard-blazor` and a **MAUI Hybrid** app at `clients/FSH.Hybrid` (net10.0-android/ios/windows).
 
 ## Repo map
 
@@ -30,7 +30,11 @@ front-ends and a CLI. Multitenancy, auth, auditing, billing, files, chat and mor
 | `src/Host/FSH.Starter.Migrations.PostgreSQL` | All EF migrations, organized per-module by folder. |
 | `src/Tests/` | Per-module tests, `Architecture.Tests` (NetArchTest), `Integration.Tests` (Testcontainers). |
 | `src/Tools/CLI` | The `fsh` CLI (Spectre.Console). |
-| `clients/admin`, `clients/dashboard` | The two React apps. |
+| `clients/admin`, `clients/dashboard` | The two React apps (operator + tenant). |
+| `clients/admin-blazor/FSH.Admin.Wasm` | Blazor WASM operator app (MudBlazor). |
+| `clients/dashboard-blazor/FSH.Dashboard.Wasm` | Blazor WASM tenant app (MudBlazor + SSE). |
+| `clients/BlazorShared` | Shared Blazor RCL (auth, components, theming, real-time). |
+| `clients/FSH.Hybrid` | MAUI Blazor Hybrid app (Android/iOS/Windows). |
 | `deploy/` | Infra (docker, terraform, dokploy). |
 
 ## Tech stack
@@ -46,7 +50,11 @@ front-ends and a CLI. Multitenancy, auth, auditing, billing, files, chat and mor
 | Cache / Jobs | Redis, Hangfire | Tests | Playwright (route-mocked) |
 | Docs | OpenAPI + Scalar | API client | hand-written `apiFetch` (no codegen) |
 | Hosting | .NET Aspire | Env | runtime `/config.json` (not `VITE_*`) |
-| Testing | xUnit, Shouldly, NSubstitute, AutoFixture, NetArchTest, Testcontainers | | |
+| Testing | xUnit, Shouldly, NSubstitute, AutoFixture, NetArchTest, Testcontainers | **Blazor** | |
+| | | Framework | MudBlazor 9 + WASM |
+| | | Auth | same JWT + `AuthenticationStateProvider` |
+| | | Realtime | SignalR + SSE |
+| | | Tests | bunit + Playwright |
 
 ## Build & run
 
@@ -62,13 +70,25 @@ cd clients/admin && npm install && npm run dev       # → http://localhost:5173
 cd clients/dashboard && npm install && npm run dev   # → http://localhost:5174
 ```
 
+Blazor WASM apps (run against a running API):
+```bash
+dotnet run --project clients/admin-blazor/FSH.Admin.Wasm       # → http://localhost:5175
+dotnet run --project clients/dashboard-blazor/FSH.Dashboard.Wasm # → http://localhost:5176
+```
+
+MAUI Hybrid:
+```bash
+dotnet workload install maui                                 # one-time
+dotnet build clients/FSH.Hybrid/FSH.Hybrid/FSH.Hybrid.csproj
+```
+
 Migrations / seed (DbMigrator, separate step):
 ```bash
 dotnet run --project src/Host/FSH.Starter.DbMigrator -- apply [--seed]
 dotnet run --project src/Host/FSH.Starter.DbMigrator -- list-pending
 ```
 
-**Ports:** API 7030 (https)/5030 (http) · admin 5173 · dashboard 5174 · Postgres 5432 · pgAdmin 5050 · Valkey 6379 · MinIO 9000/9001.
+**Ports:** API 7030 (https)/5030 (http) · admin (React) 5173 · dashboard (React) 5174 · admin-blazor 5175 · dashboard-blazor 5176 · Postgres 5432 · pgAdmin 5050 · Valkey 6379 · MinIO 9000/9001.
 
 ## Branching & PRs
 
@@ -116,6 +136,10 @@ Single long-lived branch: **`main`** (the default) — there is **no `develop`**
 | Any React work (shared stack, API client, Query, Tailwind, design language) | `frontend/shared.md` |
 | The operator app (`clients/admin`) | `frontend/admin.md` |
 | The tenant app (`clients/dashboard`) | `frontend/dashboard.md` |
+| Blazor shared (RCL, auth, theming, real-time) | `frontend/blazor-shared.md` |
+| Blazor admin WASM (`clients/admin-blazor`) | `frontend/blazor-admin.md` |
+| Blazor dashboard WASM (`clients/dashboard-blazor`) | `frontend/blazor-dashboard.md` |
+| MAUI Hybrid (`clients/FSH.Hybrid`) | `frontend/maui-hybrid.md` |
 
 ## Coding style (backend)
 
@@ -129,9 +153,10 @@ records for DTOs/events/value objects · `default!` for required non-nullable st
 - **Feature** — Contracts command/query → handler → validator → endpoint → wire in module `MapEndpoints()` → tests. Details: `api-conventions.md`.
 - **Module** — new `Modules.{Name}` + `.Contracts`, implement `IModule` w/ assembly-level `[assembly: FshModule(typeof(XModule), order)]`, register in **all four places**, add migration folder + tests. Details: `architecture.md`.
 - **React page** — API module (`src/api/`) → page → register lazy route → (admin) mirror permission + RouteGuard → Playwright test. Details: `frontend/shared.md`.
+- **Blazor page** — service → page → register route → (admin) permission gate → bunit test. Details: `frontend/blazor-shared.md`.
 
 ## AI tooling resources
 
 - **Rules** — `.agents/rules/*.md` (indexed above). Read on demand.
-- **Skills** — `.agents/skills/*/SKILL.md`: step-by-step task recipes. Scaffolders: `add-feature`, `add-entity`, `add-module`, `add-react-page`, `add-full-slice`. Ops: `create-migration`, `add-integration-event`, `add-permission`. Reference: `query-patterns`, `testing-guide`, `mediator-reference`.
+- **Skills** — `.agents/skills/*/SKILL.md`: step-by-step task recipes. Scaffolders: `add-feature`, `add-entity`, `add-module`, `add-react-page`, `add-full-slice`, `add-blazor-page`. Ops: `create-migration`, `add-integration-event`, `add-permission`, `add-permission-csharp`. Reference: `query-patterns`, `testing-guide`, `mediator-reference`. Blazor/MAUI: `setup-blazor-auth`, `setup-blazor-realtime`, `setup-blazor-sse`, `implement-blazor-form`, `implement-blazor-list`, `add-maui-hybrid-feature`.
 - **Workflows** — `.agents/workflows/*.md`: task playbooks (`code-reviewer`, `feature-scaffolder`, `module-creator`, `architecture-guard`, `migration-helper`).

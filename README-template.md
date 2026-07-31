@@ -1,8 +1,8 @@
 # FSH.Starter
 
 Your application, generated from the **FSH .NET Starter Kit** — a production-ready modular
-.NET 10 monolith with two React 19 apps, multitenancy, identity, background jobs, and
-cloud-native deploy.
+.NET 10 monolith with two React 19 apps + Blazor WASM + MAUI Hybrid, multitenancy, identity,
+background jobs, and cloud-native deploy.
 
 You **own all of this source**. There are no framework NuGet packages to track or upgrade —
 the shared code lives in `src/BuildingBlocks` and is yours to change.
@@ -22,14 +22,16 @@ dotnet run --project src/Host/FSH.Starter.AppHost
 ```
 
 Aspire starts Postgres, Redis, and MinIO, runs database migrations, then launches the API
-**and both React apps**.
+**and all front-ends** (React and Blazor WASM).
 
 | Surface | URL |
 |---|---|
 | Aspire dashboard | https://localhost:15888 |
 | API + Scalar docs | https://localhost:7030/scalar |
-| Admin console | http://localhost:5173 |
-| Tenant dashboard | http://localhost:5174 |
+| Admin console (React) | http://localhost:5173 |
+| Tenant dashboard (React) | http://localhost:5174 |
+| Admin console (Blazor) | http://localhost:5175 |
+| Tenant dashboard (Blazor) | http://localhost:5176 |
 
 ### Backend only
 
@@ -45,6 +47,20 @@ cd clients/dashboard && npm install && npm run dev   # → http://localhost:5174
 ```
 
 The React apps read their API URL at runtime from `public/config.json` — no rebuild to repoint.
+
+### Blazor WASM frontends (against a running API)
+
+```bash
+dotnet run --project clients/admin-blazor/FSH.Admin.Wasm       # → http://localhost:5175
+dotnet run --project clients/dashboard-blazor/FSH.Dashboard.Wasm # → http://localhost:5176
+```
+
+### MAUI Hybrid
+
+```bash
+dotnet workload install maui                     # one-time
+dotnet build clients/FSH.Hybrid/FSH.Hybrid/FSH.Hybrid.csproj
+```
 
 ## Project structure
 
@@ -62,6 +78,10 @@ src/
 clients/
   admin/               Operator console (React 19 + Vite + Tailwind)
   dashboard/           Tenant app (React 19 + Vite + Tailwind, SSE live feed)
+  admin-blazor/        Operator console (Blazor WASM + MudBlazor)
+  dashboard-blazor/    Tenant app (Blazor WASM + MudBlazor, SSE live feed)
+  BlazorShared/        Shared Blazor RCL (auth, theming, real-time)
+  FSH.Hybrid/          MAUI Blazor Hybrid (Android/iOS/Windows)
 deploy/
   docker/              Production docker-compose + .env
   terraform/           AWS infrastructure (ECS, RDS, ElastiCache, S3)
@@ -82,8 +102,9 @@ This project shipped with sensible defaults. Before production:
 - [ ] **Secrets** — set strong values in `deploy/docker/.env` (the `fsh` CLI generates these
       for you; otherwise `cp deploy/docker/.env.example deploy/docker/.env` and fill them in).
       Never commit `.env`.
-- [ ] **Logo** — replace `clients/admin/public/logo-fullstackhero.png` and
-      `clients/dashboard/public/logo-fullstackhero.png` with your own.
+- [ ] **Logo** — replace `clients/admin/public/logo-fullstackhero.png`,
+      `clients/dashboard/public/logo-fullstackhero.png`,
+      and `clients/admin-blazor/FSH.Admin.Wasm/wwwroot/logo-fullstackhero.png` with your own.
 - [ ] **Mail** — configure SMTP / SendGrid under `MailOptions` in
       `src/Host/FSH.Starter.Api/appsettings.json`.
 - [ ] **OpenAPI contact** — update `OpenApiOptions.Contact` in `appsettings.json`.

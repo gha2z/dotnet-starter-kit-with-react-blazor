@@ -1,0 +1,70 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider Auth
+
+<AuthorizeView>
+    <Authorized>
+        <MudLayout>
+            <MudAppBar Elevation="1">
+                <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" OnClick="@((e) => _drawerToggle())" />
+                <MudText Typo="Typo.h6" Class="ml-2">FullStackHero Admin</MudText>
+                <MudSpacer />
+                <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" />
+                <MudIconButton Icon="@Icons.Material.Filled.Brightness6" Color="Color.Inherit" OnClick="@ToggleTheme" />
+                <MudMenu Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Inherit">
+                    <MudMenuItem OnClick="NavigateToSettings">Settings</MudMenuItem>
+                    <MudMenuItem OnClick="LogoutAsync">Logout</MudMenuItem>
+                </MudMenu>
+            </MudAppBar>
+
+            <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Responsive" Elevation="2">
+                <MudNavMenu>
+                    <MudNavLink Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+                    <MudText Typo="Typo.subtitle2" Class="mx-4 mt-4 mb-2" Color="Color.Secondary">IDENTITY</MudText>
+                    <MudNavLink Href="/users" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.People">Users</MudNavLink>
+                    <MudNavLink Href="/roles" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings">Roles</MudNavLink>
+                    <MudNavLink Href="/tenants" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Business">Tenants</MudNavLink>
+                    <MudText Typo="Typo.subtitle2" Class="mx-4 mt-4 mb-2" Color="Color.Secondary">OPERATIONS</MudText>
+                    <MudNavLink Href="/audits" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.History">Audits</MudNavLink>
+                    <MudNavLink Href="/webhooks" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Webhook">Webhooks</MudNavLink>
+                    <MudNavLink Href="/notifications" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Notifications">Notifications</MudNavLink>
+                    <MudNavLink Href="/health" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.MonitorHeart">Health</MudNavLink>
+                    <MudText Typo="Typo.subtitle2" Class="mx-4 mt-4 mb-2" Color="Color.Secondary">SETTINGS</MudText>
+                    <MudNavLink Href="/settings" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
+                </MudNavMenu>
+            </MudDrawer>
+
+            <MudMainContent>
+                <MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="py-6">
+                    @Body
+                </MudContainer>
+            </MudMainContent>
+        </MudLayout>
+    </Authorized>
+    <NotAuthorized>
+        <MudContainer Class="d-flex align-center justify-center" Style="min-height: 100vh">
+            @Body
+        </MudContainer>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _isDarkMode;
+
+    private void _drawerToggle() => _drawerOpen = !_drawerOpen;
+
+    private void ToggleTheme()
+    {
+        _isDarkMode = !_isDarkMode;
+    }
+
+    private void NavigateToSettings() => Nav.NavigateTo("/settings");
+
+    private async Task LogoutAsync()
+    {
+        var authProvider = (FSH.BlazorShared.Auth.AuthStateProvider)Auth;
+        await authProvider.NotifyLogoutAsync();
+        Nav.NavigateTo("/login");
+    }
+}

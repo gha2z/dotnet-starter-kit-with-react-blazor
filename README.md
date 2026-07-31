@@ -2,7 +2,7 @@
 
 # ⚡ FullStackHero .NET 10 Starter Kit
 
-**A production-ready, modular .NET 10 monolith + two React 19 apps — the fastest way to ship a multi-tenant SaaS.**
+**A production-ready, modular .NET 10 monolith + two React 19 apps + Blazor WASM + MAUI Hybrid — the fastest way to ship a multi-tenant SaaS.**
 
 Identity, multitenancy, billing, auditing, webhooks, files, chat, real-time, caching, jobs, storage, OpenAPI and OpenTelemetry — already wired, fully tested, and **100% yours as source** (no black-box packages).
 
@@ -21,7 +21,7 @@ Identity, multitenancy, billing, auditing, webhooks, files, chat, real-time, cac
 
 ## Why FullStackHero?
 
-Most starter kits give you a login page and a TODO list. This one gives you the **boring, hard parts already done right** — multitenancy, auth, billing, auditing, background jobs, real-time, file storage, observability — across a clean **Vertical Slice** backend *and* two polished **React 19** front-ends, orchestrated locally with one command via **.NET Aspire**, and deployable to Docker or AWS.
+Most starter kits give you a login page and a TODO list. This one gives you the **boring, hard parts already done right** — multitenancy, auth, billing, auditing, background jobs, real-time, file storage, observability — across a clean **Vertical Slice** backend *and* two polished **React 19** front-ends (plus **Blazor WASM** and **MAUI Hybrid** versions), orchestrated locally with one command via **.NET Aspire**, and deployable to Docker or AWS.
 
 You scaffold with the `fsh` CLI and get the **complete, detached source** — every BuildingBlock, Module, and Host project with real project references. No hidden NuGet runtime, nothing to "eject" later. Own it, read it, change it.
 
@@ -47,15 +47,16 @@ dotnet run --project src/Host/MyApp.AppHost   # 🎉 whole stack up: API + 2 Rea
 - **Observability**: Serilog structured logging + **OpenTelemetry** traces/metrics/logs, health probes, security/exception auditing.
 - **Docs**: **OpenAPI** + the **Scalar** API reference UI.
 
-### Front-ends — two React 19 apps
+### Front-ends — React + Blazor WASM + MAUI Hybrid
 - **`clients/admin`** (operator console) and **`clients/dashboard`** (tenant app): **React 19 + Vite 7 + TypeScript**, **TanStack Query v5**, **React Router 7**, **Radix + Tailwind v4** (shadcn-style), real-time via **SignalR**/**SSE**.
-- Runtime config (`/config.json`, no rebuild per environment), hand-written typed API client, and **Playwright** E2E suites.
+- **`clients/admin-blazor`** and **`clients/dashboard-blazor`**: **Blazor WASM** versions with **MudBlazor 9**, sharing a **BlazorShared RCL** for auth, theming, and real-time.
+- **`clients/FSH.Hybrid`**: **MAUI Blazor Hybrid** for Android/iOS/Windows native deployment.
 
 ### Modules (bounded contexts)
 **Identity · Multitenancy · Billing · Catalog · Tickets · Chat · Files · Webhooks · Auditing · Notifications** — each a runtime project plus a `.Contracts` project (its only public surface), boundaries enforced by architecture tests.
 
 ### Cloud-native & DevOps
-- **.NET Aspire** orchestrates the entire stack locally with one command (Postgres + pgAdmin, Valkey + RedisInsight, MinIO, migrator, demo-seeder, API, and both React apps).
+- **.NET Aspire** orchestrates the entire stack locally with one command (Postgres + pgAdmin, Valkey + RedisInsight, MinIO, migrator, demo-seeder, API, React apps, and Blazor WASM apps).
 - **Docker Compose** production stack (`deploy/docker`) and **Terraform** for AWS (`deploy/terraform`); API image published to GHCR.
 - A one-shot **DbMigrator** (migrations are never run at API startup), and the **`fsh` CLI** + `dotnet new` template for distribution.
 
@@ -96,7 +97,7 @@ git clone https://github.com/fullstackhero/dotnet-starter-kit.git MyApp && cd My
 dotnet run --project src/Host/FSH.Starter.AppHost
 ```
 
-> **Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download) · [Docker](https://www.docker.com/) (Postgres/Valkey/MinIO via Aspire) · [Node 20+](https://nodejs.org/) (for the React apps).
+> **Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download) · [Docker](https://www.docker.com/) (Postgres/Valkey/MinIO via Aspire) · [Node 20+](https://nodejs.org/) (for the React apps). Blazor WASM apps need no extra tools; MAUI Hybrid requires `dotnet workload install maui`.
 
 **`fsh` commands:** `new` · `doctor` · `info` · `update` · `--version`. Full reference → [fullstackhero.net/docs/cli](https://fullstackhero.net/docs/cli/).
 
@@ -112,11 +113,13 @@ dotnet run --project src/Host/FSH.Starter.AppHost
 | ORM / DB | EF Core 10 / PostgreSQL | UI | Radix + Tailwind v4 (shadcn) |
 | Auth | JWT + ASP.NET Identity | Realtime | SignalR · SSE |
 | Multitenancy | Finbuckle 10 | Tests | Playwright |
-| Cache / Jobs | Valkey · Hangfire | | |
-| Storage | S3 / MinIO (presigned) | **Infra** | |
-| Docs | OpenAPI + Scalar | Orchestration | .NET Aspire |
-| Observability | Serilog + OpenTelemetry | Deploy | Docker Compose · Terraform |
-| Testing | xUnit · Testcontainers · NetArchTest | | |
+| Cache / Jobs | Valkey · Hangfire | **Blazor** | |
+| Storage | S3 / MinIO (presigned) | Framework | MudBlazor 9 + WASM |
+| Docs | OpenAPI + Scalar | Auth | JWT + `AuthenticationStateProvider` |
+| Observability | Serilog + OpenTelemetry | Realtime | SignalR · SSE |
+| Testing | xUnit · Testcontainers · NetArchTest | Tests | bunit · Playwright |
+| | | **Hybrid** | |
+| | | Framework | MAUI + Blazor (Android/iOS/Windows) |
 
 ---
 
@@ -131,6 +134,10 @@ dotnet run --project src/Host/FSH.Starter.AppHost
 | `src/Host/FSH.Starter.DbMigrator` | One-shot migrate/seed runner (DB is **not** migrated at API startup) |
 | `src/Tools/CLI` | The `fsh` CLI (Spectre.Console) |
 | `clients/admin`, `clients/dashboard` | The two React apps |
+| `clients/admin-blazor` | Blazor WASM operator app (MudBlazor) |
+| `clients/dashboard-blazor` | Blazor WASM tenant app (MudBlazor + SSE) |
+| `clients/BlazorShared` | Shared Blazor RCL (auth, theming, components) |
+| `clients/FSH.Hybrid` | MAUI Blazor Hybrid (Android/iOS/Windows) |
 | `deploy/` | Docker Compose, Terraform (AWS), Dokploy |
 | `src/Tests/` | Unit, Architecture (NetArchTest), Integration (Testcontainers) |
 
@@ -160,6 +167,8 @@ Guides → [Local orchestration](https://fullstackhero.net/docs/deployment/aspir
 dotnet test src/FSH.Starter.slnx        # backend: unit + architecture + Testcontainers integration
 cd clients/admin     && npm run test:e2e # Playwright (operator app)
 cd clients/dashboard && npm run test:e2e # Playwright (tenant app)
+dotnet test clients/admin-blazor/FSH.Admin.Wasm.Tests  # bunit (Blazor admin)
+dotnet test clients/dashboard-blazor/FSH.Dashboard.Wasm.Tests  # bunit (Blazor dashboard)
 ```
 
 > Integration tests require Docker (Testcontainers spins real Postgres). Architecture tests enforce module boundaries.

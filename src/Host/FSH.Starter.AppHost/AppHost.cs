@@ -48,6 +48,8 @@ builder.AddContainer("redis-insight", "redis/redisinsight", "latest")
 const string MinioBucket = "fsh-uploads";
 const string AdminOrigin = "http://localhost:5173";
 const string DashboardOrigin = "http://localhost:5174";
+const string BlazorAdminOrigin = "http://localhost:5175";
+const string BlazorDashboardOrigin = "http://localhost:5176";
 
 var minioUser = builder.AddParameter("minio-user", "minioadmin");
 var minioPassword = builder.AddParameter("minio-password", "minioadmin", secret: true);
@@ -58,7 +60,7 @@ var minio = builder.AddContainer("minio", "minio/minio")
     .WithHttpEndpoint(port: 9001, targetPort: 9001, name: "console")
     .WithEnvironment("MINIO_ROOT_USER", minioUser)
     .WithEnvironment("MINIO_ROOT_PASSWORD", minioPassword)
-    .WithEnvironment("MINIO_API_CORS_ALLOW_ORIGIN", $"{AdminOrigin},{DashboardOrigin}")
+    .WithEnvironment("MINIO_API_CORS_ALLOW_ORIGIN", $"{AdminOrigin},{DashboardOrigin},{BlazorAdminOrigin},{BlazorDashboardOrigin}")
     .WithVolume($"{appPrefix}-minio-data", "/data")
     .WithLifetime(ContainerLifetime.Persistent);
 
@@ -155,6 +157,22 @@ builder.AddJavaScriptApp($"{appPrefix}-dashboard", "../../../clients/dashboard",
     .WithHttpEndpoint(port: 5174, targetPort: 5174, isProxied: false)
     .WithExternalHttpEndpoints()
     .WithEnvironment("VITE_API_BASE_URL", api.GetEndpoint("https"));
+// Blazor Admin WASM — dev server on port 5175 targeting the API
+builder.AddProject<Projects.FSH_Admin_Wasm>($"{appPrefix}-admin-blazor")
+    .WithReference(api)
+    .WaitFor(api)
+    .WithHttpEndpoint(port: 5175, targetPort: 5175, isProxied: false)
+    .WithExternalHttpEndpoints()
+    .WithEnvironment("ApiBaseUrl", api.GetEndpoint("https"));
+
+// Blazor Dashboard WASM — dev server on port 5176
+builder.AddProject<Projects.FSH_Dashboard_Wasm>($"{appPrefix}-dashboard-blazor")
+    .WithReference(api)
+    .WaitFor(api)
+    .WithHttpEndpoint(port: 5176, targetPort: 5176, isProxied: false)
+    .WithExternalHttpEndpoints()
+    .WithEnvironment("ApiBaseUrl", api.GetEndpoint("https"));
+
 //#else
 // React apps excluded: discard the unused api handle to keep the no-frontend scaffold warning-clean (S1481 under TreatWarningsAsErrors).
 _ = api;

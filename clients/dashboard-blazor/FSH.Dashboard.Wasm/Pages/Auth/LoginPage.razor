@@ -1,0 +1,119 @@
+@page "/login"
+@inject IAuthService AuthService
+@inject AuthStateProvider AuthStateProvider
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IPermissionsProvider PermissionsProvider
+
+<div class="d-flex align-center justify-center" style="min-height: 100vh; background: #F0F2F5;">
+    <MudPaper Class="pa-8" Style="width: 420px; max-width: 90vw;" Elevation="3">
+        <div class="d-flex flex-column align-center mb-6">
+            <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Large" Color="Color.Primary" />
+            <MudText Typo="Typo.h5" Align="Align.Center" Class="mt-2">FullStackHero Dashboard</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Sign in to your account</MudText>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">
+                @_error
+            </MudAlert>
+        }
+
+        @if (_signedOutReason is not null)
+        {
+            <MudAlert Severity="Severity.Warning" Class="mb-4">
+                @_signedOutReason
+            </MudAlert>
+        }
+
+        <MudForm @ref="_form" Validation="@(new DataAnnotationsValidator())">
+            <MudTextField @bind-Value="_email"
+                          Label="Email"
+                          For="@(() => _email)"
+                          Required="true"
+                          RequiredError="Email is required."
+                          Disabled="@_isSubmitting" />
+            <MudTextField @bind-Value="_password"
+                          Label="Password"
+                          For="@(() => _password)"
+                          InputType="InputType.Password"
+                          Required="true"
+                          RequiredError="Password is required."
+                          Disabled="@_isSubmitting"
+                          Class="mt-4" />
+            <MudTextField @bind-Value="_tenant"
+                          Label="Tenant"
+                          For="@(() => _tenant)"
+                          HelperText="Your tenant identifier"
+                          Disabled="@_isSubmitting"
+                          Class="mt-4" />
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Class="mt-6"
+                       Disabled="@_isSubmitting"
+                       OnClick="SubmitAsync">
+                @if (_isSubmitting)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+                }
+                Sign In
+            </MudButton>
+        </MudForm>
+
+        <div class="d-flex justify-space-between mt-4">
+            <MudButton OnClick="@(() => Nav.NavigateTo("/forgot-password"))" Variant="Variant.Text" Size="Size.Small">
+                Forgot password?
+            </MudButton>
+        </div>
+    </MudPaper>
+</div>
+
+@code {
+    private MudForm? _form;
+    private string _email = string.Empty;
+    private string _password = string.Empty;
+    private string _tenant = string.Empty;
+    private bool _isSubmitting;
+    private string? _error;
+    private string? _signedOutReason;
+
+    protected override void OnInitialized()
+    {
+        if (Nav.TryGetQueryString("signedOut", out string? reason) && reason is not null)
+            _signedOutReason = reason;
+    }
+
+    private async Task SubmitAsync()
+    {
+        await _form!.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _isSubmitting = true;
+        _error = null;
+        try
+        {
+            var result = await AuthService.LoginAsync(_email, _password, _tenant, "dashboard");
+            await AuthStateProvider.NotifyLoginAsync(result.AccessToken, result.RefreshToken, _tenant);
+            await PermissionsProvider.InvalidateCache();
+
+            var returnUrl = Nav.TryGetQueryString<string>("returnUrl", out var url) && url is not null ? url : "/";
+            Nav.NavigateTo(returnUrl);
+        }
+        catch (HttpRequestException ex)
+        {
+            _error = ex.StatusCode is not null
+                ? $"Login failed ({(int)ex.StatusCode})"
+                : "Unable to connect to server. Please try again.";
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}
