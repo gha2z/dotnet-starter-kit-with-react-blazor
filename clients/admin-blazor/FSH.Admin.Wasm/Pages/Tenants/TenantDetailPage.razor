@@ -1,0 +1,178 @@
+@page "/tenants/{Id}"
+@attribute [Authorize(Policy = MultitenancyPermissions.Tenants.View)]
+@using FSH.BlazorShared.Models.Tenants
+
+<FshPageHeader Title="@HeaderTitle" Description="@(_tenant?.AdminEmail)" Icon="@Icons.Material.Filled.Business">
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="GoBackAsync">
+        Registry
+    </MudButton>
+</FshPageHeader>
+
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+
+@if (_tenant is null && _error is null)
+{
+    <div class="d-flex justify-center py-12">
+        <MudProgressCircular Indeterminate="true" />
+    </div>
+}
+
+@if (_tenant is not null)
+{
+    <MudPaper Elevation="1" Class="pa-6 mb-4 d-flex flex-wrap align-center justify-space-between gap-4">
+        <div class="d-flex align-center gap-4">
+            <MudAvatar Size="Size.Large" Color="Color.Primary" Variant="Variant.Filled">
+                @Initials
+            </MudAvatar>
+            <div>
+                <MudText Typo="Typo.h5">@_tenant.Name</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="font-mono">@_tenant.Id</MudText>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                             Color="@(_tenant.IsActive ? Color.Success : Color.Default)">
+                        @(_tenant.IsActive ? "Active" : "Inactive")
+                    </MudChip>
+                    @if (_tenant.ExpiryState != "Active")
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                 Color="@(_tenant.ExpiryState == "Expired" ? Color.Error : Color.Warning)">
+                            @(_tenant.ExpiryState == "InGrace" ? "In grace" : "Expired")
+                        </MudChip>
+                    }
+                    @if (!string.IsNullOrEmpty(_tenant.Plan))
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                            @_tenant.Plan
+                        </MudChip>
+                    }
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                        Valid until @FormatDate(_tenant.ValidUpto)
+                    </MudChip>
+                    @if (!string.IsNullOrEmpty(_tenant.Issuer))
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="font-mono">
+                            iss · @_tenant.Issuer
+                        </MudChip>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <FshPermissionGate Perms="@(new[] { MultitenancyPermissions.Tenants.UpgradeSubscription })">
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.EventRepeat"
+                           OnClick="OpenRenewDialogAsync">
+                    Renew / change plan
+                </MudButton>
+            </FshPermissionGate>
+            <FshPermissionGate Perms="@(new[] { MultitenancyPermissions.Tenants.UpgradeSubscription })">
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.EditCalendar"
+                           OnClick="OpenAdjustDialogAsync">
+                    Adjust validity
+                </MudButton>
+            </FshPermissionGate>
+            <FshPermissionGate Perms="@(new[] { MultitenancyPermissions.Tenants.Update })">
+                <MudButton Variant="@(_tenant.IsActive ? Variant.Outlined : Variant.Filled)"
+                           Color="Color.Primary"
+                           Disabled="@_isActivating"
+                           OnClick="OpenActivationConfirmAsync">
+                    @(_isActivating ? "Updating…" : _tenant.IsActive ? "Deactivate tenant" : "Activate tenant")
+                </MudButton>
+            </FshPermissionGate>
+        </div>
+    </MudPaper>
+
+    <MudGrid>
+        <MudItem xs="12" lg="6">
+            <MudPaper Elevation="1" Class="pa-6">
+                <div class="d-flex align-center gap-2 mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Details</MudText>
+                </div>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string"><b>Identifier</b> <span class="float-right font-mono">@_tenant.Id</span></MudListItem>
+                    <MudListItem T="string"><b>Name</b> <span class="float-right">@_tenant.Name</span></MudListItem>
+                    <MudListItem T="string"><b>Admin email</b> <span class="float-right font-mono">@_tenant.AdminEmail</span></MudListItem>
+                    <MudListItem T="string"><b>JWT issuer</b> <span class="float-right font-mono">@(_tenant.Issuer ?? "—")</span></MudListItem>
+                    <MudListItem T="string"><b>Plan</b> <span class="float-right">@(_tenant.Plan ?? "—")</span></MudListItem>
+                    <MudListItem T="string"><b>Valid until</b> <span class="float-right">@FormatDate(_tenant.ValidUpto)</span></MudListItem>
+                    <MudListItem T="string"><b>Status</b> <span class="float-right">@(_tenant.IsActive ? "Active" : "Inactive")</span></MudListItem>
+                    <MudListItem T="string"><b>Dedicated database</b> <span class="float-right">@(_tenant.HasConnectionString ? "Yes" : "Shared catalog")</span></MudListItem>
+                </MudList>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" lg="6">
+            <MudPaper Elevation="1" Class="pa-6">
+                <div class="d-flex align-center justify-space-between mb-4">
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.FactCheck" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">Provisioning</MudText>
+                    </div>
+                    @if (_provisioning is not null)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@ProvisioningChipColor">
+                            @ProvisioningSummary
+                        </MudChip>
+                    }
+                </div>
+
+                @if (_provisioning is null)
+                {
+                    <MudAlert Severity="Severity.Info">
+                        This tenant wasn't created through the provisioning pipeline, so there's no run history to show.
+                        Tenants created via the console report their seed/migrate steps here.
+                    </MudAlert>
+                }
+                else if (_provisioning.Steps.Count == 0)
+                {
+                    <MudText Color="Color.Secondary">No provisioning runs recorded.</MudText>
+                }
+                else
+                {
+                    <MudList T="string" Dense="true">
+                        @foreach (var step in _provisioning.Steps)
+                        {
+                            <MudListItem T="string">
+                                <div class="d-flex align-center justify-space-between w-100">
+                                    <MudText Typo="Typo.body2" Class="font-mono">@step.Step</MudText>
+                                    <div class="d-flex align-center gap-2">
+                                        @if (step.StartedUtc is not null && step.CompletedUtc is not null)
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @FormatDuration(step.StartedUtc.Value, step.CompletedUtc.Value)
+                                            </MudText>
+                                        }
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                                 Color="@StepChipColor(step.Status)">
+                                            @step.Status
+                                        </MudChip>
+                                    </div>
+                                </div>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+
+                @if (_provisioning?.Status == "Failed")
+                {
+                    @if (!string.IsNullOrEmpty(_provisioning.Error))
+                    {
+                        <MudAlert Severity="Severity.Error" Class="mt-4" Variant="Variant.Outlined">
+                            <MudText Typo="Typo.caption" Class="font-mono" Style="white-space: pre-wrap;">@_provisioning.Error</MudText>
+                        </MudAlert>
+                    }
+
+                    <FshPermissionGate Perms="@(new[] { MultitenancyPermissions.Tenants.Update })">
+                        <MudButton Variant="Variant.Outlined" Class="mt-4" StartIcon="@Icons.Material.Filled.Refresh"
+                                   Disabled="@_isRetrying" OnClick="RetryProvisioningAsync">
+                            @(_isRetrying ? "Re-queuing…" : "Retry provisioning")
+                        </MudButton>
+                    </FshPermissionGate>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}

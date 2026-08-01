@@ -4,19 +4,18 @@
 
 ## Status
 
-- Phase 3: **🔲 Not started**
+- Phase 3: **🟨 In progress** — 3.1 partial (SSE infra ✅ from Phase 1 + parity sprint; Overview ✅; ActivityFeed pending) — next: 3.2 Activity
 - Prerequisites: Phase 1 ✅ (auth+login working, AppShell)
+- **Parity sprint deliverables already in place:** `SseService` (token flow `POST /api/v1/sse/token` → `GET /api/v1/sse/stream?token=`, backoff reconnect, `ConnectionChanged` event), SSE status dot in topbar, full sidebar (accordion, permission-gated) — no rebuilds needed, only page work.
+- Terminal pages `/tenant-deactivated` + `/impersonation-ended` do **not** exist yet (docs previously claimed they did) — tracked as 3.15 in `Phase-07-Parity-Completion/plan.md`.
 
 ## Task Checklist
 
-### 3.1 Overview + SSE Integration
-- [ ] **ISseClient** — SSE stream client (in BlazorShared)
-  - EventSource polyfill via JS interop
-  - `OnMessage` event, `OnReconnect`, `OnError`
-  - Automatic reconnection with backoff
-- [ ] **OverviewPage.razor** — MudGrid of MudCards
-  - Stats: active users, revenue, orders, system health
-  - Live-updating via SSE (subscribe to SSE stream → update card values)
+### 3.1 Overview + SSE Integration 🟨
+- [x] **ISseService** — SSE stream client in `BlazorShared/Sse/` (manual `GetStreamAsync` parsing; token flow `POST /api/v1/sse/token` → `GET /api/v1/sse/stream?token=`)
+  - `OnMessage` events via `IObservable<SseEvent>`, `ConnectionChanged` event
+  - Automatic reconnection with capped backoff (1s → 2s → … → 30s, reset on success)
+- [x] **OverviewPage.razor** — `Pages/Overview/OverviewPage` — stat tiles, live-data ready
 - [ ] **ActivityFeed.razor** — Virtualized list of recent activities
   - MudList with MudListItem for each activity
   - SSE updates prepend new items

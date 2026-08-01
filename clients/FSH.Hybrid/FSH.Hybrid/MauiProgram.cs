@@ -24,11 +24,16 @@ public static class MauiProgram
         // Platform auth
         builder.Services.AddSingleton<ITokenStore, MauiTokenStore>();
 
+        // Runtime config (no config.json in the hybrid shell — defaults to same-origin)
+        builder.Services.AddSingleton<IRuntimeConfigService>(sp =>
+            new RuntimeConfigService(new HttpClient(), sp.GetRequiredService<ILogger<RuntimeConfigService>>()));
+
         // HTTP
         builder.Services.AddTransient<AuthDelegatingHandler>();
         builder.Services.AddScoped(sp =>
         {
             var handler = sp.GetRequiredService<AuthDelegatingHandler>();
+            handler.InnerHandler = new SocketsHttpHandler();
             return new HttpClient(handler);
         });
 

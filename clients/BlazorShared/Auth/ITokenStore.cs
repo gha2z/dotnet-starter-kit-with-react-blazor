@@ -10,5 +10,6 @@ public interface ITokenStore
     Task SetTenantAsync(string? tenant);
     Task<string[]?> GetPermissionsAsync();
     Task SetPermissionsAsync(string[] permissions);
+    Task ClearPermissionsAsync();
     event Action? TokensChanged;
 }

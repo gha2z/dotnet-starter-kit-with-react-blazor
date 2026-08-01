@@ -2,7 +2,7 @@
 
 Applies to **both** `clients/admin-blazor` (FSH.Admin.Wasm) and `clients/dashboard-blazor` (FSH.Dashboard.Wasm). Read this before any Blazor work, then read the app-specific file.
 
-Stack: .NET 10 Blazor WASM (standalone) · MudBlazor 8.x · `@microsoft/signalr` (via JS interop) · `System.IdentityModel.Tokens.Jwt` · bUnit · Playwright.
+Stack: .NET 10 Blazor WASM (standalone) · MudBlazor 9.7 · `@microsoft/signalr` (via JS interop) · `System.IdentityModel.Tokens.Jwt` · bUnit 2.0 · Playwright.
 
 ## Project structure
 
@@ -10,7 +10,9 @@ Stack: .NET 10 Blazor WASM (standalone) · MudBlazor 8.x · `@microsoft/signalr`
 clients/
 ├── BlazorShared/                    # Razor Class Library — shared between both WASM apps + MAUI Hybrid
 │   ├── Auth/                        # ITokenStore, AuthenticationStateProvider
-│   ├── Components/                  # FshPageHeader, FshTable, FshConfirmDialog, FshPermissionGate…
+│   ├── Components/                  # FshPageHeader, FshTable, FshConfirmDialog, FshPermissionGate,
+│   │                                #   FshNavSection, FshNotificationBell, FshPager, FshFilterBar,
+│   │                                #   FshLoadingRow, FshKpiTile, FshSectionRule…
 │   ├── Infrastructure/              # AuthDelegatingHandler, HttpClient factory extensions
 │   ├── Models/                      # PagedResult<T>, DTOs, request/response types
 │   ├── Services/                    # Per-module typed API service interfaces + implementations
@@ -72,7 +74,7 @@ clients/
   7. Expose `PermissionsHydrated` task/event for RouteGuard
 - Login: `POST /api/v1/identity/token/issue` with `X-FSH-App` header (`admin` / `dashboard`).
 - Logout: clear tokens, clear permissions, navigate to `/login`.
-- **Admin localStorage namespace:** `fsh.admin.*` — **Dashboard:** `fsh.dashboard.*`.
+- **localStorage prefixes:** admin `fsh.admin.*` — dashboard `fsh.dashboard.*`. **Exception — theme key:** both apps persist the theme under `fsh.theme` (dashboard, Light/Dark/System) and `fsh.admin.theme` (admin, binary) — the same keys the React apps use.
 
 ## Data fetching patterns
 
@@ -93,10 +95,45 @@ clients/
 
 ## MudBlazor theming
 
-- **`FshMudTheme`** in `BlazorShared/Theming/` defines the FSH brand as a `MudTheme`.
-- Both apps create their `MudThemeProvider` in `App.razor` with `ThemeProvider`.
-- Admin theme: cool-cast neutrals (hue 240, small non-zero chroma), chartreuse signal accent.
-- Dashboard theme: chroma-0 neutrals, swappable accent (rose/indigo/violet/sky/emerald/amber).
+- **`FshMudTheme`** in `BlazorShared/Theming/` defines the FSH brand as a `MudTheme` — React-19 parity:
+  rose primary (`#E11D48` light / `#FB7185` dark), Outfit display font for headings, Inter for body
+  (loaded via the app `index.html` font link, same as the React apps).
+- **`FshThemeService`** (singleton, `BlazorShared/Theming/`) owns dynamic theming with a
+  **`ThemeMode` enum (`Light | Dark | System`)**:
+  - Constructor: `new FshThemeService(IJSRuntime, storageKey, defaultMode)`.
+  - **Dashboard** registers `("fsh.theme", ThemeMode.System)` — React parity (key + System mode, OS-following).
+  - **Admin** registers `("fsh.admin.theme")` — binary (default `Dark`); the topbar toggle uses the
+    legacy `SetAsync(bool)` which is still supported and maps to Light/Dark.
+  - Stored values are the raw strings `"light" | "dark" | "system"`; `System` resolves via `prefersDark()`
+    in `fshTheme.js` at initialize and on every mode switch (`SetModeAsync`).
+  - `Mode`, `IsDarkMode`, `SetModeAsync(ThemeMode)`, `SetAsync(bool)`, `Changed` event.
+  - `Program.cs` must call `InitializeAsync()` before `RunAsync()` to avoid a light→dark flash.
+- Shared design-system styles live in `BlazorShared/wwwroot/css/fsh.css` (referenced by both apps):
+  brand mark/wordmark, `.fsh-sidebar` + `.fsh-topbar` shell (custom `<aside>`/`<header>`, NOT
+  `MudLayout/MudDrawer`), accordion nav sections (`.fsh-nav-section`, animated `0fr→1fr` expand),
+  nav links with active brand bar, mono labels, pills, skeletons, KPI tiles, pager/filter/loading-row,
+  notification bell, SSE status dot, login orbs.
+- Both apps' `MainLayout` use the shared shell: persisted sidebar collapse (`fsh.admin.sidebar.collapsed`
+  / `fsh.sidebar.collapsed` — same keys as the React apps, stored as `"true"/"false"`), mobile drawer +
+  backdrop below 900px, theme control, user menu (initials tile + name + tenant) with sign-out
+  confirmation via `FshConfirmDialogContent`.
+- Shared components in `BlazorShared/Components/`: `FshPageHeader`, `FshToneIconTile`, `FshStatusPill`,
+  `FshStatTile`, `FshMonogram`, `FshEmptyState`, `FshErrorBand`, `FshConfirmDialogContent`,
+  `FshPermissionGate`, `FshNavSection` (accordion section — header + animated body; `Collapsed` renders
+  a flat icon stack), `FshNotificationBell` (MudMenu dropdown: unread badge, list of 20, mark-read on
+  click + link nav, mark-all-read, SignalR `NotificationCreated` subscription, refresh on open),
+  `FshPager` ("Showing N–M of T · folio PP/TT" + prev/next), `FshFilterBar`, `FshLoadingRow`,
+  `FshKpiTile`, `FshSectionRule`. All expose a `Class` parameter when used with spacing utility classes.
+
+## MudBlazor 9.x form gotchas
+
+- MudForm has **no submit callback** (`OnValidSubmit`/`OnSubmit` do not exist and are silently dropped).
+  Enter-to-submit = `OnEnterPressed="..."` on the `MudForm`; the submit button needs its own
+  `OnClick="..."` (a `ButtonType="Submit"` button alone does nothing). Validation is explicit:
+  `await _form.ValidateAsync(); if (!_form.IsValid) return;` (`Validate()` is obsolete,
+  `ValidateAsync()` returns `Task`, not `Task<bool>`).
+- Razor attribute tokenizer: string literals inside `@onclick="...(...)"` break parsing (both quote
+  styles). Use method groups (`@onclick="GoHome"`) or parameterless lambdas — no `'/x'` or `"/x"` inside.
 
 ## Directory & naming conventions
 
@@ -112,7 +149,7 @@ clients/
 
 - `Router` with `@page` directives for each routable component.
 - `@attribute [Authorize]` on all protected pages.
-- `AppShell` wraps `MudLayout > MudDrawer + MudMainContent > @Body`.
+- Both apps use the shared `fsh.css` shell (`fsh-sidebar`/`fsh-topbar` custom aside+header in `MainLayout`), not `MudLayout`.
 - Lazy loading: Blazor WASM lazy-loads assemblies via `LazyAssemblyLoader` for large feature areas.
 
 ## Realtime (SignalR)
@@ -129,14 +166,36 @@ clients/
 
 - `SseService` in `BlazorShared/Sse/` wraps `HttpClient.GetStreamAsync` + manual SSE line parsing.
 - Exposes `IObservable<SseEvent>` for component subscription.
+- **`ConnectionChanged` event** — raised on `StartAsync`, successful connect, every reconnect-loop
+  iteration, and `StopAsync`. The dashboard topbar user menu shows a live status dot bound to it
+  (`.fsh-sse-dot` / `connected` class in `fsh.css`).
 - Handles reconnection with exponential backoff.
+
+## Notifications
+
+- **`INotificationService`** in `BlazorShared/Services/` (`NotificationService`): typed client for
+  `GET /api/v1/notifications/unread-count`, `GET /api/v1/notifications?unreadOnly=&page=&pageSize=`,
+  `POST /api/v1/notifications/{id}/read` (204), `POST /api/v1/notifications/read-all`.
+- `NotificationDto` in `Models/Notifications/` mirrors the server record.
+- **`FshNotificationBell`** subscribes to SignalR `NotificationCreated` (server pushes to
+  `user:{userId}` on `AppHub`), refreshes the unread badge, and re-subscribes when hub state changes.
+  Register the service in `Program.cs`; render the bell in the topbar; it needs
+  `NotificationPermissions.Inbox.View` / `MarkRead` on the server side to work.
 
 ## Testing
 
 ### bUnit (unit tests)
 
 - Test project per WASM app: `FSH.Admin.Wasm.Tests`, `FSH.Dashboard.Wasm.Tests`.
-- Test context setup helper: `TestContext` with MudBlazor + BlazorShared services registered.
+- **bUnit 2.0**: `BunitContext` (not `TestContext`) — e.g. `TestSetup : BunitContext, IAsyncLifetime`
+  with `JSInterop.Mode = JSRuntimeMode.Loose` and `Services.AddMudServices()` in the ctor.
+  `DefaultWaitTimeout = TimeSpan.FromSeconds(30)` for slow renders.
+- **`Render<T>(parameters => ...)` — `RenderComponent<T>` is obsolete and warns (treat-warnings-as-errors).**
+- **bUnit normalizes boolean attributes** (incl. `aria-expanded`): false ⇒ attribute removed, true ⇒
+  bare/empty attribute. Assert presence (`Attributes.Any(a => a.Name == ...)`), not value.
+- **JS module interop (`IJSRuntime.InvokeAsync("import", ...)`)** is not covered by loose-mode JSInterop
+  `Setup` — write a minimal `FakeJSRuntime : IJSRuntime` returning a fake `IJSObjectReference`
+  (`ValueTask<TValue>` signatures) that stores/returns values like localStorage.
 - `MockHttpClient` via `AddHttpClient` with `MockHttpMessageHandler`.
 - Page render tests: verify loading, empty, error, and data states.
 

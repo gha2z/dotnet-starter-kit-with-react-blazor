@@ -55,4 +55,10 @@ public sealed class MauiTokenStore : ITokenStore
 
     public async Task SetPermissionsAsync(string[] permissions)
         => await SecureStorage.SetAsync(PermissionsKey, System.Text.Json.JsonSerializer.Serialize(permissions));
+
+    public Task ClearPermissionsAsync()
+    {
+        SecureStorage.Remove(PermissionsKey);
+        return Task.CompletedTask;
+    }
 }

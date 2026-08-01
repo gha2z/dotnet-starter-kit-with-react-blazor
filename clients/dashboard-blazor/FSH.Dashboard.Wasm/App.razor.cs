@@ -15,19 +15,20 @@ public sealed partial class App : IDisposable
     [Inject] private ILogger<App> Logger { get; set; } = default!;
 
     private IDisposable? _sseSub;
+    private bool _sseStarting;
 
     protected override async Task OnInitializedAsync()
     {
         TokenStore.TokensChanged += OnTokensChanged;
+        _sseSub = Sse.Messages.Subscribe(new SseObserver(OnSseEvent));
 
         try
         {
-            await Sse.StartAsync();
-            _sseSub = Sse.Messages.Subscribe(new SseObserver(OnSseEvent));
+            await EnsureSseConnectionAsync();
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "SSE connection failed at startup; will be retried later");
+            Logger.LogDebug(ex, "SSE connection failed at startup; will retry after login");
         }
 
         try
@@ -57,7 +58,48 @@ public sealed partial class App : IDisposable
 
     private void OnTokensChanged()
     {
-        InvokeAsync(StateHasChanged);
+        InvokeAsync(async () =>
+        {
+            StateHasChanged();
+
+            if (await TokenStore.GetAccessTokenAsync() is null)
+            {
+                await Sse.StopAsync();
+                return;
+            }
+
+            try
+            {
+                await EnsureSseConnectionAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "SSE connection failed after login; will retry on next token change");
+            }
+        });
+    }
+
+    private async Task EnsureSseConnectionAsync()
+    {
+        if (_sseStarting || Sse.IsConnected)
+        {
+            return;
+        }
+
+        if (await TokenStore.GetAccessTokenAsync() is null)
+        {
+            return;
+        }
+
+        _sseStarting = true;
+        try
+        {
+            await Sse.StartAsync();
+        }
+        finally
+        {
+            _sseStarting = false;
+        }
     }
 
     public void Dispose()

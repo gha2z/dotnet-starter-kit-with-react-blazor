@@ -1,0 +1,29 @@
+@namespace FSH.Admin.Wasm.Pages.Identity.Roles
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_mudForm" Validation="@(new DataAnnotationsValidator())">
+            <MudTextField @bind-Value="_form.Name"
+                          Label="Name"
+                          For="@(() => _form.Name)"
+                          HelperText="2-64 characters. The role name is what shows up in user role assignments."
+                          Disabled="@_isSubmitting" />
+            <MudTextField @bind-Value="_form.Description"
+                          Label="Description (optional)"
+                          For="@(() => _form.Description)"
+                          HelperText="Plain English explaining what this role is for."
+                          Class="mt-4"
+                          Disabled="@_isSubmitting" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting" OnClick="SaveAsync">
+            @if (_isSubmitting)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+            }
+            Create role
+        </MudButton>
+    </DialogActions>
+</MudDialog>

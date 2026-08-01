@@ -1,5 +1,5 @@
 {
-  "apiBase": "",
+  "apiBaseUrl": "https://localhost:7030",
   "defaultTenant": "root",
   "dashboardUrl": "http://localhost:5174"
 }

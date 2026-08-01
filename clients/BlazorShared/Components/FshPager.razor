@@ -1,0 +1,40 @@
+@namespace FSH.BlazorShared.Components
+@using MudBlazor
+
+@if (TotalPages > 0)
+{
+    <div class="fsh-pager">
+        <span class="fsh-mono-label">@SummaryText</span>
+        <span class="fsh-pager-sep">·</span>
+        <span class="fsh-mono-label">folio @PageNumber/@TotalPages</span>
+        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small" Disabled="@(!HasPrevious)" aria-label="Previous page" OnClick="PrevAsync" />
+        <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Disabled="@(!HasNext)" aria-label="Next page" OnClick="NextAsync" />
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Folio pager (React parity: "Showing N of T" / "Showing N–M of T" plus
+    /// "folio PP/TT" and prev/next buttons).
+    /// </summary>
+    [Parameter] public int TotalCount { get; set; }
+    [Parameter] public int PageNumber { get; set; } = 1;
+    [Parameter] public int PageSize { get; set; } = 10;
+    [Parameter] public EventCallback<int> PageChanged { get; set; }
+
+    private int TotalPages => PageSize <= 0 ? 0 : (TotalCount + PageSize - 1) / PageSize;
+    private int FirstItem => TotalCount == 0 ? 0 : ((PageNumber - 1) * PageSize) + 1;
+    private int LastItem => Math.Min(PageNumber * PageSize, TotalCount);
+    private bool HasPrevious => PageNumber > 1;
+    private bool HasNext => PageNumber < TotalPages;
+
+    private string SummaryText
+        => TotalCount == 0
+            ? "Showing 0 of 0"
+            : FirstItem == LastItem
+                ? $"Showing {FirstItem} of {TotalCount}"
+                : $"Showing {FirstItem}–{LastItem} of {TotalCount}";
+
+    private async Task PrevAsync() => await PageChanged.InvokeAsync(PageNumber - 1);
+    private async Task NextAsync() => await PageChanged.InvokeAsync(PageNumber + 1);
+}

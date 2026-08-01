@@ -1,0 +1,26 @@
+@namespace FSH.Admin.Wasm.Pages.Tenants
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            Extends validity by one plan term, or switches the tenant's plan from the renewal forward.
+        </MudText>
+        <MudText Typo="Typo.caption" Class="mt-2">
+            Current plan: @(string.IsNullOrEmpty(CurrentPlanKey) ? "none" : CurrentPlanKey) · valid until @ValidUpto.ToString("MMM d, yyyy")
+        </MudText>
+        <MudSelect T="string" @bind-Value="_selectedPlanKey" Label="Plan" Class="mt-4"
+                   Disabled="@(_isSubmitting || _plans.Count == 0)"
+                   HelperText="@(_plans.Count == 0 ? "No active plans — renewing keeps the current plan." : "Pick a plan for the next term.")">
+            @foreach (var plan in _plans)
+            {
+                <MudSelectItem T="string" Value="@plan.Key">@TenantCreateDialog.PlanLabel(plan)</MudSelectItem>
+            }
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting" OnClick="SaveAsync">
+            Renew
+        </MudButton>
+    </DialogActions>
+</MudDialog>

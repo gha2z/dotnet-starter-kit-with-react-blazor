@@ -54,6 +54,9 @@ public sealed class DashboardTokenStore(IJSRuntime js) : ITokenStore
     public Task SetPermissionsAsync(string[] permissions)
         => SetItemAsync(PermissionsKey, System.Text.Json.JsonSerializer.Serialize(permissions));
 
+    public async Task ClearPermissionsAsync()
+        => await RemoveItemAsync(PermissionsKey);
+
     // Impersonation helpers
     public async Task StashTokensAsync()
     {

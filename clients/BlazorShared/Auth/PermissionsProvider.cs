@@ -7,6 +7,7 @@ public interface IPermissionsProvider
 {
     Task<string[]> GetPermissionsAsync(CancellationToken ct = default);
     Task InvalidateCache();
+    Task ResetAsync();
     bool IsHydrated { get; }
 }
 
@@ -50,5 +51,12 @@ public sealed class PermissionsProvider(IAuthService authService, ITokenStore to
     {
         lock (_lock) _cached = null;
         return Task.CompletedTask;
+    }
+
+    /// <summary>Drops the in-memory cache AND the persisted copy (login-time reset, React parity).</summary>
+    public async Task ResetAsync()
+    {
+        lock (_lock) _cached = null;
+        await tokenStore.ClearPermissionsAsync();
     }
 }

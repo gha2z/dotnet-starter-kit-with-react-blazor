@@ -1,6 +1,21 @@
 # Blazor WASM + MAUI — Implementation Roadmap
 
-> Status: **Phase 0 ✅ | Phase 1 🔲 | Phase 2 🔲 | Phase 3 🔲 | Phase 4 🔲 | Phase 5 🔲 | Phase 6 🔲**
+> Status: **Phase 0 ✅ | Phase 1 ✅ | Phase 2 🟨 (2.1 Users · 2.2 Roles · 2.3 Tenants done + parity fixes — next: 2.4 Billing) | Phase 3 🔲 | Phase 4 🔲 | Phase 5 🔲 | Phase 6 🔲 | Phase 7 🟨 (parity completion — in progress)**
+>
+> **Parity sprint 1 (React ↔ Blazor, done):** both sidebars rebuilt 1:1 from `nav-items.ts` / `nav-data.ts`
+> (accordion sections, permission-gated, collapse `"true"/"false"`) · dashboard theme = `fsh.theme` +
+> Light/Dark/System (admin keeps binary `fsh.admin.theme`) · shared components (`FshNavSection`,
+> `FshPager`, `FshFilterBar`, `FshLoadingRow`, `FshKpiTile`, `FshSectionRule`) · `FshNotificationBell`
+> (SignalR `NotificationCreated` + `INotificationService`) · SSE status dot (`SseService.ConnectionChanged`)
+> · dashboard bUnit suite 18/18 + admin 53/53.
+>
+> **Phase 7 hotfixes (done):** user/role detail crash (dropped `{Id:guid}` constraints — `RouteBindingRegressionTests`
+> navigate through the real Router) · `<base href>` ordering in both `index.html` (deep-link CSS 404s —
+> `IndexHtmlGuardTests` guards it).
+>
+> **Deferred (full-parity policy — menu entries render 404 until pages land):** command palette,
+> accent/font/density settings, and the pending pages tracked in the gap tables of
+> `Phase-07-Parity-Completion/plan.md`.
 
 ## Phase Overview
 
@@ -13,6 +28,7 @@
 | **4** | Testing | bUnit component tests, Playwright E2E, auth flow tests, perf benchmarks | 2 weeks | Phase 2 + 3 |
 | **5** | MAUI Hybrid | MAUI project, SecureStorage auth, native features (push, biometric, camera, offline, deep links) | 3 weeks | Phase 2 + 3 |
 | **6** | Polish & Perf | Bundle size, AOT, lazy loading, WASM trimming, accessiblity, feature parity audit with React | 2 weeks | Phase 4 + 5 |
+| **7** | Parity Completion | React ↔ Blazor ↔ MAUI identical or better; gap tables to zero; docs always in sync | ongoing | 2 + 3 |
 
 ## Quick Start (from any phase)
 
@@ -43,12 +59,22 @@ dotnet test clients/dashboard-blazor/FSH.Dashboard.Wasm.Tests
 
 ## Phase Plan Files
 
-- `Phase-01-Identity-And-Auth/01-plan.md` — Auth infrastructure + login/register flows
-- `Phase-02-Admin-Feature-Pages/01-plan.md` — Admin CRUD pages
-- `Phase-03-Dashboard-Feature-Pages/01-plan.md` — Dashboard pages + SSE
-- `Phase-04-Testing/01-plan.md` — bUnit + Playwright test suites
-- `Phase-05-MAUI-Hybrid/01-plan.md` — MAUI Blazor Hybrid + native features
-- `Phase-06-Polish-And-Perf/01-plan.md` — Performance, bundle, parity audit
+- `Phase-01-Identity-And-Auth/plan.md` — Auth infrastructure + login/register flows
+- `Phase-02-Admin-Feature-Pages/plan.md` — Admin CRUD pages
+- `Phase-03-Dashboard-Feature-Pages/plan.md` — Dashboard pages + SSE
+- `Phase-04-Testing/plan.md` — bUnit + Playwright test suites
+- `Phase-05-MAUI-Hybrid/plan.md` — MAUI Blazor Hybrid + native features
+- `Phase-06-Polish-And-Perf/plan.md` — Performance, bundle, parity audit
+- `Phase-07-Parity-Completion/plan.md` — Parity gap tables, hotfixes, build order, verification gates
+
+## Companion Files
+
+| File | Purpose |
+|------|---------|
+| `00-Setup.md` | Environment verification checklist — paste and go |
+| `99-Glossary.md` | Every acronym explained in plain English |
+| `Phase 0/hands-on-phase-0.md` | Chapter 0: Foundation & Tooling — full educational deep-dive |
+| (future) `Phase-0N/hands-on-phase-N.md` | Each phase has a companion hands-on chapter |
 
 ## Reference
 

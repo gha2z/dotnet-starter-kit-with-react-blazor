@@ -1,4 +1,8 @@
-<MudThemeProvider Theme="FshMudTheme.CreateDashboard()" />
+@using FSH.BlazorShared.Theming
+@inject FshThemeService Theme
+
+<MudThemeProvider Theme="FshMudTheme.CreateDashboard()" IsDarkMode="@Theme.IsDarkMode" IsDarkModeChanged="@OnThemeChanged" />
+<MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
@@ -19,8 +23,13 @@
         <NotFound>
             <PageTitle>Not Found</PageTitle>
             <MudContainer Class="d-flex align-center justify-center" Style="min-height: 100vh">
-                <MudText Typo="Typo.h4">404 — Page not found</MudText>
+                <MudText Typo="Typo.h4">404 - Page not found</MudText>
             </MudContainer>
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
+
+@code {
+    private async Task OnThemeChanged(bool isDarkMode)
+        => await Theme.SetAsync(isDarkMode);
+}

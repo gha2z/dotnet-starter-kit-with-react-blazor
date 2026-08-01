@@ -1,0 +1,14 @@
+@namespace FSH.BlazorShared.Components
+@using MudBlazor
+
+<div class="fsh-loading-row">
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Size="Size.Small" Class="fsh-loading-bar" />
+    <span class="fsh-mono-label">@Label</span>
+</div>
+
+@code {
+    /// <summary>
+    /// List loading row (React parity: progress bar + mono loading label).
+    /// </summary>
+    [Parameter] public string Label { get; set; } = "Loading…";
+}

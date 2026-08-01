@@ -1,20 +1,75 @@
 @page "/"
 @attribute [Authorize]
 
-<FshPageHeader Title="Dashboard" Icon="@Icons.Material.Filled.Dashboard">
+<FshPageHeader Title="Overview" Description="Operate every tenant on this instance — identity, multitenancy, billing, and the rest of the system surface."
+               Icon="@Icons.Material.Filled.Dashboard">
 </FshPageHeader>
 
-<MudGrid>
-    <MudItem xs="12" sm="6" md="3">
-        <MudPaper Class="pa-4" Elevation="1">
-            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Total Users</MudText>
-            <MudText Typo="Typo.h4">—</MudText>
-        </MudPaper>
-    </MudItem>
-    <MudItem xs="12" sm="6" md="3">
-        <MudPaper Class="pa-4" Elevation="1">
-            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Active Tenants</MudText>
-            <MudText Typo="Typo.h4">—</MudText>
-        </MudPaper>
-    </MudItem>
-</MudGrid>
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+<div class="fsh-enter">
+    <MudGrid>
+        <MudItem xs="12" sm="6" xl="3">
+            <FshStatTile Label="Tenants" Value="@Display(_tenantTotal)" Hint="registered on this instance" />
+        </MudItem>
+        <MudItem xs="12" sm="6" xl="3">
+            <FshStatTile Label="Plans" Value="@Display(_planTotal)" Hint="@(_planTotal is null ? "loading." : $"{_activePlans} active")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" xl="3">
+            <FshStatTile Label="Invoices" Value="@Display(_invoiceTotal)" Hint="@(_invoiceTotal is null ? "loading." : $"{_invoiceLedgerTotal} total ledger")" />
+        </MudItem>
+        <MudItem xs="12" sm="6" xl="3">
+            <FshStatTile Label="Outstanding" Value="@Display(_outstandingCount)" Hint="issued, awaiting payment"
+                         Tone="@(_outstandingCount > 0 ? Color.Warning : Color.Inherit)" />
+        </MudItem>
+    </MudGrid>
+</div>
+
+<div class="fsh-enter-2 mt-6">
+    <MudText Class="fsh-mono-label mb-3" Color="Color.Secondary">Entry points</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="6" lg="3">
+            <div class="fsh-pivot-card d-flex flex-column" @onclick="GoToTenants">
+                <div class="d-flex justify-space-between align-center mb-2">
+                    <FshToneIconTile Icon="@Icons.Material.Filled.Business" Tone="Color.Info" TileSize="36px" IconSize="Size.Small" />
+                    <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Color="Color.Secondary" />
+                </div>
+                <MudText Typo="Typo.subtitle1" Class="font-weight-semibold" Style="margin: 0;">Tenants</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Provision and operate tenant workspaces</MudText>
+            </div>
+        </MudItem>
+        <MudItem xs="12" sm="6" lg="3">
+            <div class="fsh-pivot-card d-flex flex-column" @onclick="GoToUsers">
+                <div class="d-flex justify-space-between align-center mb-2">
+                    <FshToneIconTile Icon="@Icons.Material.Filled.People" Tone="Color.Primary" TileSize="36px" IconSize="Size.Small" />
+                    <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Color="Color.Secondary" />
+                </div>
+                <MudText Typo="Typo.subtitle1" Class="font-weight-semibold" Style="margin: 0;">Users</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Manage accounts and role assignments</MudText>
+            </div>
+        </MudItem>
+        <MudItem xs="12" sm="6" lg="3">
+            <div class="fsh-pivot-card d-flex flex-column" @onclick="GoToRoles">
+                <div class="d-flex justify-space-between align-center mb-2">
+                    <FshToneIconTile Icon="@Icons.Material.Filled.AdminPanelSettings" Tone="Color.Success" TileSize="36px" IconSize="Size.Small" />
+                    <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Color="Color.Secondary" />
+                </div>
+                <MudText Typo="Typo.subtitle1" Class="font-weight-semibold" Style="margin: 0;">Roles</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Define permission sets and grants</MudText>
+            </div>
+        </MudItem>
+        <MudItem xs="12" sm="6" lg="3">
+            <div class="fsh-pivot-card d-flex flex-column" @onclick="GoToTenants">
+                <div class="d-flex justify-space-between align-center mb-2">
+                    <FshToneIconTile Icon="@Icons.Material.Filled.ReceiptLong" Tone="Color.Warning" TileSize="36px" IconSize="Size.Small" />
+                    <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Color="Color.Secondary" />
+                </div>
+                <MudText Typo="Typo.subtitle1" Class="font-weight-semibold" Style="margin: 0;">Billing</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Plans, invoices, and renewals</MudText>
+            </div>
+        </MudItem>
+    </MudGrid>
+</div>

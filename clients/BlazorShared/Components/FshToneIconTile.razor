@@ -1,0 +1,34 @@
+@namespace FSH.BlazorShared.Components
+@using MudBlazor
+
+<div class="d-flex align-center justify-center @Class" style="@TileStyle">
+    <MudIcon Icon="@Icon" Style="@($"color: {ColorVar};")" Size="@IconSize" />
+</div>
+
+@code {
+    /// <summary>
+    /// Tone-tinted icon square (React parity: oklch tone at 10% + inset ring + full-tone icon).
+    /// </summary>
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.Circle;
+    [Parameter] public Color Tone { get; set; } = Color.Primary;
+    [Parameter] public string TileSize { get; set; } = "40px";
+    [Parameter] public Size IconSize { get; set; } = Size.Medium;
+    [Parameter] public string? Class { get; set; }
+
+    private string ToneVar => Tone switch
+    {
+        Color.Success => "success",
+        Color.Warning => "warning",
+        Color.Error => "error",
+        Color.Info => "info",
+        Color.Secondary => "secondary",
+        _ => "primary",
+    };
+
+    private string ColorVar => $"var(--mud-palette-{ToneVar})";
+
+    private string TileStyle =>
+        $"width: {TileSize}; height: {TileSize}; border-radius: 10px; " +
+        $"background: color-mix(in srgb, var(--mud-palette-{ToneVar}) 10%, transparent); " +
+        $"box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mud-palette-{ToneVar}) 25%, transparent);";
+}

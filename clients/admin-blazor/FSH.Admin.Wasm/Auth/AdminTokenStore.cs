@@ -50,6 +50,9 @@ public sealed class AdminTokenStore(IJSRuntime js) : ITokenStore
     public async Task SetPermissionsAsync(string[] permissions)
         => await SetItemAsync(PermissionsKey, System.Text.Json.JsonSerializer.Serialize(permissions));
 
+    public async Task ClearPermissionsAsync()
+        => await RemoveItemAsync(PermissionsKey);
+
     private async Task<string?> GetItemAsync(string key)
         => await js.InvokeAsync<string?>("localStorage.getItem", key);
 

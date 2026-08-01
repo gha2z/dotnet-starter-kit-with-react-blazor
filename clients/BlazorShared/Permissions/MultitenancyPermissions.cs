@@ -4,10 +4,12 @@ public static class MultitenancyPermissions
 {
     public static class Tenants
     {
-        public const string View = "Permissions.Tenants.View";
-        public const string Create = "Permissions.Tenants.Create";
-        public const string Edit = "Permissions.Tenants.Edit";
-        public const string Delete = "Permissions.Tenants.Delete";
-        public const string Upgrade = "Permissions.Tenants.Upgrade";
+        public const string Resource = nameof(Tenants);
+        public const string View = $"Permissions.{Resource}.View";
+        public const string Create = $"Permissions.{Resource}.Create";
+        public const string Update = $"Permissions.{Resource}.Update";
+        public const string UpgradeSubscription = $"Permissions.{Resource}.UpgradeSubscription";
+        public const string ViewTheme = $"Permissions.{Resource}.ViewTheme";
+        public const string UpdateTheme = $"Permissions.{Resource}.UpdateTheme";
     }
 }

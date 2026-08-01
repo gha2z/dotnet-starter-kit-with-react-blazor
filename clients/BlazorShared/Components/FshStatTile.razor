@@ -1,0 +1,43 @@
+@namespace FSH.BlazorShared.Components
+@using MudBlazor
+
+<MudPaper Elevation="0" Class="d-flex flex-column justify-space-between rounded-xl px-4 py-3"
+          Style="border: 1px solid var(--mud-palette-divider); min-height: 96px;">
+    <div>
+        <MudText Class="fsh-mono-label">@Label</MudText>
+        @if (Value is null)
+        {
+            <div class="fsh-skeleton fsh-skeleton-value mt-2"></div>
+        }
+        else
+        {
+            <MudText Typo="Typo.h4" Class="mt-1 font-weight-medium lh-1"
+                     Style="@($"font-size: 26px; letter-spacing: -0.02em; color: {ValueColor};")">
+                @Value
+            </MudText>
+        }
+    </div>
+    @if (!string.IsNullOrEmpty(Hint))
+    {
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1 fsh-truncate">@Hint</MudText>
+    }
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// Dashboard stat tile (React parity: mono uppercase label, big value, muted hint, skeleton while loading).
+    /// </summary>
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public string? Hint { get; set; }
+    [Parameter] public Color Tone { get; set; } = Color.Inherit;
+
+    private string ValueColor => Tone switch
+    {
+        Color.Warning => "var(--mud-palette-warning)",
+        Color.Error => "var(--mud-palette-error)",
+        Color.Success => "var(--mud-palette-success)",
+        Color.Info => "var(--mud-palette-info)",
+        _ => "var(--mud-palette-text-primary)",
+    };
+}

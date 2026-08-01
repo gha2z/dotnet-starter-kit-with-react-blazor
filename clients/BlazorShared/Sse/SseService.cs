@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using FSH.BlazorShared.Auth;
 using Microsoft.Extensions.Logging;
 
@@ -8,40 +9,94 @@ public sealed class SseService(HttpClient http, ITokenStore tokenStore, ILogger<
 {
     private readonly Subject<SseEvent> _subject = new();
     private CancellationTokenSource? _cts;
-    private const string SseUrl = "/api/v1/realtime/stream";
+    private TimeSpan _retryDelay = TimeSpan.FromSeconds(1);
+    private const string TokenUrl = "/api/v1/sse/token";
+    private const string StreamUrl = "/api/v1/sse/stream";
 
     public IObservable<SseEvent> Messages => _subject;
     public bool IsConnected => _cts is not null && !_cts.IsCancellationRequested;
+    public event Action? ConnectionChanged;
 
-    public async Task StartAsync(CancellationToken ct = default)
+    public Task StartAsync(CancellationToken ct = default)
     {
+        _cts?.Cancel();
+        _cts?.Dispose();
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var request = new HttpRequestMessage(HttpMethod.Get, SseUrl);
+        _ = Task.Run(() => ConnectLoopAsync(_cts.Token), CancellationToken.None);
+        ConnectionChanged?.Invoke();
+        return Task.CompletedTask;
+    }
+
+    private async Task ConnectLoopAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                await ConnectOnceAsync(ct);
+                logger.LogWarning("SSE stream ended; reconnecting in {Delay}", _retryDelay);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "SSE connection failed; retrying in {Delay}", _retryDelay);
+            }
+
+            ConnectionChanged?.Invoke();
+
+            try
+            {
+                await Task.Delay(_retryDelay, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+
+            _retryDelay = TimeSpan.FromSeconds(Math.Min(_retryDelay.TotalSeconds * 2, 30));
+        }
+    }
+
+    private async Task ConnectOnceAsync(CancellationToken ct)
+    {
         var token = await tokenStore.GetAccessTokenAsync();
+
+        using var tokenRequest = new HttpRequestMessage(HttpMethod.Post, TokenUrl);
         if (token is not null)
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            tokenRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
-        try
-        {
-            var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, _cts.Token);
-            response.EnsureSuccessStatusCode();
+        var tokenResponse = await http.SendAsync(tokenRequest, ct);
+        tokenResponse.EnsureSuccessStatusCode();
 
-            var stream = await response.Content.ReadAsStreamAsync(_cts.Token);
-            _ = Task.Run(() => ReadStreamAsync(stream, _cts.Token), _cts.Token);
-            logger.LogInformation("SSE connected");
-        }
-        catch (Exception ex)
+        var tokenDto = await tokenResponse.Content.ReadFromJsonAsync<SseTokenResponse>(cancellationToken: ct);
+        if (tokenDto?.Token is not { Length: > 0 })
         {
-            logger.LogError(ex, "SSE connection failed");
-            throw;
+            throw new InvalidOperationException("SSE token exchange returned an empty token.");
         }
+
+        var streamRequest = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{StreamUrl}?token={Uri.EscapeDataString(tokenDto.Token)}");
+        var streamResponse = await http.SendAsync(streamRequest, HttpCompletionOption.ResponseHeadersRead, ct);
+        streamResponse.EnsureSuccessStatusCode();
+
+        var stream = await streamResponse.Content.ReadAsStreamAsync(ct);
+        _retryDelay = TimeSpan.FromSeconds(1);
+        logger.LogInformation("SSE connected");
+        ConnectionChanged?.Invoke();
+        await ReadStreamAsync(stream, ct);
+        ct.ThrowIfCancellationRequested();
     }
 
     public Task StopAsync()
     {
         _cts?.Cancel();
+        ConnectionChanged?.Invoke();
         return Task.CompletedTask;
     }
 
@@ -50,17 +105,24 @@ public sealed class SseService(HttpClient http, ITokenStore tokenStore, ILogger<
         using var reader = new StreamReader(stream);
         string? eventType = null;
 
-        while (!ct.IsCancellationRequested)
+        try
         {
-            var line = await reader.ReadLineAsync(ct);
-            if (line is null) break;
+            while (!ct.IsCancellationRequested)
+            {
+                var line = await reader.ReadLineAsync(ct);
+                if (line is null) break;
 
-            if (line.StartsWith("event: ", StringComparison.Ordinal))
-                eventType = line[7..];
-            else if (line.StartsWith("data: ", StringComparison.Ordinal))
-                _subject.OnNext(new SseEvent(eventType ?? "message", line[6..]));
-            else if (string.IsNullOrEmpty(line))
-                eventType = null;
+                if (line.StartsWith("event: ", StringComparison.Ordinal))
+                    eventType = line[7..];
+                else if (line.StartsWith("data: ", StringComparison.Ordinal))
+                    _subject.OnNext(new SseEvent(eventType ?? "message", line[6..]));
+                else if (string.IsNullOrEmpty(line))
+                    eventType = null;
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Stopped via StopAsync/DisposeAsync — expected.
         }
     }
 

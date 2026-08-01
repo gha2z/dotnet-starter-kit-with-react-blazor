@@ -1,0 +1,182 @@
+@page "/users/{Id}"
+@attribute [Authorize(Policy = IdentityPermissions.Users.View)]
+@using FSH.BlazorShared.Models.Identity
+
+<FshPageHeader Title="@DisplayName" Description="@_user?.Email" Icon="@Icons.Material.Filled.People">
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="GoBackAsync">
+        Directory
+    </MudButton>
+</FshPageHeader>
+
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+
+@if (_user is null && _error is null)
+{
+    <div class="d-flex justify-center py-12">
+        <MudProgressCircular Indeterminate="true" />
+    </div>
+}
+
+@if (_user is not null)
+{
+    <MudPaper Elevation="1" Class="pa-6 mb-4 d-flex flex-wrap align-center justify-space-between gap-4">
+        <div class="d-flex align-center gap-4">
+            <MudAvatar Size="Size.Large" Color="Color.Primary" Variant="Variant.Filled">
+                @Initials
+            </MudAvatar>
+            <div>
+                <MudText Typo="Typo.h5">@DisplayName</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@_user.UserName</MudText>
+                <div class="d-flex gap-2 mt-2">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(_user.IsActive ? Color.Success : Color.Default)">
+                        @(_user.IsActive ? "Active" : "Disabled")
+                    </MudChip>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(_user.EmailConfirmed ? Color.Info : Color.Warning)">
+                        @(_user.EmailConfirmed ? "Email confirmed" : "Email pending")
+                    </MudChip>
+                </div>
+            </div>
+        </div>
+        <MudButton Variant="@(_user.IsActive ? Variant.Outlined : Variant.Filled)"
+                   Color="Color.Primary"
+                   Disabled="_isToggling"
+                   OnClick="ToggleStatusAsync">
+            @(_isToggling ? "Updating…" : _user.IsActive ? "Deactivate account" : "Activate account")
+        </MudButton>
+    </MudPaper>
+
+    <MudGrid>
+        <MudItem xs="12" lg="6">
+            <MudPaper Elevation="1" Class="pa-6">
+                <div class="d-flex align-center gap-2 mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Badge" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Identity card</MudText>
+                </div>
+                <MudList T="string" Dense="true">
+                    <MudListItem T="string"><b>User ID</b> <span class="float-right font-mono">@(_user.Id ?? "—")</span></MudListItem>
+                    <MudListItem T="string"><b>Username</b> <span class="float-right font-mono">@(_user.UserName ?? "—")</span></MudListItem>
+                    <MudListItem T="string"><b>Email</b> <span class="float-right">@(_user.Email ?? "—")</span></MudListItem>
+                    <MudListItem T="string"><b>Phone</b> <span class="float-right">@(_user.PhoneNumber ?? "—")</span></MudListItem>
+                    <MudListItem T="string"><b>Status</b> <span class="float-right">@(_user.IsActive ? "Active" : "Disabled")</span></MudListItem>
+                    <MudListItem T="string"><b>Email confirmed</b> <span class="float-right">@(_user.EmailConfirmed ? "Yes" : "Pending confirmation")</span></MudListItem>
+                </MudList>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" lg="6">
+            <MudPaper Elevation="1" Class="pa-6">
+                <div class="d-flex align-center justify-space-between mb-4">
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Shield" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6">Role assignment</MudText>
+                    </div>
+                    @if (_dirtyCount > 0)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">@_dirtyCount pending change@(_dirtyCount == 1 ? "" : "s")</MudChip>
+                    }
+                </div>
+
+                @if (_error is not null)
+                {
+                    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+                }
+                else if (_roles is null)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                }
+                else if (_roles.Count == 0)
+                {
+                    <MudText Color="Color.Secondary">No roles defined for this tenant.</MudText>
+                }
+                else
+                {
+                    <MudList T="string" Dense="true">
+                        @foreach (var role in _roles)
+                        {
+                            <MudListItem T="string">
+                                <div class="d-flex align-center justify-space-between w-100">
+                                    <div>
+                                        <MudText Typo="Typo.body2">@(role.RoleName ?? "Untitled role")</MudText>
+                                        @if (!string.IsNullOrEmpty(role.Description))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@role.Description</MudText>
+                                        }
+                                    </div>
+                                    <MudSwitch T="bool"
+                                               Value="@GetRoleEnabled(role)"
+                                               ValueChanged="@((value) => OnRoleToggledAsync(role, value))"
+                                               Disabled="_isSavingRoles" />
+                                </div>
+                            </MudListItem>
+                        }
+                    </MudList>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   Disabled="@(_dirtyCount == 0 || _isSavingRoles)"
+                                   OnClick="SaveRolesAsync">
+                            @(_isSavingRoles ? "Saving…" : "Save changes")
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined"
+                                   Disabled="@(_dirtyCount == 0 || _isSavingRoles)"
+                                   OnClick="DiscardRoles">
+                            Discard
+                        </MudButton>
+                    </div>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudPaper Elevation="1" Class="pa-6">
+                <div class="d-flex align-center gap-2 mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Devices" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Active sessions</MudText>
+                </div>
+                @if (_sessions is null)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                }
+                else if (_sessions.Count == 0)
+                {
+                    <MudText Color="Color.Secondary">No active sessions.</MudText>
+                }
+                else
+                {
+                    <MudSimpleTable Dense="true" Hover="true">
+                        <thead>
+                            <tr>
+                                <th>Device</th>
+                                <th>Browser</th>
+                                <th>OS</th>
+                                <th>IP address</th>
+                                <th>Last activity</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var session in _sessions)
+                            {
+                                <tr>
+                                    <td>@(session.DeviceType ?? "—")</td>
+                                    <td>@(session.Browser ?? "—")</td>
+                                    <td>@(session.OperatingSystem ?? "—")</td>
+                                    <td>@(session.IpAddress ?? "—")</td>
+                                    <td>@session.LastActivityAt.ToLocalTime().ToString("g")</td>
+                                    <td>
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@(session.IsActive ? Color.Success : Color.Default)">
+                                            @(session.IsActive ? (session.IsCurrentSession ? "Current" : "Active") : "Expired")
+                                        </MudChip>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}

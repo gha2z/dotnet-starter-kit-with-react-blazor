@@ -1,71 +1,105 @@
 @page "/login"
+@using System.Net.Http.Json
 @inject IAuthService AuthService
 @inject AuthStateProvider AuthStateProvider
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject IPermissionsProvider PermissionsProvider
 
-<div class="d-flex align-center justify-center" style="min-height: 100vh; background: #F0F2F5;">
-    <MudPaper Class="pa-8" Style="width: 420px; max-width: 90vw;" Elevation="3">
-        <div class="d-flex flex-column align-center mb-6">
-            <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Large" Color="Color.Primary" />
-            <MudText Typo="Typo.h5" Align="Align.Center" Class="mt-2">FullStackHero Dashboard</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">Sign in to your account</MudText>
-        </div>
+<div class="position-relative d-flex align-center justify-center" style="min-height: 100vh; background: var(--mud-palette-background); overflow: hidden;">
+    <div class="fsh-orb" style="width: 420px; height: 420px; background: color-mix(in srgb, var(--mud-palette-primary) 6%, transparent); top: -120px; left: -80px;"></div>
+    <div class="fsh-orb" style="width: 360px; height: 360px; background: color-mix(in srgb, var(--mud-palette-primary) 5%, transparent); bottom: -100px; right: -60px;"></div>
 
-        @if (!string.IsNullOrEmpty(_error))
-        {
-            <MudAlert Severity="Severity.Error" Class="mb-4">
-                @_error
-            </MudAlert>
-        }
+    <MudPaper Class="fsh-login-card pa-8 position-relative" Style="width: 420px; max-width: 92vw;" Elevation="0"
+              Outlined="true">
+        <div class="d-flex flex-column align-center mb-6">
+            <FshToneIconTile Icon="@Icons.Material.Filled.Dashboard" Tone="Color.Primary" TileSize="44px" IconSize="Size.Medium" Class="mb-3" />
+            <MudText Typo="Typo.h5" Align="Align.Center" Class="mt-2 font-weight-medium" Style="margin: 0;">Welcome back</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mt-1">Sign in to your tenant workspace</MudText>
+            <div class="d-flex align-center gap-2 mt-3">
+                <div style="height: 1px; width: 24px; background: var(--mud-palette-divider);"></div>
+                <MudText Class="fsh-mono-label" Color="Color.Secondary">Tenant Console</MudText>
+                <div style="height: 1px; width: 24px; background: var(--mud-palette-divider);"></div>
+            </div>
+        </div>
 
         @if (_signedOutReason is not null)
         {
-            <MudAlert Severity="Severity.Warning" Class="mb-4">
-                @_signedOutReason
-            </MudAlert>
+            <div role="status" class="d-flex align-center gap-2 rounded-lg px-3 py-2 mb-4"
+                 style="background: color-mix(in srgb, var(--mud-palette-warning) 10%, transparent); border: 1px solid color-mix(in srgb, var(--mud-palette-warning) 30%, transparent);">
+                <MudIcon Icon="@Icons.Material.Filled.HourglassTop" Color="Color.Warning" Size="Size.Small" />
+                <MudText Typo="Typo.caption" Style="color: var(--mud-palette-warning);">@_signedOutReason</MudText>
+            </div>
         }
 
-        <MudForm @ref="_form" Validation="@(new DataAnnotationsValidator())">
-            <MudTextField @bind-Value="_email"
-                          Label="Email"
-                          For="@(() => _email)"
-                          Required="true"
-                          RequiredError="Email is required."
-                          Disabled="@_isSubmitting" />
-            <MudTextField @bind-Value="_password"
-                          Label="Password"
-                          For="@(() => _password)"
-                          InputType="InputType.Password"
-                          Required="true"
-                          RequiredError="Password is required."
-                          Disabled="@_isSubmitting"
-                          Class="mt-4" />
+        @if (_error is not null)
+        {
+            <div role="alert" class="d-flex align-center gap-2 rounded-lg px-3 py-2 mb-4"
+                 style="background: color-mix(in srgb, var(--mud-palette-error) 6%, transparent); border: 1px solid color-mix(in srgb, var(--mud-palette-error) 30%, transparent);">
+                <MudIcon Icon="@Icons.Material.Filled.ReportGmailerrorred" Color="Color.Error" Size="Size.Small" />
+                <MudText Typo="Typo.caption" Style="color: var(--mud-palette-error);">@_error</MudText>
+            </div>
+        }
+
+        <MudForm @ref="_form" Validation="@(new DataAnnotationsValidator())" OnEnterPressed="SubmitAsync">
             <MudTextField @bind-Value="_tenant"
                           Label="Tenant"
                           For="@(() => _tenant)"
+                          autocomplete="organization"
+                          Placeholder="acme"
                           HelperText="Your tenant identifier"
+                          Disabled="@_isSubmitting" />
+            <MudTextField @bind-Value="_email"
+                          Label="Email"
+                          For="@(() => _email)"
+                          autocomplete="email"
+                          Placeholder="you@acme.example"
+                          Required="true"
+                          RequiredError="Email is required."
                           Disabled="@_isSubmitting"
                           Class="mt-4" />
+            <MudTextField @bind-Value="_password"
+                          Label="Password"
+                          For="@(() => _password)"
+                          InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                          autocomplete="current-password"
+                          Required="true"
+                          RequiredError="Password is required."
+                          Disabled="@_isSubmitting"
+                          Class="mt-4"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@(_showPassword ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                          AdornmentAriaLabel="@(_showPassword ? "Hide password" : "Show password")"
+                          AdornmentColor="Color.Default"
+                          OnAdornmentClick="TogglePasswordVisibility" />
+            <div class="d-flex justify-end mt-2">
+                <MudButton OnClick="@(() => Nav.NavigateTo("/forgot-password"))" Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" Style="font-size: 12px;">
+                    Forgot password?
+                </MudButton>
+            </div>
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        FullWidth="true"
-                       Class="mt-6"
-                       Disabled="@_isSubmitting"
-                       OnClick="SubmitAsync">
+                       Class="mt-3"
+                       ButtonType="ButtonType.Submit"
+                       OnClick="SubmitAsync"
+                       Disabled="@(_isSubmitting || string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))">
                 @if (_isSubmitting)
                 {
                     <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+                    <text>Signing in…</text>
                 }
-                Sign In
+                else
+                {
+                    <text>Sign in</text>
+                    <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Class="ml-1" />
+                }
             </MudButton>
         </MudForm>
 
-        <div class="d-flex justify-space-between mt-4">
-            <MudButton OnClick="@(() => Nav.NavigateTo("/forgot-password"))" Variant="Variant.Text" Size="Size.Small">
-                Forgot password?
-            </MudButton>
+        <div class="d-flex align-center justify-center gap-2 mt-6">
+            <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" Color="Color.Secondary" />
+            <MudText Typo="Typo.caption" Color="Color.Secondary">Encrypted in transit · JWT-secured session</MudText>
         </div>
     </MudPaper>
 </div>
@@ -75,6 +109,7 @@
     private string _email = string.Empty;
     private string _password = string.Empty;
     private string _tenant = string.Empty;
+    private bool _showPassword;
     private bool _isSubmitting;
     private string? _error;
     private string? _signedOutReason;
@@ -85,10 +120,23 @@
             _signedOutReason = reason;
     }
 
+    private void TogglePasswordVisibility() => _showPassword = !_showPassword;
+
     private async Task SubmitAsync()
     {
-        await _form!.ValidateAsync();
-        if (!_form.IsValid) return;
+        if (_isSubmitting)
+        {
+            return;
+        }
+
+        if (_form is not null)
+        {
+            await _form.ValidateAsync();
+            if (!_form.IsValid)
+            {
+                return;
+            }
+        }
 
         _isSubmitting = true;
         _error = null;

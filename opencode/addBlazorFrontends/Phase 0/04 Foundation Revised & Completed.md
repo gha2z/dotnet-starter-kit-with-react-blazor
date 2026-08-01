@@ -1,5 +1,7 @@
 Great — Phase 0 is complete. Both Blazor apps now boot and render.
 
+📘 **Educational companion**: See `hands-on-phase-0.md` in this directory for a comprehensive deep-dive into every decision, code pattern, and learning resource.
+
 ### What's next? Phase 1 — The Login Flow
 
 Currently the login page is a stub. The natural next step is building the full login/authentication flow:

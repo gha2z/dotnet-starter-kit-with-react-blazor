@@ -10,6 +10,16 @@ public sealed class RuntimeConfigService(HttpClient http, ILogger<RuntimeConfigS
     public string DefaultTenant { get; private set; } = "root";
     public int InactivityTimeoutMinutes { get; private set; } = 10;
 
+    public static Uri ResolveApiBase(string appBaseAddress, string? apiBaseUrl)
+    {
+        if (string.IsNullOrWhiteSpace(apiBaseUrl) || apiBaseUrl == "/")
+        {
+            return new Uri(appBaseAddress);
+        }
+
+        return new Uri(new Uri(appBaseAddress), apiBaseUrl);
+    }
+
     public async Task LoadAsync(CancellationToken ct = default)
     {
         try

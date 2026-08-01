@@ -1,0 +1,33 @@
+@namespace FSH.BlazorShared.Components
+@using MudBlazor
+
+<div class="d-flex flex-column align-center py-8 text-center">
+    <FshToneIconTile Icon="@Icon" Tone="@Tone" TileSize="56px" IconSize="Size.Medium" Class="mb-3" />
+    @if (!string.IsNullOrEmpty(Kicker))
+    {
+        <MudText Class="fsh-mono-label mb-1" Color="Color.Secondary">@Kicker</MudText>
+    }
+    <MudText Typo="Typo.h5" Class="font-weight-medium">@Title</MudText>
+    @if (!string.IsNullOrEmpty(Description))
+    {
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1" Style="max-width: 26rem;">@Description</MudText>
+    }
+    @if (ChildContent is not null)
+    {
+        <div class="mt-4">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Empty state (React parity: icon tile + mono kicker + display headline + description + optional CTA).
+    /// </summary>
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.Inbox;
+    [Parameter] public Color Tone { get; set; } = Color.Default;
+    [Parameter] public string? Kicker { get; set; }
+    [Parameter] public string Title { get; set; } = "Nothing here yet.";
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

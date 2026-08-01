@@ -1,0 +1,18 @@
+@namespace FSH.Admin.Wasm.Pages.Tenants
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            Sets the expiry date directly with no invoice (operator override for comps, support
+            extensions, or immediate expiry). May move the date backward, unlike renewal.
+        </MudText>
+        <MudDatePicker @bind-Date="_validUpto" Label="Valid until" Class="mt-4"
+                       Disabled="@_isSubmitting" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting" OnClick="SaveAsync">
+            Set validity
+        </MudButton>
+    </DialogActions>
+</MudDialog>

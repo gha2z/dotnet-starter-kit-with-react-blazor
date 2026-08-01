@@ -1,0 +1,75 @@
+@page "/roles"
+@attribute [Authorize(Policy = IdentityPermissions.Roles.View)]
+@using FSH.BlazorShared.Models.Identity
+
+<FshPageHeader Title="Roles" Description="@HeaderDescription" Icon="@Icons.Material.Filled.AdminPanelSettings" Count="@_roles.Count" Unit="role">
+    <FshPermissionGate Perms="@(new[] { IdentityPermissions.Roles.Create })">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialogAsync">
+            New role
+        </MudButton>
+    </FshPermissionGate>
+</FshPageHeader>
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+<div class="d-flex flex-wrap align-center gap-4 mb-4">
+    <MudTextField T="string"
+                  Value="@_searchInput"
+                  ValueChanged="@OnSearchChangedAsync"
+                  Placeholder="Search name or description…"
+                  Clearable="true"
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  AdornmentColor="Color.Secondary"
+                  Variant="Variant.Outlined"
+                  Margin="Margin.Dense"
+                  Style="max-width: 360px; flex: 1;" />
+</div>
+
+<MudTable Items="@_filteredRoles"
+          RowsPerPage="12"
+          Hover="true"
+          Elevation="1"
+          RowClassFunc="@RowClassFunc"
+          OnRowClick="@((TableRowClickEventArgs<RoleDto> e) => RowClickAsync(e))">
+    <HeaderContent>
+        <MudTh>Role</MudTh>
+        <MudTh>Description</MudTh>
+        <MudTh>Permissions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>
+            <div class="d-flex align-center gap-3">
+                <FshToneIconTile Icon="@Icons.Material.Filled.Shield" Tone="Color.Primary" TileSize="36px" IconSize="Size.Small" />
+                <div>
+                    <MudText Typo="Typo.body2" Style="margin: 0;">@(context.Name ?? "Untitled role")</MudText>
+                    @if (IsSystemRole(context))
+                    {
+                        <FshStatusPill Text="System" Tone="Color.Default" />
+                    }
+                </div>
+            </div>
+        </MudTd>
+        <MudTd>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Style="margin: 0;">
+                @(context.Description ?? "-")
+            </MudText>
+        </MudTd>
+        <MudTd>
+            <MudText Typo="Typo.body2" Class="font-mono" Style="margin: 0;">@PermissionCountLabel(context)</MudText>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <FshEmptyState Icon="@Icons.Material.Filled.Shield"
+                       Kicker="// roles"
+                       Title="@(_searchActive ? "No roles found." : "No roles defined yet.")"
+                       Description="@(_searchActive ? "Try a different search." : "Create your first role to start bundling permissions.")" />
+    </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager RowsPerPageString="Rows" />
+    </PagerContent>
+</MudTable>

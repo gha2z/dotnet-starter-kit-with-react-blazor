@@ -1,0 +1,178 @@
+@page "/roles/{Id}"
+@attribute [Authorize(Policy = IdentityPermissions.Roles.View)]
+@using FSH.BlazorShared.Models.Identity
+
+<FshPageHeader Title="@(_role?.Name ?? "Role")"
+               Description="@(_role?.Description ?? "Inspect and edit this role's profile and permission grants.")"
+               Icon="@Icons.Material.Filled.AdminPanelSettings">
+    @if (IsSystemRole)
+    {
+        <MudChip T="string" Variant="Variant.Outlined" Class="mr-2"
+                 Icon="@Icons.Material.Filled.Lock" Size="Size.Small">System</MudChip>
+    }
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="GoBackAsync">
+        Registry
+    </MudButton>
+</FshPageHeader>
+
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+
+@if (_role is null && _error is null)
+{
+    <div class="d-flex justify-center py-12">
+        <MudProgressCircular Indeterminate="true" />
+    </div>
+}
+
+@if (_role is not null)
+{
+    @if (IsSystemRole)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            <MudText Typo="Typo.body2">
+                <b>Built-in role — read only.</b>
+                @_role.Name ships with the framework. Its name, description, and permissions are managed
+                centrally. Create a custom role if you need a different set of grants.
+            </MudText>
+        </MudAlert>
+    }
+
+    <MudPaper Elevation="1" Class="pa-6 mb-4">
+        <div class="d-flex align-center gap-2 mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.Shield" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Profile</MudText>
+        </div>
+        <MudForm @ref="_profileForm" Validation="@(new DataAnnotationsValidator())">
+            <MudTextField @bind-Value="_profileFormModel.Name"
+                          Label="Name"
+                          For="@(() => _profileFormModel.Name)"
+                          Disabled="@(IsSystemRole || _isSavingProfile)" />
+            <MudTextField @bind-Value="_profileFormModel.Description"
+                          Label="Description"
+                          For="@(() => _profileFormModel.Description)"
+                          Class="mt-4"
+                          Disabled="@(IsSystemRole || _isSavingProfile)" />
+        </MudForm>
+        <div class="d-flex gap-2 mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       Disabled="@(!_profileDirty || _isSavingProfile || IsSystemRole)"
+                       OnClick="SaveProfileAsync">
+                @(_isSavingProfile ? "Saving…" : "Save profile")
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Disabled="@(!_profileDirty || _isSavingProfile)"
+                       OnClick="ResetProfile">
+                Reset
+            </MudButton>
+        </div>
+    </MudPaper>
+
+    <MudPaper Elevation="1" Class="pa-6 mb-4">
+        <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-1">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Color="Color.Primary" />
+                <MudText Typo="Typo.h6">Permissions</MudText>
+            </div>
+            <MudText Typo="Typo.body2" Class="font-mono"
+                     Color="@(_permissionsDirty ? Color.Warning : Color.Secondary)">
+                @(_permissionsDirty ? "Unsaved changes" : "All changes saved") ·
+                @(_selected.Count.ToString("00")) of @(_totalPermissions.ToString("00")) granted
+            </MudText>
+        </div>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+            Pick what holders of this role can do. Root-only permissions take effect only on roles assigned in the root tenant.
+        </MudText>
+
+        @if (_catalogGroups is null)
+        {
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+        }
+        else
+        {
+            @foreach (var group in _catalogGroups)
+            {
+                <div class="mb-4">
+                    <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-1">
+                        <div>
+                            <MudText Typo="Typo.subtitle2">@group.Resource</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="font-mono">
+                                @(group.SelectedCount.ToString("00")) / @(group.Entries.Count.ToString("00"))
+                            </MudText>
+                        </div>
+                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => ToggleGroup(group)">
+                            @(group.AllSelected ? "Clear all" : group.AnySelected ? "Select remaining" : "Select all")
+                        </MudButton>
+                    </div>
+                    <MudPaper Elevation="0" Class="pa-2"
+                              Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 8px;">
+                        @foreach (var entry in group.Entries)
+                        {
+                            <div class="d-flex align-center gap-2 px-2 py-1">
+                                <MudCheckBox T="bool"
+                                             Value="@GetChecked(entry.Name)"
+                                             ValueChanged="@((bool value) => OnPermissionToggled(entry.Name, value))" />
+                                <div style="flex: 1;">
+                                    <div class="d-flex flex-wrap align-center gap-2">
+                                        <MudText Typo="Typo.body2">@entry.Description</MudText>
+                                        @if (entry.IsRoot)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">root</MudChip>
+                                        }
+                                        @if (entry.IsBasic)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">basic</MudChip>
+                                        }
+                                    </div>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="font-mono">@entry.Name</MudText>
+                                </div>
+                            </div>
+                        }
+                    </MudPaper>
+                </div>
+            }
+        }
+
+        <div class="d-flex gap-2 mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Shield"
+                       Disabled="@(!_permissionsDirty || _isSavingPermissions)"
+                       OnClick="SavePermissionsAsync">
+                @(_isSavingPermissions ? "Saving…" : "Save permissions")
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Disabled="@(!_permissionsDirty || _isSavingPermissions)"
+                       OnClick="DiscardPermissions">
+                Discard
+            </MudButton>
+        </div>
+    </MudPaper>
+
+    @if (!IsSystemRole)
+    {
+        <MudPaper Elevation="1" Class="pa-6"
+                  Style="border: 1px solid var(--mud-palette-error); border-radius: 8px;">
+            <div class="d-flex align-center gap-2 mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Delete" Color="Color.Error" />
+                <MudText Typo="Typo.h6" Color="Color.Error">Danger zone</MudText>
+            </div>
+            <MudText Typo="Typo.body2" Class="mb-2">
+                Delete this role. Users assigned to it will lose every permission it grants — this is not reversible.
+            </MudText>
+            <div class="d-flex flex-wrap align-center gap-2">
+                <MudTextField T="string"
+                              Value="@_deleteConfirm"
+                              ValueChanged="@OnDeleteConfirmChanged"
+                              Placeholder="@($"Type {_role.Name} to confirm deletion")"
+                              Style="max-width: 360px; flex: 1;" />
+                <MudButton Variant="Variant.Filled" Color="Color.Error"
+                           Disabled="@(!_deleteReady || _isDeleting)"
+                           OnClick="DeleteRoleAsync">
+                    @(_isDeleting ? "Deleting…" : "Delete role")
+                </MudButton>
+            </div>
+        </MudPaper>
+    }
+}

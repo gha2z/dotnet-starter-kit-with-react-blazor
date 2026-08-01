@@ -7,24 +7,31 @@ using FSH.BlazorShared.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
 using MudBlazor.Services;
+using FSH.BlazorShared.Theming;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
+// Client-side AuthorizeRouteView policy checks log info-level "Authorization failed"
+// for every anonymous route visit — expected noise, not an error. Silence it.
+builder.Logging.AddFilter("Microsoft.AspNetCore.Authorization", LogLevel.Warning);
+
 var baseAddress = builder.HostEnvironment.BaseAddress;
 
-// Runtime config (load /config.json)
-builder.Services.AddScoped<IRuntimeConfigService, RuntimeConfigService>();
-builder.Services.AddScoped(sp =>
-{
-    var config = sp.GetRequiredService<IRuntimeConfigService>();
-    _ = config.LoadAsync(); // fire-and-forget at startup
-    return config;
-});
+// Runtime config (load /config.json from the app origin) — singleton so it can be
+// resolved from the root provider inside IHttpClientFactory client factories
+// (their configure delegates run in the root scope; scoped services throw
+// DirectScopedResolvedFromRootException there). Loaded eagerly in Main below.
+builder.Services.AddSingleton<IRuntimeConfigService>(sp =>
+    new RuntimeConfigService(
+        new HttpClient { BaseAddress = new Uri(baseAddress) },
+        sp.GetRequiredService<ILogger<RuntimeConfigService>>()));
 
 // Auth
 builder.Services.AddSingleton<ITokenStore>(sp =>
@@ -35,35 +42,51 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
 builder.Services.AddScoped<IPermissionsProvider, PermissionsProvider>();
 
 // Auth HTTP client (no auth handler — used for login/refresh only)
-builder.Services.AddHttpClient("FSH.Auth", client =>
-    client.BaseAddress = new Uri(baseAddress));
+builder.Services.AddHttpClient("FSH.Auth", (sp, client) =>
+{
+    var config = sp.GetRequiredService<IRuntimeConfigService>();
+    client.BaseAddress = RuntimeConfigService.ResolveApiBase(baseAddress, config.ApiBaseUrl);
+});
 
 // Auth service
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Feature services
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<IBillingService, BillingService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // Authorization policies
 builder.Services.AddAuthorizationCore(options =>
 {
     options.AddPolicy("Permissions.Users.View", p => p.RequireClaim("permission", "Permissions.Users.View"));
     options.AddPolicy("Permissions.Users.Create", p => p.RequireClaim("permission", "Permissions.Users.Create"));
-    options.AddPolicy("Permissions.Users.Edit", p => p.RequireClaim("permission", "Permissions.Users.Edit"));
+    options.AddPolicy("Permissions.Users.Update", p => p.RequireClaim("permission", "Permissions.Users.Update"));
     options.AddPolicy("Permissions.Users.Delete", p => p.RequireClaim("permission", "Permissions.Users.Delete"));
     options.AddPolicy("Permissions.Roles.View", p => p.RequireClaim("permission", "Permissions.Roles.View"));
     options.AddPolicy("Permissions.Roles.Create", p => p.RequireClaim("permission", "Permissions.Roles.Create"));
-    options.AddPolicy("Permissions.Roles.Edit", p => p.RequireClaim("permission", "Permissions.Roles.Edit"));
+    options.AddPolicy("Permissions.Roles.Update", p => p.RequireClaim("permission", "Permissions.Roles.Update"));
     options.AddPolicy("Permissions.Roles.Delete", p => p.RequireClaim("permission", "Permissions.Roles.Delete"));
     options.AddPolicy("Permissions.Tenants.View", p => p.RequireClaim("permission", "Permissions.Tenants.View"));
     options.AddPolicy("Permissions.Tenants.Create", p => p.RequireClaim("permission", "Permissions.Tenants.Create"));
-    options.AddPolicy("Permissions.Tenants.Edit", p => p.RequireClaim("permission", "Permissions.Tenants.Edit"));
+    options.AddPolicy("Permissions.Tenants.Update", p => p.RequireClaim("permission", "Permissions.Tenants.Update"));
+    options.AddPolicy("Permissions.Tenants.UpgradeSubscription", p => p.RequireClaim("permission", "Permissions.Tenants.UpgradeSubscription"));
+    options.AddPolicy("Permissions.Tenants.ViewTheme", p => p.RequireClaim("permission", "Permissions.Tenants.ViewTheme"));
+    options.AddPolicy("Permissions.Tenants.UpdateTheme", p => p.RequireClaim("permission", "Permissions.Tenants.UpdateTheme"));
 });
 
 // HTTP client with auth handler (for all authenticated API calls)
 builder.Services.AddTransient<AuthDelegatingHandler>();
-builder.Services.AddScoped(sp =>
+builder.Services.AddHttpClient("FSH.Api", (sp, client) =>
 {
-    var handler = sp.GetRequiredService<AuthDelegatingHandler>();
-    return new HttpClient(handler) { BaseAddress = new Uri(baseAddress) };
-});
+    var config = sp.GetRequiredService<IRuntimeConfigService>();
+    client.BaseAddress = RuntimeConfigService.ResolveApiBase(baseAddress, config.ApiBaseUrl);
+})
+.AddHttpMessageHandler<AuthDelegatingHandler>();
+builder.Services.AddScoped(sp =>
+    sp.GetRequiredService<IHttpClientFactory>().CreateClient("FSH.Api"));
 
 // MudBlazor
 builder.Services.AddMudServices(config =>
@@ -73,7 +96,28 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.ShowCloseIcon = true;
 });
 
+// Theme (dark default, persisted to localStorage - React parity)
+builder.Services.AddSingleton(sp => new FshThemeService(sp.GetRequiredService<IJSRuntime>(), "fsh.admin.theme"));
+
 // Realtime
 builder.Services.AddScoped<IHubConnectionService, HubConnectionService>();
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+// Load runtime config before the app starts (no race on first request).
+await host.Services.GetRequiredService<IRuntimeConfigService>().LoadAsync();
+
+// Restore the persisted theme before the first render (avoids a light->dark flash).
+await host.Services.GetRequiredService<FshThemeService>().InitializeAsync();
+
+// Hydrate permissions before the first render so the initial auth state already
+// carries permission claims (React parity: the JWT only carries roles - permissions
+// are resolved server-side per role). Without this, policy-gated routes fail and
+// bounce to /login. Only when a token exists - while signed out there is nothing
+// to hydrate and the request would 401.
+if (!string.IsNullOrEmpty(await host.Services.GetRequiredService<ITokenStore>().GetAccessTokenAsync()))
+{
+    await host.Services.GetRequiredService<IPermissionsProvider>().GetPermissionsAsync();
+}
+
+await host.RunAsync();

@@ -88,6 +88,11 @@
   - `MudTextField` with `For` / `Label`
 
 ### 6.5 Feature Parity Audit
+
+> **Parity status is now tracked in `Phase-07-Parity-Completion/plan.md`** (gap tables per app,
+> hotfixes, verification gates). This checklist is the historical list — cross-reference it with the
+> Phase-7 tables and tick items there as pages land.
+
 - [ ] **Admin app parity** — Compare each page with `clients/admin/src/pages/`
   - Auth: Same login/register/forgot/reset/confirm pages
   - Dashboard cards: Same stats, same layout

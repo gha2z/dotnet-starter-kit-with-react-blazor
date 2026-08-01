@@ -1,0 +1,13 @@
+@namespace FSH.BlazorShared.Components
+
+<div class="fsh-section-rule">
+    <span class="fsh-mono-label">// @Label</span>
+    <div class="fsh-section-rule-line"></div>
+</div>
+
+@code {
+    /// <summary>
+    /// Section rule (React parity: "// Label" mono caption with a divider line).
+    /// </summary>
+    [Parameter] public string Label { get; set; } = string.Empty;
+}

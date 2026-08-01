@@ -4,9 +4,10 @@
 
 ## Status
 
-- Phase 5: **🔲 Not started**
-- Prerequisites: Phase 2 ✅ + Phase 3 ✅ (BlazorShared RCL stable, all pages known)
-- Blocked: Requires `dotnet workload install maui` on dev machine
+- Phase 5: **🟨 Scaffold exists, workload resolved — app has ZERO `.razor` pages** (bare shell project only)
+- Prerequisites: Phase 2 ✅ + Phase 3 ✅ (BlazorShared RCL stable, all pages known) — Phases 2/3 are **not** complete; Hybrid build-out starts once pages land
+- **MAUI workload (resolved Aug 2026):** `dotnet workload install maui` must run **elevated** (UAC). A non-elevated attempt corrupted the workload store (deleted manifest packs under `sdk-manifests\10.0.300\`, breaking every build with `MSB4242`). Recovery recipe: elevated → delete stale `workloadsets\10.0.302` → **recreate the empty folder** (installer requires it) → elevated `dotnet workload install maui`. Full story in `Phase-07-Parity-Completion/hands-on-phase-7.md` §7.6.
+- **Parity note:** Hybrid reuses `BlazorShared` (shell CSS, `FshThemeService`, components). `FshThemeService`/`ThemeMode` are not yet referenced by Hybrid — wire `("fsh.theme", ThemeMode.System)`-style registration when the shell is built (same storage contract; MAUI should use SecureStorage-backed token store but localStorage-backed theme is acceptable).
 
 ## Task Checklist
 

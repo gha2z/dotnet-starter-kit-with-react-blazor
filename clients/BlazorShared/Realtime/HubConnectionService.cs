@@ -1,4 +1,5 @@
 using FSH.BlazorShared.Auth;
+using FSH.BlazorShared.Infrastructure;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
@@ -8,6 +9,7 @@ namespace FSH.BlazorShared.Realtime;
 public sealed class HubConnectionService(
     ITokenStore tokenStore,
     NavigationManager nav,
+    IRuntimeConfigService config,
     ILogger<HubConnectionService> logger) : IHubConnectionService, IAsyncDisposable
 {
     private HubConnection? _hub;
@@ -22,8 +24,12 @@ public sealed class HubConnectionService(
             await StopAsync();
         }
 
+        var hubUri = new Uri(
+            RuntimeConfigService.ResolveApiBase(nav.BaseUri, config.ApiBaseUrl),
+            "/api/v1/realtime/hub");
+
         _hub = new HubConnectionBuilder()
-            .WithUrl(nav.ToAbsoluteUri("/api/v1/realtime/hub"), options =>
+            .WithUrl(hubUri, options =>
             {
                 options.AccessTokenProvider = () => tokenStore.GetAccessTokenAsync();
             })
