@@ -23,7 +23,7 @@ public sealed class RolePermissionTests
         var page = await rolesResponse.DeserializeAsync<PagedResponse<RoleDto>>();
         var adminRole = page.Items.First(r => r.Name == "Admin");
 
-        var response = await client.GetAsync($"{TestConstants.IdentityBasePath}/{adminRole.Id}/permissions");
+        var response = await client.GetAsync($"{TestConstants.IdentityBasePath}/roles/{adminRole.Id}/permissions");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
@@ -44,7 +44,7 @@ public sealed class RolePermissionTests
         var createdRole = await createResponse.DeserializeAsync<RoleDto>();
 
         var response = await client.PutAsJsonAsync(
-            $"{TestConstants.IdentityBasePath}/{createdRole.Id}/permissions", new
+            $"{TestConstants.IdentityBasePath}/roles/{createdRole.Id}/permissions", new
             {
                 roleId = createdRole.Id,
                 permissions = new[] { "Permissions.AuditTrails.View" }

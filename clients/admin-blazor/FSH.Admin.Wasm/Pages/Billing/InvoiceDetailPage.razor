@@ -1,0 +1,177 @@
+@page "/billing/invoices/{Id}"
+@attribute [Authorize(Policy = BillingPermissions.View)]
+@using FSH.BlazorShared.Formatting
+@using FSH.BlazorShared.Models.Billing
+
+<BillingScaffold>
+    <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-2" OnClick="GoBackAsync">
+        All invoices
+    </MudButton>
+
+    @if (_error is not null)
+    {
+        <FshErrorBand Message="@_error" />
+    }
+
+    @if (_invoice is null && _error is null)
+    {
+        <div class="d-flex justify-center py-12">
+            <MudProgressCircular Indeterminate="true" />
+        </div>
+    }
+
+    @if (_invoice is not null)
+    {
+        <FshPageHeader Title="@FshFormat.Money(_invoice.SubtotalAmount, _invoice.Currency)"
+                       Description="@HeaderDescription"
+                       Icon="@Icons.Material.Filled.Description"
+                       Tone="Color.Warning">
+            <FshPermissionGate Perms="@(new[] { BillingPermissions.Manage })">
+                <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Download"
+                           Disabled="@_isDownloading"
+                           OnClick="DownloadPdfAsync">
+                    @(_isDownloading ? "Preparing…" : "Download PDF")
+                </MudButton>
+            </FshPermissionGate>
+        </FshPageHeader>
+
+        <div class="d-flex flex-wrap align-center gap-2 mb-3" style="margin-top: -8px;">
+            <code class="fsh-code-chip">@_invoice.InvoiceNumber</code>
+            <FshStatusPill Text="@_invoice.Status" />
+            <FshStatusPill Text="@_invoice.Purpose" Tone="Color.Default" />
+        </div>
+
+        <div class="row">
+            <div class="col-12 col-lg-8">
+                <MudPaper Elevation="1" Class="pa-4 pa-md-6 mb-4">
+                    <div class="d-flex align-center gap-2 mb-1">
+                        <MudIcon Icon="@Icons.Material.Filled.ViewList" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6" Style="margin: 0;">Line items</MudText>
+                    </div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0; display: block; margin-bottom: 16px;">
+                        @(_invoice.LineItems.Count == 1 ? "1 line" : $"{_invoice.LineItems.Count} lines")
+                    </MudText>
+
+                    @if (_invoice.LineItems.Count == 0)
+                    {
+                        <FshEmptyState Icon="@Icons.Material.Filled.ViewList"
+                                       Kicker="// line items"
+                                       Title="No line items."
+                                       Description="This invoice has no line items yet." />
+                    }
+                    else
+                    {
+                        @foreach (var item in _invoice.LineItems)
+                        {
+                            <div class="d-flex align-baseline justify-space-between gap-4 py-3" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                                <div class="min-w-0">
+                                    <div class="d-flex flex-wrap align-center gap-2">
+                                        <MudText Typo="Typo.body2" Style="margin: 0;">@item.Description</MudText>
+                                        <FshStatusPill Text="@item.Kind" Tone="@LineItemTone(item.Kind)" />
+                                        @if (!string.IsNullOrEmpty(item.Resource))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="font-mono" Style="margin: 0; text-transform: uppercase; letter-spacing: 0.18em; font-size: 10.5px;">
+                                                @item.Resource
+                                            </MudText>
+                                        }
+                                    </div>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="font-mono tabular-nums" Style="margin: 0;">
+                                        @FshFormat.Number(item.Quantity) × @FshFormat.Money(item.UnitPrice, _invoice.Currency)
+                                    </MudText>
+                                </div>
+                                <MudText Typo="Typo.body2" Class="font-weight-medium tabular-nums text-right" Style="margin: 0;">
+                                    @FshFormat.Money(item.Amount, _invoice.Currency)
+                                </MudText>
+                            </div>
+                        }
+                        <div class="d-flex align-baseline justify-space-between gap-4 py-4" style="border-top: 2px solid var(--mud-palette-text-primary);">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="font-mono" Style="text-transform: uppercase; letter-spacing: 0.18em;">
+                                subtotal
+                            </MudText>
+                            <MudText Typo="Typo.h6" Class="font-weight-medium tabular-nums" Style="margin: 0;">
+                                @FshFormat.Money(_invoice.SubtotalAmount, _invoice.Currency)
+                            </MudText>
+                        </div>
+                    }
+                </MudPaper>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <FshPermissionGate Perms="@(new[] { BillingPermissions.Manage })">
+                    <MudPaper Elevation="1" Class="pa-4 mb-4">
+                        <div class="d-flex align-center gap-2 mb-1">
+                            <MudIcon Icon="@Icons.Material.Filled.Send" Color="Color.Primary" />
+                            <MudText Typo="Typo.subtitle1" Style="margin: 0;">Issue</MudText>
+                        </div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="display: block; margin-bottom: 12px;">
+                            Transition from Draft to Issued status.
+                        </MudText>
+                        <MudDatePicker @bind-Date="_dueAt"
+                                       Label="Due date"
+                                       HelperText="Leave blank for server default (+14 days)."
+                                       Clearable="true"
+                                       Disabled="@(Status != "Draft" || _isIssuing)"
+                                       Margin="Margin.Dense"
+                                       Class="mb-2" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                   Disabled="@(Status != "Draft" || _isIssuing)"
+                                   OnClick="IssueAsync"
+                                   Class="w-100">
+                            @(_isIssuing ? "Issuing…" : "Issue invoice")
+                        </MudButton>
+                    </MudPaper>
+
+                    <MudPaper Elevation="1" Class="pa-4 mb-4">
+                        <div class="d-flex align-center gap-2 mb-1">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                            <MudText Typo="Typo.subtitle1" Style="margin: 0;">Mark paid</MudText>
+                        </div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="display: block; margin-bottom: 12px;">
+                            Records manual payment receipt. Idempotent.
+                        </MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                                   Disabled="@(Status != "Issued" || _isPaying)"
+                                   OnClick="MarkPaidAsync"
+                                   Class="w-100">
+                            @(_isPaying ? "Saving…" : "Mark as paid")
+                        </MudButton>
+                    </MudPaper>
+
+                    <MudPaper Elevation="1" Class="pa-4 mb-4">
+                        <div class="d-flex align-center gap-2 mb-1">
+                            <MudIcon Icon="@Icons.Material.Filled.Block" Color="Color.Error" />
+                            <MudText Typo="Typo.subtitle1" Style="margin: 0;">Void</MudText>
+                        </div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="display: block; margin-bottom: 12px;">
+                            Cancel from Draft or Issued. Irreversible.
+                        </MudText>
+                        <MudTextField T="string" @bind-Value="_voidReason"
+                                      Label="Reason"
+                                      Placeholder="duplicate · disputed · …"
+                                      Margin="Margin.Dense"
+                                      Disabled="@(Status is "Paid" or "Void" || _isVoiding)"
+                                      Class="mb-2" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small"
+                                   Disabled="@(Status is "Paid" or "Void" || _isVoiding)"
+                                   OnClick="VoidAsync"
+                                   Class="w-100">
+                            @(_isVoiding ? "Voiding…" : "Void invoice")
+                        </MudButton>
+                    </MudPaper>
+                </FshPermissionGate>
+
+                @if (!string.IsNullOrWhiteSpace(_invoice.Notes))
+                {
+                    <MudPaper Elevation="1" Class="pa-4">
+                        <div class="d-flex align-center gap-2 mb-1">
+                            <MudIcon Icon="@Icons.Material.Filled.Notes" Color="Color.Primary" />
+                            <MudText Typo="Typo.subtitle1" Style="margin: 0;">Notes</MudText>
+                        </div>
+                        <MudText Typo="Typo.caption" Class="whitespace-pre-line" Style="white-space: pre-line;">@_invoice.Notes</MudText>
+                    </MudPaper>
+                }
+            </div>
+        </div>
+    }
+</BillingScaffold>

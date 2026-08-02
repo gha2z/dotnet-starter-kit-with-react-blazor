@@ -28,6 +28,19 @@
     white-space: nowrap;
 }
 
+.fsh-code-chip {
+    font-family: var(--fsh-mono);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
+    padding: 4px 8px;
+    border-radius: 6px;
+    color: var(--mud-palette-text-primary);
+    background: color-mix(in srgb, var(--mud-palette-text-primary) 6%, transparent);
+    white-space: nowrap;
+}
+
 .fsh-truncate {
     overflow: hidden;
     text-overflow: ellipsis;

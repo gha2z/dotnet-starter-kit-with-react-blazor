@@ -100,8 +100,7 @@ test.describe("identity/roles/:roleId — detail", () => {
     await seedAuthedSession(page, TEST_USER);
     await installShellMocks(page);
     await mockJsonResponse(page, "**/api/v1/identity/permissions/catalog", CATALOG);
-    // getRoleWithPermissions hits /identity/{roleId}/permissions (no /roles/).
-    await mockJsonResponse(page, `**/api/v1/identity/${ROLE_ID}/permissions`, ROLE);
+    await mockJsonResponse(page, `**/api/v1/identity/roles/${ROLE_ID}/permissions`, ROLE);
   });
 
   test("loads the role and shows the back link + details form", async ({ page }) => {

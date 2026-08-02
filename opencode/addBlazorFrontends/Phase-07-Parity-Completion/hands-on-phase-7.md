@@ -2,7 +2,7 @@
 
 This chapter is the educational companion to `Phase-07-Parity-Completion/plan.md`. It explains the
 **why** behind the parity conventions, the two hotfixes, and the patterns you will use for every
-remaining page. Read it before starting 2.4 Billing or any dashboard 3.x page.
+remaining page. Read it before starting 2.5 Webhooks or any dashboard 3.x page.
 
 ## 7.1 Why parity is structural, not visual
 
@@ -176,3 +176,41 @@ The Hybrid app itself still has **zero `.razor` pages** — Phase 5 builds the s
 from scratch. Both Blazor WASM suites remain green after all of this: admin **58/58**, dashboard
 **18/18** (also bumped transitive `AngleSharp` to 1.7.0 in the test projects — 1.3.0 triggers
 `NU1902` GHSA-pgww-w46g-26qg).
+
+## 7.7 Hotfix 3 — role-permissions route asymmetry (404 on role detail)
+
+Symptom: clicking a role in the admin roles page rendered the page fine but showed
+`Failed to load role: net_http_message_not_success_statuscode_reason, 404, Not Found` — the
+browser console showed `GET /api/v1/identity/roles/{id}/permissions → 404`.
+
+**Root cause:** the backend registered the two role-permissions endpoints on the identity group
+without the `/roles` segment — `GET /{id:guid}/permissions` and `PUT /{id}/permissions` —
+i.e. `/api/v1/identity/{id}/permissions`. The React admin + dashboard API clients mirrored that
+asymmetric path (a `roles.ts` comment even documented the asymmetry), while `BlazorShared/RoleService`
+used the canonical `/roles/{id}/permissions`. A Phase-2 fix on the Blazor side had regressed on the
+server. The 404 was real — the route simply did not exist.
+
+**Lesson:** a URL is a contract. When two frontends + an `.http` scratch file disagree with the
+server, the server's own convention wins: every sibling endpoint lives under `/roles/`, so the
+permissions endpoints belong there too. `Phase-02-Admin-Feature-Pages/hands-on-phase-2.md` (§10
+table) records the same bug on the Blazor side — grep the repo for `/{id}/permissions` before
+touching these routes again.
+
+**Fix (server-first, then every consumer in the same change):**
+
+1. `GetRolePermissionsEndpoint` → `MapGet("/roles/{id:guid}/permissions")`
+2. `UpdateRolePermissionsEndpoint` → `MapPut("/roles/{id}/permissions")`
+3. `clients/admin/src/api/roles.ts` + `clients/dashboard/src/api/identity.ts` → add `/roles/`,
+   delete the asymmetry comment.
+4. Playwright specs `clients/admin/tests/roles/roles.spec.ts` +
+   `clients/dashboard/tests/identity/roles.spec.ts` → update mock URLs / PUT assertion.
+5. Integration tests: `RolePermissionTests`, `RolePrivilegeEscalationTests`,
+   `SystemRoleProtectionTests`, `GroupRolePermissionTests`, `PermissionCacheInvalidationTests`
+   → `{IdentityBasePath}/roles/{id}/permissions`.
+6. `identity-roles.http` → PUT and POST lines gained the missing `/roles` (POST `/api/v1/identity`
+   was broken too).
+
+**Verification:** backend build 0 warnings; admin Blazor 58/58 + dashboard Blazor 18/18; admin PW
+roles 7/7 + dashboard PW roles 5/5 (after `npx playwright install chromium` — browsers were not
+installed on this machine); 17 role-permission integration tests green against real Postgres
+(Testcontainers).

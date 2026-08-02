@@ -139,8 +139,8 @@ public class TenantCreateDialogTests : TestSetup
         _billingService.GetPlansAsync(Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns(
             [
-                new BillingPlanDto(Guid.NewGuid(), "free", "Free", "USD", 0m, true, "Monthly", null),
-                new BillingPlanDto(Guid.NewGuid(), "pro", "Pro", "USD", 49m, true, "Monthly", 490m),
+                new BillingPlanDto(Guid.NewGuid(), "free", "Free", "USD", 0m, new Dictionary<string, decimal>(), true, "Monthly", null),
+                new BillingPlanDto(Guid.NewGuid(), "pro", "Pro", "USD", 49m, new Dictionary<string, decimal>(), true, "Monthly", 490m),
             ]);
         _tenantService.CreateAsync(Arg.Any<CreateTenantRequest>(), Arg.Any<CancellationToken>())
             .Returns(new CreateTenantResponse("acme-corp", "corr-1", "Queued"));

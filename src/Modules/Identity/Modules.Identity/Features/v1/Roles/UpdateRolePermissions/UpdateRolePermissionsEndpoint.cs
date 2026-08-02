@@ -14,7 +14,7 @@ public static class UpdateRolePermissionsEndpoint
 {
     public static RouteHandlerBuilder MapUpdateRolePermissionsEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        return endpoints.MapPut("/{id}/permissions", Handler)
+        return endpoints.MapPut("/roles/{id}/permissions", Handler)
         .WithName("UpdateRolePermissions")
         .WithSummary("Update role permissions")
         .RequirePermission(IdentityPermissions.Roles.Update)

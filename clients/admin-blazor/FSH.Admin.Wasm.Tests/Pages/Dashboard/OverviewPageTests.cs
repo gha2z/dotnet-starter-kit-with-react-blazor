@@ -23,10 +23,10 @@ public class OverviewPageTests : TestSetup
     }
 
     private static BillingPlanDto SamplePlan(string key, bool isActive = true) =>
-        new(Guid.NewGuid(), key, key, "USD", 10m, isActive, "Monthly", null);
+        new(Guid.NewGuid(), key, key, "USD", 10m, new Dictionary<string, decimal>(), isActive, "Monthly", null);
 
     private static InvoiceDto SampleInvoice(Guid id, string status) =>
-        new(id, "root", $"INV-{id:N}", 2026, 7, "USD", 100m, status, DateTime.UtcNow, "Subscription");
+        new(id, "root", $"INV-{id:N}", 2026, 7, "USD", 100m, status, DateTime.UtcNow, null, null, null, null, null, [], "Subscription", null, null);
 
     [Fact]
     public void Renders_all_four_stats_from_services()
@@ -35,7 +35,7 @@ public class OverviewPageTests : TestSetup
             .Returns(new PagedResult<TenantDto>([], 1, 1, 12, 12, true, false));
         _billingService.GetPlansAsync(Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns([SamplePlan("Starter"), SamplePlan("Pro"), SamplePlan("Retired", isActive: false)]);
-        _billingService.GetInvoicesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _billingService.GetInvoicesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<InvoiceDto>(
                 [SampleInvoice(Guid.NewGuid(), "Issued"), SampleInvoice(Guid.NewGuid(), "Paid")],
                 1, 50, 7, 1, false, false));
@@ -62,7 +62,7 @@ public class OverviewPageTests : TestSetup
             .Returns(new PagedResult<TenantDto>([], 1, 1, 4, 4, false, false));
         _billingService.GetPlansAsync(Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns([SamplePlan("Starter")]);
-        _billingService.GetInvoicesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _billingService.GetInvoicesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<InvoiceDto>([], 1, 50, 0, 0, false, false));
 
         var cut = Render<OverviewPage>();
@@ -93,7 +93,7 @@ public class OverviewPageTests : TestSetup
             .Returns(Task.FromException<PagedResult<TenantDto>>(new InvalidOperationException("boom")));
         _billingService.GetPlansAsync(Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns([SamplePlan("Starter")]);
-        _billingService.GetInvoicesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        _billingService.GetInvoicesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
             .Returns(new PagedResult<InvoiceDto>([], 1, 50, 0, 0, false, false));
 
         var cut = Render<OverviewPage>();

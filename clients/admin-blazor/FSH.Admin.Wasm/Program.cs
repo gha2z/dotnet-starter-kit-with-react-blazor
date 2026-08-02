@@ -75,6 +75,8 @@ builder.Services.AddAuthorizationCore(options =>
     options.AddPolicy("Permissions.Tenants.UpgradeSubscription", p => p.RequireClaim("permission", "Permissions.Tenants.UpgradeSubscription"));
     options.AddPolicy("Permissions.Tenants.ViewTheme", p => p.RequireClaim("permission", "Permissions.Tenants.ViewTheme"));
     options.AddPolicy("Permissions.Tenants.UpdateTheme", p => p.RequireClaim("permission", "Permissions.Tenants.UpdateTheme"));
+    options.AddPolicy("Permissions.Billing.View", p => p.RequireClaim("permission", "Permissions.Billing.View"));
+    options.AddPolicy("Permissions.Billing.Manage", p => p.RequireClaim("permission", "Permissions.Billing.Manage"));
 });
 
 // HTTP client with auth handler (for all authenticated API calls)

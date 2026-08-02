@@ -168,7 +168,7 @@ export async function listRoles(): Promise<RoleDto[]> {
 }
 
 export async function getRoleWithPermissions(id: string): Promise<RoleDto> {
-  return apiFetch<RoleDto>(`/api/v1/identity/${encodeURIComponent(id)}/permissions`);
+  return apiFetch<RoleDto>(`/api/v1/identity/roles/${encodeURIComponent(id)}/permissions`);
 }
 
 export async function upsertRole(input: UpsertRoleInput): Promise<RoleDto> {
@@ -179,7 +179,7 @@ export async function upsertRole(input: UpsertRoleInput): Promise<RoleDto> {
 }
 
 export async function updateRolePermissions(roleId: string, permissions: string[]): Promise<string> {
-  return apiFetch<string>(`/api/v1/identity/${encodeURIComponent(roleId)}/permissions`, {
+  return apiFetch<string>(`/api/v1/identity/roles/${encodeURIComponent(roleId)}/permissions`, {
     method: "PUT",
     body: JSON.stringify({ roleId, permissions }),
   });

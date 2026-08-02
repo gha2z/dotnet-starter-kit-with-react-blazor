@@ -98,7 +98,7 @@ public sealed class SystemRoleProtectionTests
         var basicRole = await GetRoleAsync(client, "Basic");
 
         var response = await client.PutAsJsonAsync(
-            $"{TestConstants.IdentityBasePath}/{basicRole.Id}/permissions",
+            $"{TestConstants.IdentityBasePath}/roles/{basicRole.Id}/permissions",
             new
             {
                 roleId = basicRole.Id,
@@ -115,7 +115,7 @@ public sealed class SystemRoleProtectionTests
         var adminRole = await GetRoleAsync(client, "Admin");
 
         var response = await client.PutAsJsonAsync(
-            $"{TestConstants.IdentityBasePath}/{adminRole.Id}/permissions",
+            $"{TestConstants.IdentityBasePath}/roles/{adminRole.Id}/permissions",
             new
             {
                 roleId = adminRole.Id,

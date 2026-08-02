@@ -170,8 +170,7 @@ test.describe("role detail permission matrix", () => {
   };
 
   test("loads the role and renders the profile + permission catalog groups", async ({ page }) => {
-    // NOTE: path is /identity/{id}/permissions — NO /roles/ segment.
-    await mockJsonResponse(page, `**/api/v1/identity/${ROLE.id}/permissions`, ROLE);
+    await mockJsonResponse(page, `**/api/v1/identity/roles/${ROLE.id}/permissions`, ROLE);
 
     await page.goto(`/roles/${ROLE.id}`);
 
@@ -197,8 +196,8 @@ test.describe("role detail permission matrix", () => {
     await expect(main.getByText("Permissions.Users.View", { exact: true })).toBeVisible();
   });
 
-  test("toggling a permission and saving PUTs to /identity/{id}/permissions", async ({ page }) => {
-    await mockJsonResponse(page, `**/api/v1/identity/${ROLE.id}/permissions`, ROLE);
+  test("toggling a permission and saving PUTs to /identity/roles/{id}/permissions", async ({ page }) => {
+    await mockJsonResponse(page, `**/api/v1/identity/roles/${ROLE.id}/permissions`, ROLE);
 
     await page.goto(`/roles/${ROLE.id}`);
     const main = page.getByRole("main");
@@ -211,7 +210,7 @@ test.describe("role detail permission matrix", () => {
 
     const reqPromise = page.waitForRequest(
       (r) =>
-        r.url().endsWith(`/api/v1/identity/${ROLE.id}/permissions`) && r.method() === "PUT",
+        r.url().endsWith(`/api/v1/identity/roles/${ROLE.id}/permissions`) && r.method() === "PUT",
       { timeout: 5_000 },
     );
     await main.getByRole("button", { name: /save permissions/i }).click();

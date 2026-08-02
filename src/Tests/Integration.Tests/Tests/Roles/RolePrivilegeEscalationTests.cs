@@ -81,13 +81,13 @@ public sealed class RolePrivilegeEscalationTests
     private static async Task SetRolePermissionsAsync(HttpClient client, string roleId, params string[] permissions)
     {
         var resp = await client.PutAsJsonAsync(
-            $"{TestConstants.IdentityBasePath}/{roleId}/permissions", new { roleId, permissions });
+            $"{TestConstants.IdentityBasePath}/roles/{roleId}/permissions", new { roleId, permissions });
         resp.StatusCode.ShouldBe(HttpStatusCode.OK, await resp.Content.ReadAsStringAsync());
     }
 
     private static async Task<string> GetRolePermissionsBodyAsync(HttpClient client, string roleId)
     {
-        var resp = await client.GetAsync($"{TestConstants.IdentityBasePath}/{roleId}/permissions");
+        var resp = await client.GetAsync($"{TestConstants.IdentityBasePath}/roles/{roleId}/permissions");
         resp.IsSuccessStatusCode.ShouldBeTrue($"Get role permissions failed: {await resp.Content.ReadAsStringAsync()}");
         return await resp.Content.ReadAsStringAsync();
     }

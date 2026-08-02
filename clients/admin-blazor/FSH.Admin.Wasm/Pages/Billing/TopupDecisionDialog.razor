@@ -1,0 +1,79 @@
+@namespace FSH.Admin.Wasm.Pages.Billing
+@using FSH.BlazorShared.Formatting
+@using FSH.BlazorShared.Models.Billing
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4">
+            @if (Mode == "reject")
+            {
+                <text>Reject the <b>@FshFormat.Money(Request.Amount, Request.Currency)</b> top-up for tenant <code>@Request.TenantId</code>? This cannot be undone.</text>
+            }
+            else
+            {
+                <text>Approve the <b>@FshFormat.Money(Request.Amount, Request.Currency)</b> top-up for tenant <code>@Request.TenantId</code>? An invoice will be generated for the operator to mark paid.</text>
+            }
+        </MudText>
+        <MudTextField T="string"
+                      @bind-Value="_note"
+                      Label="@(Mode == "reject" ? "Reason" : "Note")"
+                      Placeholder="@(Mode == "reject" ? "duplicate · invalid · …" : "internal note")"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Disabled="_isSubmitting" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="@(Mode == "reject" ? Color.Error : Color.Primary)"
+                   OnClick="ConfirmAsync"
+                   Disabled="_isSubmitting">
+            @(_isSubmitting ? "Saving…" : (Mode == "reject" ? "Reject" : "Approve & generate invoice"))
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public string Mode { get; set; } = "approve";
+    [Parameter] public TopupRequestDto Request { get; set; } = default!;
+
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Inject] private IBillingService BillingService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private string _note = string.Empty;
+    private bool _isSubmitting;
+
+    private async Task ConfirmAsync()
+    {
+        _isSubmitting = true;
+        try
+        {
+            var note = string.IsNullOrWhiteSpace(_note) ? null : _note.Trim();
+            object result;
+            if (Mode == "reject")
+            {
+                await BillingService.RejectTopupRequestAsync(Request.Id, note);
+                result = true;
+            }
+            else
+            {
+                var invoiceId = await BillingService.ApproveTopupRequestAsync(Request.Id, note);
+                result = invoiceId;
+            }
+
+            Dialog.Close(result);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"{(Mode == "reject" ? "Reject" : "Approve")} failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private void Cancel() => Dialog.Cancel();
+}

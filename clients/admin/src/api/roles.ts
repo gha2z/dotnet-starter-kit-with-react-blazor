@@ -34,9 +34,7 @@ export function getRole(id: string): Promise<RoleDto> {
 }
 
 export function getRoleWithPermissions(id: string): Promise<RoleDto> {
-  // Note: this endpoint is mapped at `/{id:guid}/permissions` under the
-  // identity group, NOT under `/roles/`. Server-side asymmetry preserved.
-  return apiFetch<RoleDto>(`${ROOT}/${encodeURIComponent(id)}/permissions`);
+  return apiFetch<RoleDto>(`${ROOT}/roles/${encodeURIComponent(id)}/permissions`);
 }
 
 export function upsertRole(input: UpsertRoleInput): Promise<RoleDto> {
@@ -57,7 +55,7 @@ export function deleteRole(id: string): Promise<void> {
 }
 
 export function updateRolePermissions(input: UpdateRolePermissionsInput): Promise<string> {
-  return apiFetch<string>(`${ROOT}/${encodeURIComponent(input.roleId)}/permissions`, {
+  return apiFetch<string>(`${ROOT}/roles/${encodeURIComponent(input.roleId)}/permissions`, {
     method: "PUT",
     body: JSON.stringify({ roleId: input.roleId, permissions: input.permissions }),
   });

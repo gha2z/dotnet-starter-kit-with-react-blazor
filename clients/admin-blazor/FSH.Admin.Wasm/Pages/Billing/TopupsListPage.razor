@@ -1,0 +1,165 @@
+@page "/billing/topups"
+@attribute [Authorize(Policy = BillingPermissions.View)]
+@using FSH.BlazorShared.Formatting
+@using FSH.BlazorShared.Models.Billing
+
+<BillingScaffold>
+    <div class="row mb-4">
+        <div class="col-12 col-sm-4 mb-2 mb-sm-0">
+            <FshKpiTile Label="Page requests" Value="@_items.Count.ToString()" Loading="@_loading" Footnote="@(_data is null ? "loading…" : $"{_data.TotalCount} total")" />
+        </div>
+        <div class="col-12 col-sm-4 mb-2 mb-sm-0">
+            <FshKpiTile Label="Pending" Value="@_pendingCount.ToString()" Loading="@_loading" Footnote="awaiting decision (this page)" />
+        </div>
+        <div class="col-12 col-sm-4">
+            <FshKpiTile Label="Requested" Value="@FshFormat.Money(_requestedTotal, _currency)" Loading="@_loading" Footnote="this page" />
+        </div>
+    </div>
+
+    <MudPaper Elevation="1" Class="pa-4 mb-4">
+        <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-3">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Color="Color.Secondary" Size="Size.Small" />
+                <div>
+                    <MudText Typo="Typo.subtitle1" Style="margin: 0;">Filters</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">
+                        Review wallet top-up requests across every tenant. Approve to generate an invoice.
+                    </MudText>
+                </div>
+            </div>
+            @if (FiltersDirty)
+            {
+                <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.Clear" OnClick="ClearFiltersAsync">
+                    Clear
+                </MudButton>
+            }
+        </div>
+        <div class="row">
+            <div class="col-12 col-sm-6 mb-2 mb-sm-0">
+                <MudTextField T="string"
+                              @bind-Value="_tenantFilter"
+                              @bind-Value:after="OnFilterChangedAsync"
+                              Label="Tenant"
+                              Placeholder="tenant identifier"
+                              Clearable="true"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+            </div>
+            <div class="col-12 col-sm-6">
+                <MudSelect T="string"
+                           @bind-Value="_statusFilter"
+                           @bind-Value:after="OnFilterChangedAsync"
+                           Label="Status"
+                           Margin="Margin.Dense"
+                           Variant="Variant.Outlined">
+                    <MudSelectItem Value="@string.Empty">All</MudSelectItem>
+                    @foreach (var status in Statuses)
+                    {
+                        <MudSelectItem Value="@status">@status</MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+        </div>
+    </MudPaper>
+
+    <MudPaper Elevation="1" Class="pa-4 pa-md-6">
+        <div class="mb-1">
+            <MudText Typo="Typo.h6" Style="margin: 0;">Top-up requests</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">
+                @(_data is null ? "Loading…" : $"Page {_data.PageNumber} of {Math.Max(_data.TotalPages, 1)} · {_data.TotalCount} total")
+            </MudText>
+        </div>
+
+        @if (_error is not null)
+        {
+            <FshErrorBand Message="@_error" />
+        }
+        else if (_loading && _items.Count == 0)
+        {
+            @for (var i = 0; i < 5; i++)
+            {
+                <div class="d-flex align-center justify-space-between gap-4 py-3" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                    <div style="flex: 1;">
+                        <div class="fsh-skeleton" style="width: 45%; height: 16px;"></div>
+                        <div class="fsh-skeleton mt-2" style="width: 70%; height: 12px;"></div>
+                    </div>
+                    <div class="fsh-skeleton" style="width: 120px; height: 24px;"></div>
+                </div>
+            }
+        }
+        else if (_items.Count == 0)
+        {
+            <FshEmptyState Icon="@Icons.Material.Filled.AccountBalanceWallet"
+                           Kicker="// top-ups"
+                           Title="No requests found."
+                           Description="No top-up requests match the current filters." />
+        }
+        else
+        {
+            @foreach (var req in _items)
+            {
+                <div class="d-flex align-center justify-space-between gap-4 py-3" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                    <div class="d-flex align-center gap-3 min-w-0">
+                        <FshToneIconTile Icon="@Icons.Material.Filled.AccountBalanceWallet" TileSize="36px" IconSize="Size.Small" />
+                        <div class="min-w-0">
+                            <div class="d-flex flex-wrap align-center gap-2">
+                                <MudText Typo="Typo.subtitle1" Class="font-weight-medium tabular-nums" Style="margin: 0;">
+                                    @FshFormat.Money(req.Amount, req.Currency)
+                                </MudText>
+                                <FshStatusPill Text="@req.Status" Tone="@StatusTone(req.Status)" />
+                                @if (req.InvoiceId is not null)
+                                {
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="pa-0 font-mono"
+                                               StartIcon="@Icons.Material.Filled.Receipt" OnClick="@(() => Nav.NavigateTo($"/billing/invoices/{req.InvoiceId}"))">
+                                        invoice
+                                    </MudButton>
+                                }
+                            </div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="font-mono" Style="margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                tenant <span style="color: var(--mud-palette-text-primary);">@req.TenantId</span> ·
+                                created @FshFormat.DateShort(req.CreatedAtUtc)
+                                @if (req.DecidedAtUtc is not null)
+                                {
+                                    <text> · decided @FshFormat.DateShort(req.DecidedAtUtc)</text>
+                                }
+                                @if (!string.IsNullOrEmpty(req.Note))
+                                {
+                                    <text> · "@req.Note"</text>
+                                }
+                            </MudText>
+                        </div>
+                    </div>
+                    @if (req.Status == "Pending")
+                    {
+                        <FshPermissionGate Perms="@(new[] { BillingPermissions.Manage })">
+                            <div class="d-flex align-center gap-2">
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Check"
+                                           Disabled="@_isDeciding"
+                                           OnClick="@(() => OpenDecisionAsync(req, true))">
+                                    Approve
+                                </MudButton>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.Close"
+                                           Disabled="@_isDeciding"
+                                           OnClick="@(() => OpenDecisionAsync(req, false))">
+                                    Reject
+                                </MudButton>
+                            </div>
+                        </FshPermissionGate>
+                    }
+                </div>
+            }
+        }
+
+        @if (_data is not null)
+        {
+            <div class="d-flex justify-end pt-4">
+                <FshPager TotalCount="@_data.TotalCount"
+                          PageNumber="@_pageNumber"
+                          PageSize="PageSize"
+                          PageChanged="OnPageChangedAsync" />
+            </div>
+        }
+    </MudPaper>
+</BillingScaffold>

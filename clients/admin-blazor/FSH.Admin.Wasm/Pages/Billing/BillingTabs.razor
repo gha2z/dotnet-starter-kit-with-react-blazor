@@ -1,0 +1,28 @@
+@namespace FSH.Admin.Wasm.Pages.Billing
+@inject NavigationManager Nav
+
+<div class="d-flex align-center gap-1 mb-4" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+    @foreach (var tab in Tabs)
+    {
+        <MudButton Variant="Variant.Text"
+                   Class="fsh-billing-tab rounded-0 px-4 py-2"
+                   Style="@(IsActive(tab) ? "border-bottom: 2px solid var(--mud-palette-primary); color: var(--mud-palette-primary); font-weight: 500;" : "border-bottom: 2px solid transparent; color: var(--mud-palette-text-secondary);")"
+                   OnClick="() => Nav.NavigateTo(tab.Href)">
+            @tab.Label
+        </MudButton>
+    }
+</div>
+
+@code {
+    private static readonly TabSpec[] Tabs =
+    [
+        new("/billing/plans", "Plans"),
+        new("/billing/invoices", "Invoices"),
+        new("/billing/topups", "Top-ups"),
+    ];
+
+    private sealed record TabSpec(string Href, string Label);
+
+    private bool IsActive(TabSpec tab) =>
+        Nav.Uri.Contains(tab.Href, StringComparison.OrdinalIgnoreCase);
+}

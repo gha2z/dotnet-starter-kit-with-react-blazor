@@ -102,7 +102,7 @@ public sealed class GroupRolePermissionTests
         var role = await createResponse.DeserializeAsync<RoleDto>();
 
         var permResponse = await adminClient.PutAsJsonAsync(
-            $"{TestConstants.IdentityBasePath}/{role.Id}/permissions", new
+            $"{TestConstants.IdentityBasePath}/roles/{role.Id}/permissions", new
             {
                 roleId = role.Id,
                 permissions = new[] { permission }

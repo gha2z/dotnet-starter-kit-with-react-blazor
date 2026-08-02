@@ -186,7 +186,7 @@ public sealed class PermissionCacheInvalidationTests
     private static async Task SetRolePermissionsAsync(HttpClient adminClient, string roleId, params string[] permissions)
     {
         var response = await adminClient.PutAsJsonAsync(
-            $"{TestConstants.IdentityBasePath}/{roleId}/permissions", new
+            $"{TestConstants.IdentityBasePath}/roles/{roleId}/permissions", new
             {
                 roleId,
                 permissions

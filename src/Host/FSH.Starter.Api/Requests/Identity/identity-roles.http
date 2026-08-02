@@ -21,7 +21,7 @@ tenant: {{tenant}}
 Authorization: Bearer {{token}}
 
 ### Create or update role
-POST {{baseUrl}}/api/v1/identity
+POST {{baseUrl}}/api/v1/identity/roles
 Content-Type: application/json
 tenant: {{tenant}}
 Authorization: Bearer {{token}}
@@ -33,7 +33,7 @@ Authorization: Bearer {{token}}
 }
 
 ### Update role permissions
-PUT {{baseUrl}}/api/v1/identity/{{roleId}}/permissions
+PUT {{baseUrl}}/api/v1/identity/roles/{{roleId}}/permissions
 Content-Type: application/json
 tenant: {{tenant}}
 Authorization: Bearer {{token}}

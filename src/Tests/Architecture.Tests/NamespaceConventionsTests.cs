@@ -29,7 +29,8 @@ public class NamespaceConventionsTests
             string content = File.ReadAllText(file);
 
             var namespaceLine = content
-                .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => line.TrimEnd('\r'))
                 .FirstOrDefault(line => line.TrimStart().StartsWith("namespace ", StringComparison.Ordinal));
 
             namespaceLine.ShouldNotBeNull($"File '{file}' must declare a namespace matching the folder structure.");

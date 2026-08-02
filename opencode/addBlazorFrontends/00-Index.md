@@ -1,6 +1,6 @@
 # Blazor WASM + MAUI — Implementation Roadmap
 
-> Status: **Phase 0 ✅ | Phase 1 ✅ | Phase 2 🟨 (2.1 Users · 2.2 Roles · 2.3 Tenants done + parity fixes — next: 2.4 Billing) | Phase 3 🔲 | Phase 4 🔲 | Phase 5 🔲 | Phase 6 🔲 | Phase 7 🟨 (parity completion — in progress)**
+> Status: **Phase 0 ✅ | Phase 1 ✅ | Phase 2 🟨 (2.1 Users · 2.2 Roles · 2.3 Tenants · 2.4 Billing done — next: 2.5 Webhooks) | Phase 3 🔲 | Phase 4 🔲 | Phase 5 🔲 | Phase 6 🔲 | Phase 7 🟨 (parity completion — in progress)**
 >
 > **Parity sprint 1 (React ↔ Blazor, done):** both sidebars rebuilt 1:1 from `nav-items.ts` / `nav-data.ts`
 > (accordion sections, permission-gated, collapse `"true"/"false"`) · dashboard theme = `fsh.theme` +

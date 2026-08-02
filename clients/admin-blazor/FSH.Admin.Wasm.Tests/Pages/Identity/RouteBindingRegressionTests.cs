@@ -1,4 +1,6 @@
 using Bunit;
+using FSH.BlazorShared.Models;
+using FSH.BlazorShared.Models.Billing;
 using FSH.BlazorShared.Models.Identity;
 using FSH.BlazorShared.Services;
 using Microsoft.AspNetCore.Components;
@@ -100,6 +102,60 @@ public sealed class RouteBindingRegressionTests : TestSetup
         var router = RenderRouter($"/roles/{RoleId}");
 
         router.WaitForAssertion(() => router.Markup.ShouldContain("Support"));
+        router.Markup.ShouldNotContain("route-not-found");
+    }
+
+    [Fact]
+    public void Navigating_to_billing_invoice_detail_route_binds_string_id()
+    {
+        var billingService = Substitute.For<IBillingService>();
+        billingService.GetInvoiceByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new InvoiceDto(
+                Guid.Parse(RoleId),
+                "acme-corp",
+                "INV-2026-07-001",
+                2026,
+                7,
+                "USD",
+                315m,
+                "Draft",
+                new DateTime(2026, 7, 2, 9, 0, 0, DateTimeKind.Utc),
+                null,
+                null,
+                null,
+                null,
+                null,
+                [],
+                "Usage",
+                null,
+                null));
+        Services.AddSingleton(billingService);
+
+        var router = RenderRouter($"/billing/invoices/{RoleId}");
+
+        router.WaitForAssertion(() => router.Markup.ShouldContain("INV-2026-07-001"));
+        router.Markup.ShouldNotContain("route-not-found");
+    }
+
+    [Fact]
+    public void Navigating_to_billing_index_redirects_to_invoices()
+    {
+        var billingService = Substitute.For<IBillingService>();
+        billingService.GetInvoicesAsync(
+                Arg.Any<int>(),
+                Arg.Any<int>(),
+                Arg.Any<string?>(),
+                Arg.Any<string?>(),
+                Arg.Any<int?>(),
+                Arg.Any<int?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<InvoiceDto>([], 1, 20, 0, 1, false, false));
+        Services.AddSingleton(billingService);
+
+        var router = RenderRouter("/billing");
+
+        // React parity: /billing redirects (replace) to /billing/invoices.
+        router.WaitForAssertion(() => router.Markup.ShouldContain("No invoices found."));
         router.Markup.ShouldNotContain("route-not-found");
     }
 

@@ -8,9 +8,11 @@
 ## Status
 
 - Phase 7: **🟨 In progress** — parity sprint 1 done (sidebar/theme/bell/SSE), hotfixes done **and
-  verified (58/58 admin, 18/18 dashboard, 0 warnings)**, MAUI Hybrid workload saga resolved (Hybrid
-  builds 4 TFMs, 0 warnings), page build-out pending.
-- Prerequisites: Phases 0–1 ✅ · Phase 2 partial (2.1–2.3) · Phase 5 unblocked — MAUI workload
+  verified (58/58 admin, 18/18 dashboard, 0 warnings; admin PW roles 7/7, dashboard PW roles 5/5;
+  17 role-permission integration tests green)**, MAUI Hybrid workload saga resolved (Hybrid builds
+  4 TFMs, 0 warnings). Page build-out: **2.4 Billing done (82/82 admin tests, 18/18 dashboard,
+  Hybrid 0 warnings)** — next up 2.5 Webhooks.
+- Prerequisites: Phases 0–1 ✅ · Phase 2 partial (2.1–2.4) · Phase 5 unblocked — MAUI workload
   installed (elevated) and `clients/FSH.Hybrid` migrated to .NET 10 conventions (see §7.6 in
   `hands-on-phase-7.md` for the full saga + project-file recipe).
 
@@ -43,6 +45,8 @@
 |---|---|---|
 | Clicking a user/role crashed (`Arg_InvalidCastException` on `Id`) | `@page "/users/{Id:guid}"` / `"/roles/{Id:guid}"` produce a `Guid` route value but pages bind `[Parameter] string Id` — Guid cannot be cast to string | Dropped the `:guid` constraint (`{Id}`); 3 regression tests navigate through the real `Router` — green |
 | Full-page reload at a sub-route 404s all CSS/JS (`/roles/_content/... ERR_ABORTED 404`) | `<base href="/" />` appeared AFTER the `<link>` tags in `index.html`; the browser resolves relative links against the document URL until it parses `<base>` | Moved `<base href="/" />` to the top of `<head>` in both apps; guard test asserts ordering — green |
+| Role detail page: "Failed to load role: …404 Not Found" on `GET /identity/roles/{id}/permissions` | Backend role-permissions endpoints were registered as `/{id:guid}/permissions` on the identity group (missing the `/roles` segment), and React admin + dashboard clients mirrored the asymmetric path; only `BlazorShared/RoleService` used the canonical `/roles/…` path — a Phase-2 fix on the Blazor side had regressed on the server | Backend GET→`/roles/{id:guid}/permissions`, PUT→`/roles/{id}/permissions`; updated `clients/admin/src/api/roles.ts`, `clients/dashboard/src/api/identity.ts`, both Playwright roles specs, 5 integration test files, and `identity-roles.http` (PUT + POST lines). Verified: backend build 0 warnings, admin/dashboard Blazor suites green, admin PW roles 7/7 + dashboard PW roles 5/5, 17 role-permission integration tests green against real Postgres (Testcontainers) |
+| `Architecture.Tests` `BuildingBlocks_Core_Domain_Namespaces_Should_Match_Folder` failed | Test split file content on `Environment.NewLine` (CRLF) but `src/BuildingBlocks/Core/Domain/IDomainEvent.cs` is committed with LF-only endings → whole file became one "line" and the `namespace ` scan missed it (pre-existing, surfaced in the full-suite run) | Test now splits on `\n` and trims `\r` (line-ending agnostic). Architecture suite 51/51 — no BuildingBlocks change |
 
 ## Parity gap tables
 
@@ -55,7 +59,7 @@
 | `/roles` + `/roles/{id}` + create | `Roles/RolesListPage`, `RoleDetailPage`, `RoleCreateDialog` | ✅ |
 | `/tenants` + `/tenants/{id}` + create | `Tenants/TenantsListPage`, `TenantDetailPage`, `TenantCreateDialog` | ✅ |
 | `/audits` + `/audits/{id}` | — | 🔲 2.6 |
-| `/billing/*` (plans, invoices, topups, invoice detail) | — | 🔲 2.4 |
+| `/billing/*` (plans, invoices, topups, invoice detail) | `Pages/Billing/PlansListPage` (+ `PlanFormDialog`), `InvoicesListPage`, `InvoiceDetailPage`, `TopupsListPage` (+ `TopupDecisionDialog`) | ✅ |
 | `/health` | — | 🔲 2.7 |
 | `/impersonation` | — | 🔲 2.10 |
 | `/notifications/inbox` | — (bell exists; inbox page missing) | 🔲 2.8 |
@@ -97,7 +101,7 @@
 
 ## Build order
 
-1. **Admin** 2.4 Billing → 2.5 Webhooks → 2.6 Audits → 2.7 Health → 2.8 Notifications inbox →
+1. **Admin** 2.4 Billing ✅ → 2.5 Webhooks → 2.6 Audits → 2.7 Health → 2.8 Notifications inbox →
    2.9 Settings → 2.10 Impersonation → styled 404 (parallel: permission constants per feature).
 2. **Dashboard** 3.1 → 3.15 per the table (each page: service → page → route → SSE/live data where
    the React page has it → bUnit test).
