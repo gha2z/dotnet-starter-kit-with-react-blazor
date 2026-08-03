@@ -1,4 +1,5 @@
 @using FSH.BlazorShared.Theming
+@using FSH.BlazorShared.Components
 @inject FshThemeService Theme
 
 <MudThemeProvider Theme="FshMudTheme.CreateAdmin()" IsDarkMode="@Theme.IsDarkMode" IsDarkModeChanged="@OnThemeChanged" />
@@ -21,10 +22,7 @@
             </AuthorizeRouteView>
         </Found>
         <NotFound>
-            <PageTitle>Not Found</PageTitle>
-            <MudContainer Class="d-flex align-center justify-center" Style="min-height: 100vh">
-                <MudText Typo="Typo.h4">404 - Page not found</MudText>
-            </MudContainer>
+            <FshNotFound />
         </NotFound>
     </Router>
 </CascadingAuthenticationState>

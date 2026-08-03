@@ -1,0 +1,99 @@
+@namespace FSH.Admin.Wasm.Pages.Impersonation
+@using FSH.BlazorShared.Formatting
+@using FSH.BlazorShared.Models.Identity
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Revoke impersonation grant?</MudText>
+
+        <div class="d-flex flex-column gap-2 mb-3 pa-3" style="background: var(--mud-palette-background-grey); border-radius: 8px;">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Primary" />
+                <div class="d-flex flex-column">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="margin: 0;">Impersonated</MudText>
+                    <MudText Typo="Typo.subtitle2" Style="margin: 0;">@(Grant.ImpersonatedUserName ?? Grant.ImpersonatedUserId)</MudText>
+                </div>
+            </div>
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.PersonOutline" Size="Size.Small" Color="Color.Secondary" />
+                <div class="d-flex flex-column">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="margin: 0;">Actor</MudText>
+                    <MudText Typo="Typo.subtitle2" Style="margin: 0;">@(Grant.ActorUserName ?? Grant.ActorUserId)</MudText>
+                </div>
+            </div>
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.Badge" Size="Size.Small" Color="Color.Info" />
+                <div class="d-flex flex-column">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="margin: 0;">Tenant</MudText>
+                    <MudText Typo="Typo.subtitle2" Style="margin: 0;">@Grant.ImpersonatedTenantId</MudText>
+                </div>
+            </div>
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" />
+                <div class="d-flex flex-column">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="margin: 0;">Reason</MudText>
+                    <MudText Typo="Typo.subtitle2" Style="margin: 0;">@(string.IsNullOrEmpty(Grant.Reason) ? "—" : Grant.Reason)</MudText>
+                </div>
+            </div>
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Color="Color.Warning" />
+                <div class="d-flex flex-column">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="margin: 0;">Expires</MudText>
+                    <MudText Typo="Typo.subtitle2" Style="margin: 0;">@FshFormat.DateShort(Grant.ExpiresAtUtc)</MudText>
+                </div>
+            </div>
+        </div>
+
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="my-3">
+            Revoking immediately invalidates the dashboard session. The impersonated user will be redirected to login.
+        </MudText>
+
+        <MudTextField @bind-Value="_reason"
+                      Label="Reason (optional)"
+                      Placeholder="Why are you revoking this grant?"
+                      MaxLength="500"
+                      HelperText="Max 500 characters"
+                      Variant="Variant.Outlined"
+                      FullWidth="true"
+                      Margin="Margin.Dense" />
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="ConfirmAsync" Disabled="@_isSubmitting">
+            @(_isSubmitting ? "Revoking…" : "Revoke")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Parameter] public ImpersonationGrantDto Grant { get; set; } = default!;
+    [Inject] private IImpersonationService ImpersonationService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private string? _reason;
+    private bool _isSubmitting;
+
+    private async Task ConfirmAsync()
+    {
+        _isSubmitting = true;
+        try
+        {
+            await ImpersonationService.RevokeGrantAsync(Grant.Id, _reason);
+            Snackbar.Add("Grant revoked", Severity.Success);
+            Dialog.Close(true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to revoke: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private void Cancel() => Dialog.Cancel();
+}

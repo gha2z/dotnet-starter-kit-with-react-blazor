@@ -1,0 +1,194 @@
+@page "/health"
+@implements IDisposable
+@using FSH.BlazorShared.Models.Health
+
+<FshPageHeader Title="Health"
+               Icon="@Icons.Material.Filled.MonitorHeart"
+               Tone="Color.Success"
+               Description="Live process and dependency probes. Auto-refreshes every 10 seconds. The probe endpoints themselves (/health/live /health/ready) are unauthenticated so they can be scraped by load balancers and uptime monitors.">
+    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh"
+               Disabled="@_isFetching" OnClick="RefetchAsync">
+        Refresh
+    </MudButton>
+</FshPageHeader>
+
+<div class="row mb-4">
+    <div class="col-12 col-sm-6 col-md-3 mb-2 mb-md-0">
+        <FshStatTile Label="Liveness" Value="@(_live?.Status ?? (_loading ? null : "Unknown"))"
+                     Hint="API process responding" Tone="@Tone(_live?.Status)" />
+    </div>
+    <div class="col-12 col-sm-6 col-md-3 mb-2 mb-md-0">
+        <FshStatTile Label="Readiness" Value="@(_ready?.Status ?? (_loading ? null : "Unknown"))"
+                     Hint="Dependencies reachable" Tone="@Tone(_ready?.Status)" />
+    </div>
+    <div class="col-12 col-sm-6 col-md-3 mb-2 mb-md-0">
+        <FshStatTile Label="Checks healthy" Value="@(_loading ? null : _checksHealthy.ToString("N0"))"
+                     Hint="@ChecksHealthyHint"
+                     Tone="@(_checksHealthy > 0 ? Color.Success : Color.Inherit)" />
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+        <FshStatTile Label="Checks failing" Value="@(_loading ? null : (_checksFailing + _checksDegraded).ToString("N0"))"
+                     Hint="@(_checksDegraded > 0 ? $"{_checksDegraded} degraded · {_checksFailing} unhealthy" : $"{_checksFailing} unhealthy")"
+                     Tone="@(_checksFailing > 0 ? Color.Error : _checksDegraded > 0 ? Color.Warning : Color.Inherit)" />
+    </div>
+</div>
+
+@if (_liveError is not null)
+{
+    <FshErrorBand Message="@_liveError" />
+}
+@if (_readyError is not null)
+{
+    <FshErrorBand Message="@_readyError" />
+}
+
+<MudPaper Elevation="0" Class="pa-4 mb-4 rounded-xl" Style="border: 1px solid var(--mud-palette-divider);">
+    <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-1">
+        <MudText Typo="Typo.h6" Class="font-weight-medium" Style="margin: 0;">Liveness</MudText>
+        <code class="fsh-code-chip">/health/live</code>
+    </div>
+    <MudText Typo="Typo.body2" Color="Color.Secondary">Process is up and serving requests. No external dependencies are checked.</MudText>
+    <div class="mt-3">
+        @if (_loading)
+        {
+            <div class="fsh-mono-label">Probing…</div>
+        }
+        else if (_live is null || _live.Results.Count == 0)
+        {
+            <div class="d-flex align-center gap-3 py-3">
+                <MudIcon Icon="@Icons.Material.Filled.MonitorHeart" Size="Size.Small"
+                         Style="color: var(--mud-palette-text-secondary);" />
+                <div>
+                    <div class="fsh-mono-medium">No dependency checks reported.</div>
+                    <div class="fsh-mono-muted">The probe responded with status <code class="fsh-code-chip">@(_live?.Status ?? "—")</code>.</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            @foreach (var entry in _live.Results)
+            {
+                <HealthCheckRow Entry="entry" />
+            }
+        }
+    </div>
+</MudPaper>
+
+<MudPaper Elevation="0" Class="pa-4 rounded-xl" Style="border: 1px solid var(--mud-palette-divider);">
+    <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-1">
+        <MudText Typo="Typo.h6" Class="font-weight-medium" Style="margin: 0;">Readiness</MudText>
+        <code class="fsh-code-chip">/health/ready</code>
+    </div>
+    <MudText Typo="Typo.body2" Color="Color.Secondary">All registered dependency checks must report Healthy for the probe to return 200. A 503 here flips the API out of the load-balancer pool.</MudText>
+    <div class="mt-3">
+        @if (_loading)
+        {
+            <div class="fsh-mono-label">Probing…</div>
+        }
+        else if (_ready is null || _ready.Results.Count == 0)
+        {
+            <div class="d-flex align-center gap-3 py-3">
+                <MudIcon Icon="@Icons.Material.Filled.MonitorHeart" Size="Size.Small"
+                         Style="color: var(--mud-palette-text-secondary);" />
+                <div>
+                    <div class="fsh-mono-medium">No dependency checks reported.</div>
+                    <div class="fsh-mono-muted">The probe responded with status <code class="fsh-code-chip">@(_ready?.Status ?? "—")</code>.</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            @foreach (var entry in _ready.Results)
+            {
+                <HealthCheckRow Entry="entry" />
+            }
+        }
+    </div>
+</MudPaper>
+
+@code {
+    [Inject]
+    private FSH.BlazorShared.Services.IHealthService HealthService { get; set; } = default!;
+
+    private HealthResult? _live;
+    private HealthResult? _ready;
+    private string? _liveError;
+    private string? _readyError;
+    private bool _loading = true;
+    private bool _isFetching;
+    private Timer? _timer;
+    private bool _disposed;
+
+    private int _checksHealthy =>
+        _ready?.Results.Count(e => e.Status == "Healthy") ?? 0;
+
+    private int _checksDegraded =>
+        _ready?.Results.Count(e => e.Status == "Degraded") ?? 0;
+
+    private int _checksFailing =>
+        _ready?.Results.Count(e => e.Status != "Healthy" && e.Status != "Degraded") ?? 0;
+
+    private string ChecksHealthyHint =>
+        _ready is null ? "of — registered" : $"of {_ready.Results.Count} registered";
+
+    protected override void OnInitialized()
+    {
+        _timer = new Timer(_ => _ = InvokeAsync(RefetchAsync), null, 10_000, 10_000);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefetchAsync();
+    }
+
+    private async Task RefetchAsync()
+    {
+        if (_isFetching)
+        {
+            return;
+        }
+
+        _isFetching = true;
+        _loading = _live is null && _ready is null;
+        try
+        {
+            var liveTask = HealthService.GetLivenessAsync();
+            var readyTask = HealthService.GetReadinessAsync();
+            await Task.WhenAll(liveTask, readyTask);
+
+            _live = await liveTask;
+            _ready = await readyTask;
+            _liveError = null;
+            _readyError = null;
+        }
+        catch (Exception ex)
+        {
+            _liveError ??= $"Liveness probe failed: {ex.Message}";
+            _readyError ??= $"Readiness probe failed: {ex.Message}";
+        }
+        finally
+        {
+            _isFetching = false;
+            _loading = false;
+        }
+    }
+
+    private static Color Tone(string? status) => status switch
+    {
+        "Healthy" => Color.Success,
+        "Degraded" => Color.Warning,
+        "Unknown" or null => Color.Inherit,
+        _ => Color.Error,
+    };
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _timer?.Dispose();
+    }
+}

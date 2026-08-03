@@ -18,7 +18,6 @@ public sealed partial class InvoiceDetailPage
 
     private InvoiceDto? _invoice;
     private string? _error;
-    private bool _loading = true;
 
     private DateTime? _dueAt;
     private string _voidReason = string.Empty;
@@ -83,11 +82,9 @@ public sealed partial class InvoiceDetailPage
         if (!Guid.TryParse(Id, out var invoiceId))
         {
             _error = "Invalid invoice identifier.";
-            _loading = false;
             return;
         }
 
-        _loading = true;
         _error = null;
         try
         {
@@ -96,10 +93,6 @@ public sealed partial class InvoiceDetailPage
         catch (Exception ex)
         {
             _error = $"Failed to load invoice: {ex.Message}";
-        }
-        finally
-        {
-            _loading = false;
         }
     }
 

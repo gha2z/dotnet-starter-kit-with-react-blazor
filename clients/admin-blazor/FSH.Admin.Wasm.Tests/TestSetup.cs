@@ -1,6 +1,8 @@
+using System.Net.Http;
 using Bunit;
 using Bunit.TestDoubles;
 using FSH.BlazorShared.Auth;
+using FSH.BlazorShared.Infrastructure;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
@@ -30,6 +32,9 @@ public abstract class TestSetup : BunitContext, IAsyncLifetime
         Services.AddScoped(_ => PermissionsProvider);
         Authorization = AddAuthorization();
         Services.AddMudServices();
+
+        // Register services needed for impersonation page
+        Services.AddSingleton<IRuntimeConfigService, RuntimeConfigServiceStub>();
     }
 
     public Task InitializeAsync() => Task.CompletedTask;

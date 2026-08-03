@@ -43,6 +43,15 @@ public sealed class SseService(HttpClient http, ITokenStore tokenStore, ILogger<
             catch (Exception ex)
             {
                 logger.LogDebug(ex, "SSE connection failed; retrying in {Delay}", _retryDelay);
+
+                // The auth layer clears tokens and flips the app back to login when a
+                // session dies (refresh failure). Stop retrying instead of hammering a
+                // dead session forever — the App root restarts us after the next login.
+                if (await tokenStore.GetAccessTokenAsync() is null)
+                {
+                    logger.LogInformation("SSE stopped: no session token");
+                    break;
+                }
             }
 
             ConnectionChanged?.Invoke();

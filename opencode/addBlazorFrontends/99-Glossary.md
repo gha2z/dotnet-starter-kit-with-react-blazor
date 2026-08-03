@@ -1,4 +1,5 @@
 # Glossary — Acronyms & Terms
+Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-free).
 
 > Every acronym used in this project, explained in plain English.
 

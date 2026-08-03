@@ -1,0 +1,75 @@
+@namespace FSH.Admin.Wasm.Pages.Health
+@using FSH.BlazorShared.Models.Health
+
+<li>
+    @if (HasDetails)
+    {
+        <div class="fsh-health-row fsh-row-link" @onclick="ToggleAsync" role="button" tabindex="0" aria-expanded="@_open">
+            @RowInner
+        </div>
+    }
+    else
+    {
+        <div class="fsh-health-row">
+            @RowInner
+        </div>
+    }
+    @if (HasDetails && _open)
+    {
+        <div class="fsh-health-details">
+            <dl class="fsh-health-grid">
+                @foreach (var (key, value) in Entry.Details!)
+                {
+                    <div class="d-flex align-baseline justify-space-between gap-3 fsh-health-detail-row">
+                        <dt class="fsh-mono-label" style="letter-spacing: 0.16em;">@key.ToUpperInvariant()</dt>
+                        <dd class="fsh-truncate fsh-mono-medium" style="font-size: 12px; margin: 0; min-width: 0;">@value</dd>
+                    </div>
+                }
+            </dl>
+        </div>
+    }
+</li>
+
+@code {
+    private bool _open;
+
+    [Parameter]
+    public HealthEntry Entry { get; set; } = default!;
+
+    private bool HasDetails => Entry.Details is { Count: > 0 };
+
+    private RenderFragment RowInner => __builder =>
+    {
+        <span class="fsh-dot" style="background: @DotColor();" aria-hidden title="@Entry.Status"></span>
+        <div class="min-w-0 flex-grow-1">
+            <div class="fsh-truncate fsh-mono-medium" style="font-size: 13px;">@Entry.Name</div>
+            @if (!string.IsNullOrEmpty(Entry.Description))
+            {
+                <div class="fsh-mono-muted fsh-truncate mt-1">@Entry.Description</div>
+            }
+        </div>
+        <span class="fsh-mono-label" style="text-transform: none; letter-spacing: 0.02em; white-space: nowrap;">@Entry.DurationMs.ToString("F1")ms</span>
+        @if (HasDetails)
+        {
+            <MudIcon Icon="@(_open ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
+                     Size="Size.Small" Style="color: var(--mud-palette-text-secondary);" />
+        }
+        else
+        {
+            <span style="width: 20px; height: 20px;" aria-hidden></span>
+        }
+    };
+
+    private async Task ToggleAsync()
+    {
+        _open = !_open;
+        await Task.CompletedTask;
+    }
+
+    private string DotColor() => Entry.Status switch
+    {
+        "Healthy" => "var(--mud-palette-success)",
+        "Degraded" => "var(--mud-palette-warning)",
+        _ => "var(--mud-palette-error)",
+    };
+}

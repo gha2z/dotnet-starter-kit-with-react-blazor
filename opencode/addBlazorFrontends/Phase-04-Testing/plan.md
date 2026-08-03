@@ -1,4 +1,5 @@
 # Phase 4 — Testing
+Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-free).
 
 > **Target:** Comprehensive test coverage with bUnit (component unit tests) + Playwright (E2E). Auth flows, page states (loading/empty/error/edge), permission gating, form validation, SSE, SignalR.
 

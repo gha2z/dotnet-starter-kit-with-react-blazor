@@ -51,12 +51,15 @@ builder.Services.AddHttpClient("FSH.Auth", (sp, client) =>
 // Auth service
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// Feature services
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IRoleService, RoleService>();
-builder.Services.AddScoped<ITenantService, TenantService>();
-builder.Services.AddScoped<IBillingService, BillingService>();
-builder.Services.AddScoped<INotificationService, NotificationService>();
+// Health probes are anonymous (no auth handler) so load balancers can scrape them.
+builder.Services.AddHttpClient("FSH.Health", (sp, client) =>
+{
+    var config = sp.GetRequiredService<IRuntimeConfigService>();
+    client.BaseAddress = RuntimeConfigService.ResolveApiBase(baseAddress, config.ApiBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(8);
+});
+builder.Services.AddScoped<IHealthService>(sp =>
+    new HealthService(sp.GetRequiredService<IHttpClientFactory>().CreateClient("FSH.Health")));
 
 // Authorization policies
 builder.Services.AddAuthorizationCore(options =>
@@ -77,6 +80,15 @@ builder.Services.AddAuthorizationCore(options =>
     options.AddPolicy("Permissions.Tenants.UpdateTheme", p => p.RequireClaim("permission", "Permissions.Tenants.UpdateTheme"));
     options.AddPolicy("Permissions.Billing.View", p => p.RequireClaim("permission", "Permissions.Billing.View"));
     options.AddPolicy("Permissions.Billing.Manage", p => p.RequireClaim("permission", "Permissions.Billing.Manage"));
+    options.AddPolicy("Permissions.Webhooks.View", p => p.RequireClaim("permission", "Permissions.Webhooks.View"));
+    options.AddPolicy("Permissions.Webhooks.Create", p => p.RequireClaim("permission", "Permissions.Webhooks.Create"));
+    options.AddPolicy("Permissions.Webhooks.Delete", p => p.RequireClaim("permission", "Permissions.Webhooks.Delete"));
+    options.AddPolicy("Permissions.Webhooks.Test", p => p.RequireClaim("permission", "Permissions.Webhooks.Test"));
+    options.AddPolicy("Permissions.AuditTrails.View", p => p.RequireClaim("permission", "Permissions.AuditTrails.View"));
+    options.AddPolicy("Permissions.AuditTrails.ViewCrossTenant", p => p.RequireClaim("permission", "Permissions.AuditTrails.ViewCrossTenant"));
+    options.AddPolicy("Permissions.Users.Impersonate", p => p.RequireClaim("permission", "Permissions.Users.Impersonate"));
+    options.AddPolicy("Permissions.Impersonation.View", p => p.RequireClaim("permission", "Permissions.Impersonation.View"));
+    options.AddPolicy("Permissions.Impersonation.Revoke", p => p.RequireClaim("permission", "Permissions.Impersonation.Revoke"));
 });
 
 // HTTP client with auth handler (for all authenticated API calls)
@@ -101,8 +113,20 @@ builder.Services.AddMudServices(config =>
 // Theme (dark default, persisted to localStorage - React parity)
 builder.Services.AddSingleton(sp => new FshThemeService(sp.GetRequiredService<IJSRuntime>(), "fsh.admin.theme"));
 
+// API services (all use the scoped "FSH.Api" HttpClient with auth handler)
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IBillingService, BillingService>();
+builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<ISessionService, SessionService>();
+builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IWebhookService, WebhookService>();
+
 // Realtime
 builder.Services.AddScoped<IHubConnectionService, HubConnectionService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 var host = builder.Build();
 

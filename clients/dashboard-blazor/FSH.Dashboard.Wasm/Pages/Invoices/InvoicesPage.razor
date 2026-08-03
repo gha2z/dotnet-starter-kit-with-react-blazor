@@ -1,0 +1,93 @@
+@page "/invoices"
+@attribute [Authorize]
+@using FSH.BlazorShared.Formatting
+@using MudBlazor
+
+<FshPageHeader Title="Invoices"
+               Description="Your tenant's billing history, newest first."
+               Icon="@Icons.Material.Filled.Receipt"
+               Count="@_totalCount"
+               Unit="invoice">
+</FshPageHeader>
+
+<MudTextField @bind-Value="_search"
+              Placeholder="Search by invoice number, status, or period…"
+              Variant="Variant.Outlined"
+              Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Filled.Search"
+              Class="mb-4"
+              Immediate="true" />
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+@if (_loading)
+{
+    @for (var i = 0; i < 4; i++)
+    {
+        <div class="fsh-skeleton" style="height: 56px; border-radius: 12px; margin-bottom: 8px;"></div>
+    }
+}
+else if (Filtered.Count == 0)
+{
+    <FshEmptyState Icon="@Icons.Material.Filled.Receipt"
+                   Title="@(SearchActive ? "No invoices found" : "No invoices yet")"
+                   Description="@EmptyStateDescription">
+        @if (SearchActive)
+        {
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="ClearSearch">Clear search</MudButton>
+        }
+    </FshEmptyState>
+}
+else
+{
+    <div class="d-flex justify-space-between align-center mb-3">
+        <p class="fsh-muted-copy" style="font-size: 12px; font-weight: 500; margin: 0;">@MetaText</p>
+    </div>
+
+    @* Desktop grid header *@
+    <div class="fsh-invoices-grid fsh-list-head">
+        <span>Invoice #</span>
+        <span>Customer</span>
+        <span class="text-right">Amount</span>
+        <span>Status</span>
+        <span>Due date</span>
+    </div>
+
+    @for (var i = 0; i < Filtered.Count; i++)
+    {
+        var invoice = Filtered[i];
+        var isLast = i == Filtered.Count - 1;
+        <div class="fsh-invoices-grid fsh-list-row @(isLast ? "" : "fsh-row-border")" @onclick="() => OpenInvoice(invoice.Id)">
+            <div class="d-flex align-center gap-3 min-w-0">
+                <FshToneIconTile Icon="@Icons.Material.Filled.Receipt" TileSize="36px" IconSize="Size.Small" />
+                <div class="min-w-0">
+                    <code class="fsh-invoice-number">@invoice.InvoiceNumber</code>
+                    <div class="fsh-invoice-period">period @FormatPeriod(invoice)</div>
+                </div>
+            </div>
+            <span class="fsh-truncate" style="font-size: 12px; color: var(--mud-palette-text-secondary);">@invoice.TenantId</span>
+            <span class="text-right fsh-list-money">@FshFormat.Money(invoice.SubtotalAmount, invoice.Currency)</span>
+            <span><FshStatusPill Text="@StatusLabel(invoice.Status)" Tone="@StatusTone(invoice.Status)" /></span>
+            <span class="fsh-muted-copy" style="font-size: 12px;">
+                @if (invoice.DueAtUtc is not null && invoice.Status == "Issued")
+                {
+                    <span style="color: var(--mud-palette-warning);">@FshFormat.DateShort(invoice.DueAtUtc)</span>
+                }
+                else
+                {
+                    @("—")
+                }
+            </span>
+        </div>
+    }
+
+    @if (!SearchActive && _totalPages > 1)
+    {
+        <div class="d-flex align-center justify-center gap-2 mt-4">
+            <FshPager TotalCount="@_totalCount" PageNumber="@_pageNumber" PageSize="@PageSize" PageChanged="GoToPage" />
+        </div>
+    }
+}

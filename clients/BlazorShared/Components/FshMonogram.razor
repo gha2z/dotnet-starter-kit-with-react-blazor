@@ -2,7 +2,7 @@
 @using MudBlazor
 
 <MudAvatar Class="fsh-monogram" Size="@AvatarSize" Variant="Variant.Filled"
-           Style="@($"background: {Background}; color: {Foreground}; font-family: 'JetBrains Mono', 'Cascadia Mono', monospace; letter-spacing: 0.08em; border-radius: 8px;")">
+           Style="@($"{(PixelSize > 0 ? $"width: {PixelSize}px; height: {PixelSize}px; font-size: {PixelSize / 2}px; " : string.Empty)}background: {Background}; color: {Foreground}; font-family: 'JetBrains Mono', 'Cascadia Mono', monospace; letter-spacing: 0.08em; border-radius: 8px;")">
     @Initials
 </MudAvatar>
 
@@ -14,6 +14,9 @@
     [Parameter] public string? Seed { get; set; }
     [Parameter] public string? Name { get; set; }
     [Parameter] public Size AvatarSize { get; set; } = Size.Medium;
+
+    /// <summary>Exact pixel size (e.g. 56). Overrides <see cref="AvatarSize"/>; 0 = use the enum size.</summary>
+    [Parameter] public int PixelSize { get; set; }
 
     private string Initials
     {

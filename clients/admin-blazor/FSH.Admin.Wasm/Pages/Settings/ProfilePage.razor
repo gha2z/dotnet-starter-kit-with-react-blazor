@@ -1,0 +1,196 @@
+@page "/settings/profile"
+@attribute [Authorize]
+@namespace FSH.Admin.Wasm.Pages.Settings
+@using FSH.BlazorShared.Models.Identity
+
+<SettingsScaffold>
+    @if (_error is not null)
+    {
+        <FshErrorBand Message="@_error" />
+    }
+    else if (_loading)
+    {
+        <FshLoadingRow Label="Loading profile" />
+    }
+    else if (_profile is null)
+    {
+        <FshEmptyState Icon="@Icons.Material.Filled.Person" Title="No profile data." />
+    }
+    else
+    {
+        <div class="space-y-5">
+            <MudCard Elevation="1" Class="pa-4">
+                <div class="d-flex align-center gap-3 mb-2">
+                    <FshToneIconTile Icon="@Icons.Material.Filled.Person" Tone="Color.Primary" TileSize="40px" IconSize="Size.Small" />
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Avatar</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Shown in the topbar and on your activity.</MudText>
+                    </div>
+                </div>
+                <div class="d-flex align-center gap-3">
+                    @if (!string.IsNullOrEmpty(_profile.ImageUrl))
+                    {
+                        <img src="@_profile.ImageUrl" alt="Profile avatar" class="fsh-avatar-lg" />
+                    }
+                    else
+                    {
+                        <FshMonogram Name="@DisplayName" PixelSize="56" />
+                    }
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit" OnClick="OpenImageDialog">
+                        Change avatar
+                    </MudButton>
+                    @if (!string.IsNullOrEmpty(_profile.ImageUrl))
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ClearImageAsync">
+                            Clear
+                        </MudButton>
+                    }
+                </div>
+            </MudCard>
+
+            <MudCard Elevation="1" Class="pa-4">
+                <div class="d-flex align-center gap-3 mb-3">
+                    <FshToneIconTile Icon="@Icons.Material.Filled.Fingerprint" Tone="Color.Primary" TileSize="40px" IconSize="Size.Small" />
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Identity</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Managed by an administrator — contact one if changes are needed.</MudText>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 col-sm-6">
+                        <MudTextField Label="Username" Value="@_profile.UserName" ReadOnly="true" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-1" />
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <MudTextField Label="Display name" Value="@DisplayName" ReadOnly="true" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-1" />
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <MudTextField Label="Email" Value="@_profile.Email" ReadOnly="true" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-1" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@(_profile.EmailConfirmed ? "Address verified" : "Not yet verified")</MudText>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <MudTextField Label="Phone" Value="@(_profile.PhoneNumber ?? "—")" ReadOnly="true" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-1" />
+                    </div>
+                </div>
+            </MudCard>
+
+            <MudCard Elevation="1" Class="pa-4">
+                <div class="d-flex align-center gap-3 mb-3">
+                    <FshToneIconTile Icon="@Icons.Material.Filled.Shield" Tone="Color.Primary" TileSize="40px" IconSize="Size.Small" />
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Account status</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Runtime flags on this account. Contact an operator to change them.</MudText>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap align-center gap-2">
+                    <MudChip T="string" Size="Size.Small" Color="@(_profile.IsActive ? Color.Success : Color.Error)" Variant="Variant.Outlined">
+                        @(_profile.IsActive ? "Active" : "Inactive")
+                    </MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="@(_profile.TwoFactorEnabled ? Color.Success : Color.Default)" Variant="Variant.Outlined">
+                        2FA @(_profile.TwoFactorEnabled ? "enabled" : "disabled")
+                    </MudChip>
+                </div>
+            </MudCard>
+        </div>
+    }
+
+    <MudDialog @bind-Visible="_imageDialogOpen" Options="new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Small }">
+        <DialogContent>
+            <MudTextField Label="Image URL" @bind-Value="_imageUrl" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Text" OnClick="CloseImageDialog">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_savingImage" OnClick="SaveImageAsync">
+                @(_savingImage ? "Saving…" : "Save")
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+</SettingsScaffold>
+
+@code {
+    [Inject] private IUserService UserService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private UserDto? _profile;
+    private string? _error;
+    private bool _loading = true;
+    private bool _imageDialogOpen;
+    private bool _savingImage;
+    private string _imageUrl = string.Empty;
+
+    private string DisplayName
+    {
+        get
+        {
+            if (_profile is null)
+            {
+                return "Account";
+            }
+
+            var name = string.Join(' ', new[] { _profile.FirstName, _profile.LastName })
+                .Trim();
+            return !string.IsNullOrEmpty(name) ? name : (_profile.UserName ?? _profile.Email ?? "Account");
+        }
+    }
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _profile = await UserService.GetMyProfileAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OpenImageDialog()
+    {
+        _imageUrl = _profile?.ImageUrl ?? string.Empty;
+        _imageDialogOpen = true;
+    }
+
+    private void CloseImageDialog() => _imageDialogOpen = false;
+
+    private async Task SaveImageAsync()
+    {
+        _savingImage = true;
+        try
+        {
+            await UserService.SetProfileImageAsync(string.IsNullOrWhiteSpace(_imageUrl) ? null : _imageUrl.Trim());
+            _imageDialogOpen = false;
+            Snackbar.Add("Profile image updated", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to update profile image: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _savingImage = false;
+        }
+    }
+
+    private async Task ClearImageAsync()
+    {
+        try
+        {
+            await UserService.SetProfileImageAsync(null);
+            Snackbar.Add("Profile image cleared", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to clear profile image: {ex.Message}", Severity.Error);
+        }
+    }
+}

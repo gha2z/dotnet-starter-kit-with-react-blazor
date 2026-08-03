@@ -2,7 +2,8 @@
 
 This chapter is the educational companion to `Phase-07-Parity-Completion/plan.md`. It explains the
 **why** behind the parity conventions, the two hotfixes, and the patterns you will use for every
-remaining page. Read it before starting 2.5 Webhooks or any dashboard 3.x page.
+remaining page. Read it before starting any dashboard 3.x page or the remaining admin pages
+(2.10 Impersonation, styled 404; 2.9 Settings is delivered — see 7.8).
 
 ## 7.1 Why parity is structural, not visual
 
@@ -77,7 +78,7 @@ Add one of these tests for **every** new detail route (tickets, invoices, produc
    `Render<Router>(...)` makes the initial match the page under test and keeps the test
    dependency-light.
 
-**Status: all 3 Router regression tests pass (58/58 admin suite).**
+**Status: all Router regression tests pass (114/114 admin suite).**
 
 ### `<base href="/" />` ordering
 
@@ -128,7 +129,7 @@ diverge).
 - JS module interop (`InvokeAsync("import", …)`) is not covered by loose-mode `JSInterop.Setup` —
   use the fake `IJSRuntime`/`IJSObjectReference` pattern from `FshThemeServiceTests`.
 - Router-level route tests: see 7.2. Base-href guard: see 7.2.
-- Admin suite: 58 tests. Dashboard suite: 18 tests. Both green (0 warnings — the build
+- Admin suite: 146 tests. Dashboard suite: 18 tests. Both green (0 warnings — the build
   treats warnings as errors).
 
 ## 7.6 MAUI workload saga (this machine) — RESOLVED
@@ -172,9 +173,9 @@ Build check: `dotnet build clients\FSH.Hybrid\FSH.Hybrid\FSH.Hybrid.csproj` → 
 > `clients\BlazorShared\obj\project.assets.json` (NETSDK1005 on the RCL's `net10.0` target);
 > clean both `obj`/`bin` folders and restore normally if that happens.
 
-The Hybrid app itself still has **zero `.razor` pages** — Phase 5 builds the shell + screens
-from scratch. Both Blazor WASM suites remain green after all of this: admin **58/58**, dashboard
-**18/18** (also bumped transitive `AngleSharp` to 1.7.0 in the test projects — 1.3.0 triggers
+The Hybrid app itself still has **zero `.razor` pages** - Phase 5 builds the shell + screens
+from scratch. Both Blazor WASM suites remain green after all of this: admin **114/114**, dashboard
+**18/18** (also bumped transitive `AngleSharp` to 1.7.0 in the test projects - 1.3.0 triggers
 `NU1902` GHSA-pgww-w46g-26qg).
 
 ## 7.7 Hotfix 3 — role-permissions route asymmetry (404 on role detail)
@@ -210,7 +211,46 @@ touching these routes again.
 6. `identity-roles.http` → PUT and POST lines gained the missing `/roles` (POST `/api/v1/identity`
    was broken too).
 
-**Verification:** backend build 0 warnings; admin Blazor 58/58 + dashboard Blazor 18/18; admin PW
+**Verification:** backend build 0 warnings; admin Blazor 114/114 + dashboard Blazor 18/18; admin PW
 roles 7/7 + dashboard PW roles 5/5 (after `npx playwright install chromium` — browsers were not
 installed on this machine); 17 role-permission integration tests green against real Postgres
 (Testcontainers).
+
+## 7.8 Delivering 2.9 Settings — the lessons
+
+Settings landed as four routes behind a shared `SettingsScaffold` in
+`clients/admin-blazor/FSH.Admin.Wasm/Pages/Settings/` (`ProfilePage`, `SecurityPage` with
+`PasswordSection` + `TwoFactorSection`, `SessionsPage`, `AppearancePage`), backed by new/changed
+services in `BlazorShared` (`ISessionService`, `ITwoFactorService`, `IUserService` additions).
+The admin suite grew from 114 → **146** tests (28 new: 4 page suites + 4 settings routes driven
+through the real `Router`). Gotchas worth remembering:
+
+**1. `MudCard` has no `OnClick` in MudBlazor 9.7.** An `@onclick` on `<MudCard>` compiles but is
+silently swallowed into `UserAttributes` — a dead click handler. `AppearancePage`'s theme cards are
+clickable `<div role="button" tabindex="0" @onclick @onkeydown>` instead (and that's what the tests
+click).
+
+**2. bUnit asserts the HTML-escaped markup.** A button rendering `Verify & enable` appears in
+`cut.Markup` as `Verify &amp; enable`. Match the escaped form: `ShouldContain("Verify &amp; enable")`.
+
+**3. Inline-MudDialog needs the providers.** The app renders `MudDialogProvider`/`MudPopoverProvider`/
+`MudSnackbarProvider` in `App.razor`, but a bare `Render<SecurityPage>()` has none — opening the 2FA
+disable dialog fails. The test project's `TestShell.razor` mounts the providers around
+`@ChildContent`; dialog tests do `Render<TestShell>(p => p.AddChildContent<SecurityPage>())`, and the
+dialog itself is rendered by the provider **outside** the page subtree — reach its inputs via
+`cut.FindAll("div.mud-dialog input")`, not `section.FindAll("input")`.
+
+**4. `@bind-Valid` on `MudForm` is stale read-after-write.** The bound flag updates only after
+`Validate()` completes, so `if (!_formValid)` immediately after `Validate()` is wrong and form
+submission tests fail. Use the pattern from `RoleCreateDialog`: `await _form.ValidateAsync();
+if (!_form.IsValid) return;`.
+
+**5. Register every service before the container renders.** `RenderRouter` calls
+`GetRequiredService<NavigationManager>()`, freezing the container, so inject `ITwoFactorService`/
+sessions/theme substitutes *before* rendering — and build the theme from bUnit's `JSInterop.JSRuntime`
+(setup's `JSInterop.JSRuntime`), never from `Services.GetRequiredService<IJSRuntime>()` after render.
+
+**6. Settings routes are auth-gated, not permission-gated.** The four `@page "/settings/*"` routes
+carry `[Authorize]` and no `PermissionsSettings.*` claim — matching React, where any signed-in user
+sees profile/security/sessions/appearance. Check the React route guards before adding a
+`FshPermissionGate` on a settings page.

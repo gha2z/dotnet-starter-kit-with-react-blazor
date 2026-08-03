@@ -1,0 +1,95 @@
+@namespace FSH.Dashboard.Wasm.Pages.Catalog
+@using FSH.BlazorShared.Models.Catalog
+@using FSH.BlazorShared.Services
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex align-center gap-2 mb-2">
+            <FshToneIconTile Icon="@Icons.Material.Filled.Payments" Tone="Color.Warning" TileSize="32px" IconSize="Size.Small" />
+            <MudText Typo="Typo.h6" Style="margin: 0;">Change price</MudText>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
+            Update the price of <span style="font-weight: 500; color: var(--mud-palette-text-primary);">@Product.Name</span>.
+            The old price (@CurrentPrice) is kept in the price history.
+        </MudText>
+
+        <div class="d-flex gap-3 mb-4 flex-wrap">
+            <MudTextField T="decimal" @bind-Value="_amount"
+                          Label="New price"
+                          Adornment="@Adornment.Start"
+                          AdornmentText="@_currency"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Style="min-width: 180px;">
+            </MudTextField>
+            <MudSelect T="string" @bind-Value="_currency"
+                       Label="Currency"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Style="min-width: 140px;">
+                @foreach (var currency in Currencies)
+                {
+                    <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="mt-4">
+                <FshErrorBand Message="@_error" />
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync"
+                   Disabled="_isSubmitting || _amount < 0">
+            @(_isSubmitting ? "Saving…" : "Save price")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private static readonly string[] Currencies = ["USD", "EUR", "GBP"];
+
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Inject] private ICatalogService Catalog { get; set; } = default!;
+
+    [Parameter] public ProductDto Product { get; set; } = default!;
+
+    private decimal _amount;
+    private string _currency = "USD";
+    private string? _error;
+    private bool _isSubmitting;
+
+    private string CurrentPrice => FSH.BlazorShared.Formatting.FshFormat.Money(Product.Price.Amount, Product.Price.Currency);
+
+    protected override void OnInitialized()
+    {
+        _amount = Product.Price.Amount;
+        _currency = Product.Price.Currency;
+    }
+
+    private async Task SubmitAsync()
+    {
+        _isSubmitting = true;
+        _error = null;
+        try
+        {
+            await Catalog.ChangeProductPriceAsync(Product.Id, new ChangeProductPriceRequest(_amount, _currency));
+            Dialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private void Cancel() => Dialog.Cancel();
+}

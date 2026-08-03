@@ -1,4 +1,5 @@
 # Phase 1 — Identity & Authentication Flow
+Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-free).
 
 > **Target:** Both Blazor WASM apps authenticate against the API. Login page, token management, AuthStateProvider, DelegatingHandler, permission gating, and logout work end-to-end.
 

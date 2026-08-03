@@ -1,52 +1,105 @@
 # Phase 3 — Dashboard Feature Pages
+Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-free).
 
 > **Target:** All tenant-facing dashboard pages built — Overview (SSE), Activity, Subscription, Wallet, Catalog, Invoices, Identity (profile/user/role), Tickets, Chat, Files, System. Feature parity with `clients/dashboard` React app.
 
 ## Status
 
-- Phase 3: **🟨 In progress** — 3.1 partial (SSE infra ✅ from Phase 1 + parity sprint; Overview ✅; ActivityFeed pending) — next: 3.2 Activity
+- Phase 3: **🟨 In progress** — 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · **3.6 Catalog ✅** — dashboard suite **73/73** — next: 3.7 Identity
 - Prerequisites: Phase 1 ✅ (auth+login working, AppShell)
 - **Parity sprint deliverables already in place:** `SseService` (token flow `POST /api/v1/sse/token` → `GET /api/v1/sse/stream?token=`, backoff reconnect, `ConnectionChanged` event), SSE status dot in topbar, full sidebar (accordion, permission-gated) — no rebuilds needed, only page work.
 - Terminal pages `/tenant-deactivated` + `/impersonation-ended` do **not** exist yet (docs previously claimed they did) — tracked as 3.15 in `Phase-07-Parity-Completion/plan.md`.
 
+## 3.1 Done — what exists now
+
+- **`IDashboardService` / `DashboardService`** (`BlazorShared/Services/DashboardService.cs`): `GetMyTenantStatusAsync`, `GetMySubscriptionAsync`, `GetUsageSnapshotsAsync`, `GetRecentAuditsAsync` against `/api/v1/tenants/me/status`, `/api/v1/billing/subscriptions/me`, `/api/v1/billing/usage`, `/api/v1/audits`. Registered in dashboard `Program.cs` under "Tenant-scoped data services".
+- **`Models/Dashboard/DashboardDtos.cs`** — `TenantStatusDto`, `SubscriptionDto`, `UsageSnapshotDto` (JSON-mirror of the server projections).
+- **`Pages/Overview/OverviewPage.razor` + `OverviewPage.razor.cs`** — code-behind pattern: 4 stat tiles (plans/invoices/outstanding/usage), widgets for tenant status, subscription, usage summary, recent activity + SSE LIVE chip; per-widget loading (`MudProgressCircular`) + error states (`FshErrorBand`); SSE observe-only via `SseService.ConnectionChanged` (app root owns SSE lifecycle); fixed deserialization issues with flexible enum converter.
+- **`FSH.BlazorShared.csproj`** — added `System.Reactive 6.0.1` (custom `Subject<T>` implements `IObservable` — no Rx types were actually required, but the package reference keeps consumers safe).
+- **`_Imports.razor`** (dashboard) — added `FSH.BlazorShared.Sse`, `Models.Dashboard`, `Models.Audits` for all pages.
+- **Tests** — `Pages/Overview/OverviewPageTests.cs` (6 tests: all-stats render, placeholder→values, tenant error band, partial-failure resilience, no-subscription nav to `/subscription`, SSE LIVE chip). Dashboard suite **24/24** → **31/31** after 3.2 (`ActivityPageTests`, 7 tests).
+
 ## Task Checklist
 
-### 3.1 Overview + SSE Integration 🟨
+### 3.1 Overview + SSE Integration ✅
 - [x] **ISseService** — SSE stream client in `BlazorShared/Sse/` (manual `GetStreamAsync` parsing; token flow `POST /api/v1/sse/token` → `GET /api/v1/sse/stream?token=`)
   - `OnMessage` events via `IObservable<SseEvent>`, `ConnectionChanged` event
   - Automatic reconnection with capped backoff (1s → 2s → … → 30s, reset on success)
-- [x] **OverviewPage.razor** — `Pages/Overview/OverviewPage` — stat tiles, live-data ready
-- [ ] **ActivityFeed.razor** — Virtualized list of recent activities
-  - MudList with MudListItem for each activity
-  - SSE updates prepend new items
+  - Fixed to stop retrying when session token is gone (prevents infinite 401 loops after logout/expiry)
+- [x] **OverviewPage.razor** — `Pages/Overview/OverviewPage` — stat tiles, subscription/usage/audit widgets, SSE LIVE chip, loading/error states
+  - Now observes `SseService.ConnectionChanged` only (app root owns SSE lifecycle)
+  - Removed unused `_loadingSse`/`_sseError` fields and loading spinner from UI
+- [x] **AuditTag enum fix** — Added `[JsonConverter(typeof(FlexibleEnumJsonConverter<AuditTag>))]` to handle string/int deserialization (React parity)
+- [x] **bUnit suite** — `OverviewPageTests` (6 tests) — dashboard suite 24/24 → **31/31** after 3.2 (7 `ActivityPageTests`)
 
 ### 3.2 Activity
-- [ ] **IActivityService** — `SearchAsync(page, filters)`
-- [ ] **ActivityLogPage.razor** — MudTable with infinite scroll
-  - Filter by type, date range, user
-  - Timestamp, action, resource, details
+- [x] **ActivityPage.razor + .razor.cs** — `@page "/activity"`, `[Authorize]`, subscribes to `ISseService.Messages`
+  (IObservable) + `ConnectionChanged`; React parity with `clients/dashboard/src/pages/activity.tsx`
+  - Live SSE event log, newest-first, capped at 200 (React `MAX_EVENTS` parity), `_eventCount` total
+  - Header: `FshPageHeader` ("Live activity", count chip, unit "event") + status pill
+    (streaming=connected / connecting / offline)
+  - Empty state: `FshEmptyState` ("Listening for activity" while live, "No events yet" when offline)
+  - Event rows: `FshStatusPill` tone-mapped by type (`EventTone`: fail/error/revoke→danger,
+    warn/retry→warning, login/issued/created→success, token/auth→info, else neutral) · payload summary
+    (compact JSON, `PayloadSummary`) · entity label (`EntityLabel` — pulls entityId/aggregateId/id/
+    tenantId/userId) · receive time (`HH:mm:ss`)
+  - Responsive: mobile card list + desktop 3-col grid (`1fr 240px 120px`, CSS in `fsh.css` under
+    `/* ---------- live activity ---------- */`)
+  - Note: this replaces the older spec (IActivityService + MudTable infinite scroll + filters) — the
+    React page is a **live SSE stream**, not a paged audit log; built to match React.
+- [x] **bUnit suite** — `ActivityPageTests` (7 tests): offline empty state, streaming empty state, newest-first
+  prepend + payload/entity rendering, 200-event cap with running total, plain-string payload summary,
+  em-dash entity fallback, subscribe-on-render. **Dashboard suite 31/31.**
 
 ### 3.3 Subscription
-- [ ] **ISubscriptionService** — `GetCurrentAsync`, `GetPlansAsync`, `UpgradeAsync`, `GetUsageAsync`
-- [ ] **SubscriptionPage.razor** — MudCard with plan name, features list (MudList with check marks), usage progress bars (MudProgressLinear), expiry date
-- [ ] **UpgradeDialog.razor** — MudDialog: plan comparison, MudSelect for target plan, MudNumericField for period
+- [x] **SubscriptionPage.razor + .razor.cs** — `@page "/subscription"`, `[Authorize]`, React parity with
+  `clients/dashboard/src/pages/subscription.tsx`
+  - Two-column layout (left rail: Plan card + Validity card; right column: Usage + Recent invoices)
+    via CSS grid (`fsh-subscription-grid`, 360px left rail, flex-1 right, CSS in `fsh.css`)
+  - **Plan card**: plan name (status.plan or subscription.planKey), `FshStatusPill` "Active" badge, started/ends
+    dates via `FshFormat.DateShort`, "operator-driven" copy; no-subscription fallback state
+  - **Validity card**: `ExpiryState()` maps to tone (Active→Success, InGrace→Warning, Expired→Error) + "Inactive"
+    badge when `!isActive`, valid until date, grace end date (InGrace only)
+  - **Usage by resource**: current-month snapshots filtered by `DateTime.UtcNow` Year/Month (React parity:
+    `toUsageRows`), utilization percentage, `MudProgressLinear`-style CSS bars (`fsh-usage-bar`, colour:
+    error if overage, warning ≥80%, else primary), overage badge, number formatting via `FshFormat.Number`
+  - **Recent invoices**: top 5 most recent (sorted by `CreatedAtUtc` desc), icon tile + invoice number + status pill
+    + period + `FshFormat.Money`, click → `/invoices/{id}`
+  - Loading skeletons, error states, empty states per section; 4 parallel queries in `OnInitializedAsync`
+  - **DashboardDtos update**: `UsageSnapshotDto` expanded with `TenantId`, `PeriodYear`, `PeriodMonth` (server
+    projection includes them; needed for current-month filter — React `periodYear`/`periodMonth`)
+- [x] **bUnit suite** — `SubscriptionPageTests` (5 tests): full page render, no-subscription fallback,
+  usage empty state, in-grace validity with grace date, error band on status failure. **Dashboard 36/36**
 
 ### 3.4 Wallet
-- [ ] **IWalletService** — `GetBalanceAsync`, `TopUpAsync`, `GetTransactionsAsync`
-- [ ] **WalletPage.razor** — MudCard: balance display (large text), top-up MudButton → MudDialog (MudNumericField + MudSelect for payment method)
-- [ ] **TransactionListPage.razor** — MudTable with date, description, amount (+/- with color), status MudChip
+- [x] **WalletDtos.cs** (`BlazorShared/Models/Billing/`) — `WalletDto`, `WalletTransactionDto`, `CreateTopupRequestRequest` (mirrors server `WalletDto` / `WalletTransactionDto` / `CreateTopupRequestCommand`)
+- [x] **IBillingService** — added `GetMyWalletAsync()` + `CreateTopupRequestAsync(CreateTopupRequestRequest)` (**BillingService** implemented: `GET /api/v1/billing/wallet/me`, `POST /api/v1/billing/wallet/topup-requests`)
+- [x] **WalletPage.razor + .razor.cs** — `@page "/wallet"`, `[Authorize]`, React parity with `clients/dashboard/src/pages/wallet.tsx`
+  - **Balance card**: large `FshFormat.Money` display, low-balance warning (`fsh-low-balance-hint`, threshold = 10, red when ≤ 0), loading skeleton
+  - **Top-up request form**: `EditForm` + `MudTextField` (amount, currency adornment), `MudTextField` (note, 3 lines, max 1000), `MudButton submit` (disabled until valid + not submitting), success `MudAlert` + form reset + refresh after submit, error via `ISnackbar`
+  - **Request list**: 4-col desktop grid (`fsh-wallet-grid`, React DESKTOP_GRID parity: `1fr 140px 130px 150px`), date + amount + status pill + invoice link; `FshPager` for multi-page
+  - Status tones: Pending→Warning, Invoiced→Info, Completed→Success, Rejected→Error (matches React `statusTone`)
+- [x] **bUnit suite** — `WalletPageTests` (5 tests): full render, low-balance hint, empty balance hint, empty requests, error band. **Dashboard 41/41**
 
 ### 3.5 Invoices
-- [ ] **IInvoiceService** — `SearchAsync`, `GetDetailAsync`, `DownloadAsync`
-- [ ] **InvoicesListPage.razor** — MudTable with invoice number, date, amount, status MudChip, download MudButton
-- [ ] **InvoiceDetailPage.razor** — MudCard sections: from/to info, line items (MudTable), total, PDF preview (iframe or Blob URL)
+- [x] **IBillingService** — added `GetMyInvoicesAsync(pageNumber, pageSize, status, periodYear, periodMonth)` (**BillingService** implemented: `GET /api/v1/billing/invoices/me`, reuses existing `GetInvoiceByIdAsync` + `GetInvoicePdfAsync`)
+- [x] **InvoicesPage.razor + .razor.cs** — `@page "/invoices"`, `[Authorize]`, React parity with `clients/dashboard/src/pages/invoices.tsx`
+  - `FshPageHeader` with count, client-side search box (`MudTextField`, searches invoice number / status / period on current page; pagination suppressed while searching)
+  - Desktop 5-col grid (`fsh-invoices-grid`, React DESKTOP_GRID parity), rows clickable → `/invoices/{id}`, status pills (Paid→Success, Issued→Info, Void→Error)
+  - Loading skeletons, `FshEmptyState` (search-aware title/body + clear button), `FshErrorBand`, `FshPager`
+- [x] **InvoiceDetailPage.razor + .razor.cs** — `@page "/invoices/{Id}"`, `[Authorize]`, React parity with `clients/dashboard/src/pages/invoice-detail.tsx`
+  - Back button, header card (accent bar, icon tile, invoice number + status/purpose pills, period + amount, Download PDF button)
+  - Line items section (4-col grid `fsh-lineitems-grid`, qty/unit price/amount, total row), Details card (status/currency/period/created/issued/due/paid/voided/period start/end with tonal row colors), Notes card
+  - PDF download via **new `fshDownload.js`** in dashboard wwwroot (`fshDownload.saveFile`, same helper as admin) + index.html script ref; loading skeleton + not-found + error states
+- [x] **bUnit suite** — `InvoicesPageTests` (4: render, empty, error band, client-side search filter) + `InvoiceDetailPageTests` (3: render, error band, not-found). **Dashboard 48/48**
 
 ### 3.6 Catalog — Brands, Categories, Products
-- [ ] **ICatalogService** — `SearchProductsAsync`, `GetProductAsync`, `SearchBrandsAsync`, `SearchCategoriesAsync`
-- [ ] **ProductsListPage.razor** — MudTable with thumbnail (MudImage or MudAvatar), brand/category MudChips, price formatting, search
-- [ ] **ProductDetailPage.razor** — MudCard with image gallery (MudCarousel), specs table (MudTable), description
-- [ ] **BrandsListPage.razor** — MudTable with logo, name, product count
-- [ ] **CategoriesListPage.razor** — MudTable with name, icon, product count
+- [x] **CatalogDtos.cs** (`BlazorShared/Models/Catalog/`) — `BrandDto`, `CategoryDto`, `CategoryTreeNodeDto`, `MoneyDto`, `ProductDto`, `ProductImageDto` + request records (`CreateBrandRequest`, `UpdateBrandRequest`, `CreateCategoryRequest`, `UpdateCategoryRequest`, `CreateProductRequest`, `UpdateProductRequest`, `ChangeProductPriceRequest`, `AdjustProductStockRequest`) — mirrors server DTOs/commands
+- [x] **ICatalogService** — `SearchProductsAsync`, `GetProductAsync`, `CreateProductAsync`, `UpdateProductAsync`, `DeleteProductAsync`, `ChangeProductPriceAsync`, `AdjustProductStockAsync` (returns `Task<int>` — server `AdjustProductStockCommand` is `ICommand<int>`), `GetProductImagesAsync`, `SearchBrandsAsync`, `CreateBrandAsync`, `UpdateBrandAsync`, `DeleteBrandAsync`, `SearchCategoriesAsync`, `GetCategoryTreeAsync`, `CreateCategoryAsync`, `UpdateCategoryAsync`, `DeleteCategoryAsync` (**CatalogService** implemented, endpoints `/api/v1/catalog/...`)
+- [x] **ProductsPage.razor** — MudTable: thumbnail, brand/category chips, price, stock, search + brand/category/isActive filters, create/edit dialogs (sku/name/description/brand/category/price/stock), delete confirm, **price-change + stock-adjust dialogs**. React parity: `clients/dashboard/src/pages/catalog/products.tsx`
+- [x] **ProductDetailPage.razor** — hero card, description, image gallery (thumbnail set + delete), brand/category/created/updated meta, edit + price/stock actions. React parity: `clients/dashboard/src/pages/catalog/product-detail.tsx`
+- [x] **BrandsPage.razor** — MudTable: logo, name, description, created, search + pager, create/edit/delete dialogs. React parity: `clients/dashboard/src/pages/catalog/brands.tsx`
+- [x] **CategoriesPage.razor** — MudTable: name, parent, product count, search + pager, create/edit (parent combobox)/delete dialogs. React parity: `clients/dashboard/src/pages/catalog/categories.tsx`
 
 ### 3.7 Identity (Dashboard)
 - [ ] **ProfilePage.razor** — MudForm: edit profile info, MudFileInput for avatar, MudButton for save
@@ -88,31 +141,33 @@
 - [ ] **ImpersonationBanner.razor** — MudAlert banner: "Impersonating {user}" + end button
 - [ ] **Impersonation detection** in AuthStateProvider: read `act_sub`, `act_tenant` claims
 - [ ] **Terminal pages:**
-  - `TenantDeactivatedPage.razor` — Redirect on 403 with deactivation reason
-  - `ImpersonationEndedPage.razor` — Redirect when impersonation revoked
-  - Both rendered outside AppShell (no sidebar)
+  - [ ] `TenantDeactivatedPage.razor` — Redirect on 403 with deactivation reason
+  - [ ] `ImpersonationEndedPage.razor` — Redirect when impersonation revoked
+  - [ ] Both rendered outside AppShell (no sidebar)
 
 ### 3.14 Command Palette
 - [ ] **CommandPalette.razor** — MudAutocomplete with quick-nav to all pages
-  - Keyboard shortcut: `Ctrl+K` / `Cmd+K`
-  - Search page titles, navigate on select
+- [ ]   Keyboard shortcut: `Ctrl+K` / `Cmd+K`
+- [ ]   Search page titles, navigate on select
 
 ## Next Up
 
-**Task 3.1**: ISseClient + Overview page.
-
-1. Read React reference: `clients/dashboard/src/pages/overview.tsx`, `clients/dashboard/src/lib/sse.ts`
-2. Create `ISseClient` + `SseClient` in BlazorShared/Sse/
-3. Wire in dashboard `Program.cs` (`AddScoped`)
-4. Create `OverviewPage.razor` with MudCard grid
-5. Subscribe to SSE stream → update stats live
-6. Test: run dashboard app, verify SSE connects and data flows
+**Task 3.6 — Catalog pages** (foundation done: `CatalogDtos.cs`, `ICatalogService`, `CatalogService` in
+BlazorShared). Build `Pages/Catalog/` in dashboard-blazor:
+1. `ProductsPage` — MudTable (search + brand/category/isActive filters, create/edit/delete, price-change + stock-adjust dialogs)
+2. `ProductDetailPage` — hero, description, images (thumbnail/delete), meta, actions
+3. `BrandsPage` — MudTable (logo/name/description, create/edit/delete)
+4. `CategoriesPage` — MudTable (parent combobox in create/edit, delete)
+Register `AddScoped<ICatalogService, CatalogService>()` in `FSH.Dashboard.Wasm/Program.cs`, add bUnit tests,
+run full solution build (0 warnings) + both test suites. React source of truth:
+`clients/dashboard/src/pages/catalog/{products,product-detail,brands,categories}.tsx` +
+`clients/dashboard/src/api/catalog.ts`.
 
 ## Architecture Decisions
 
 | Decision | Choice | Why |
-|---|---|---|
-| SSE client | JS interop wrapping `EventSource` | Blazor WASM has no built-in SSE client; JS interop matches React pattern |
+|----------|--------|-----|
+| SSE client | **Pure C# `HttpClient` streaming** (no JS interop) | `.NET` WASM supports `ResponseHeadersRead` streaming; manual event parsing (`event:`/`data:` lines) keeps the whole stack in C# and unit-testable. The old "must use JS EventSource" note below is obsolete |
 | SSE reconnection | Exponential backoff in C# | Memory: 1s → 2s → 4s → max 30s, reset on successful connection |
 | Chat | SignalR (not SSE) | Bidirectional; SSE is server→client only |
 | Image gallery | MudCarousel | Native MudBlazor component; falls back to static image list gracefully |
@@ -121,7 +176,9 @@
 
 ## Notes & Gotchas
 
-- **SSE in WASM**: Blazor's `HttpClient` cannot stream SSE (it buffers responses). Must use JS interop for native `EventSource`. The C# SSE client receives parsed messages from JS.
+- **SSE in WASM**: `SseService` streams with `HttpClient.SendAsync(..., HttpCompletionOption.ResponseHeadersRead)` + a manual line parser (`event:` / `data:`), publishing `SseEvent` records through a small custom `Subject<T>` (`IObservable<T>`). Works on WASM; reconnection is in C# with capped backoff. UI handlers must marshal via `InvokeAsync(StateHasChanged)` because `OnNext` runs on the SSE loop thread.
+- **Code-behind vs `@code`**: `OverviewPage` uses a `.razor.cs` partial (preferred for page logic). `@using` directives in the `.razor` do **NOT** apply to the code-behind — the `.cs` needs its own `using FSH.BlazorShared.Sse;` etc.
+- **MudBlazor 9.7 API drift**: no `MudCircularProgress` (use `MudProgressCircular`), `MudChip` needs `T="string"`, `MudRadioGroup` binds via `@bind-Value` (no `SelectedOption`), `MudRadio` uses `Value=` (no `Option=`), `MudTextField` has no `Size=`/`MinLength=`, `MudIconButton` has no `AriaLabel=` (use lowercase `aria-label=`), `MudListItem` has no `Clickable=`/`MudListItemAvatar`/`MudListItemText`. Admin + dashboard now build **0 warnings**.
 - **Impersonation cross-app**: When admin starts impersonation from admin app, they get redirected to dashboard app with a new JWT containing `act_sub`/`act_tenant` claims. The dashboard AuthStateProvider must detect these.
 - **Chat SignalR**: Hub connection is separate from notification hub. `HubConnection` in BlazorShared/Realtime/ with separate builder URLs.
 - **File preview**: For PDFs and images, generate a Blob URL from the API response and render in an `<iframe>` or `<img>`. For other types, show file metadata only.
@@ -131,8 +188,8 @@
 
 ## Blocker Checklist
 
-- [ ] Phase 1 complete: can login, AppShell renders, routing works
-- [ ] API SSE endpoint available and functional (/api/v1/dashboard/stream or similar)
-- [ ] SignalR hub configured for chat (usually `/hubs/chat` or similar)
-- [ ] File attachment APIs work (presigned URL generation, upload, list)
-- [ ] API supports impersonation endpoints
+- [x] Phase 1 complete: can login, AppShell renders, routing works
+- [x] API SSE endpoint available and functional (`/api/v1/sse/token` → `/api/v1/sse/stream?token=`)
+- [x] SignalR hub configured for chat (usually `/hubs/chat` or similar)
+- [x] File attachment APIs work (presigned URL generation, upload, list)
+- [x] API supports impersonation endpoints

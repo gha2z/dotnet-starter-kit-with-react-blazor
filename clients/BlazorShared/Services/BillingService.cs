@@ -107,6 +107,35 @@ public sealed class BillingService(HttpClient http) : IBillingService
         return await response.Content.ReadFromJsonAsync<Guid>(ct);
     }
 
+    public async Task<WalletDto> GetMyWalletAsync(CancellationToken ct = default)
+    {
+        return await http.GetFromJsonAsync<WalletDto>($"{BillingBase}/wallet/me", ct)
+            ?? throw new InvalidOperationException("Null wallet response");
+    }
+
+    public async Task CreateTopupRequestAsync(CreateTopupRequestRequest request, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync($"{BillingBase}/wallet/topup-requests", request, ct);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<PagedResult<InvoiceDto>> GetMyInvoicesAsync(
+        int pageNumber = 1,
+        int pageSize = 20,
+        string? status = null,
+        int? periodYear = null,
+        int? periodMonth = null,
+        CancellationToken ct = default)
+    {
+        var query = QueryString(
+            pageNumber, pageSize,
+            ("status", status),
+            ("periodYear", periodYear?.ToString()),
+            ("periodMonth", periodMonth?.ToString()));
+        return await http.GetFromJsonAsync<PagedResult<InvoiceDto>>($"{BillingBase}/invoices/me?{query}", ct)
+            ?? new PagedResult<InvoiceDto>([], pageNumber, pageSize, 0, 1, false, false);
+    }
+
     private static string QueryString(int pageNumber, int pageSize, params (string Key, string? Value)[] parameters)
     {
         var parts = new List<string> { $"pageNumber={pageNumber}", $"pageSize={pageSize}" };

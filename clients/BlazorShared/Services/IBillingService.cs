@@ -29,4 +29,17 @@ public interface IBillingService
         CancellationToken ct = default);
     Task<Guid> ApproveTopupRequestAsync(Guid id, string? note, CancellationToken ct = default);
     Task<Guid> RejectTopupRequestAsync(Guid id, string? reason, CancellationToken ct = default);
+
+    // Wallet — tenant-scoped
+    Task<WalletDto> GetMyWalletAsync(CancellationToken ct = default);
+    Task CreateTopupRequestAsync(CreateTopupRequestRequest request, CancellationToken ct = default);
+
+    // Dashboard (tenant-scoped) invoice helpers
+    Task<PagedResult<InvoiceDto>> GetMyInvoicesAsync(
+        int pageNumber = 1,
+        int pageSize = 20,
+        string? status = null,
+        int? periodYear = null,
+        int? periodMonth = null,
+        CancellationToken ct = default);
 }

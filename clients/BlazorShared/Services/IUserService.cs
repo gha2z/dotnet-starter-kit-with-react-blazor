@@ -12,4 +12,8 @@ public interface IUserService
     Task<List<UserRoleDto>> GetRolesAsync(string userId, CancellationToken ct = default);
     Task AssignRolesAsync(string userId, List<UserRoleDto> roles, CancellationToken ct = default);
     Task<List<UserSessionDto>> GetSessionsAsync(string userId, CancellationToken ct = default);
+    Task<UserDto> GetMyProfileAsync(CancellationToken ct = default);
+    Task SetProfileImageAsync(string? imageUrl, CancellationToken ct = default);
+    Task ChangePasswordAsync(ChangePasswordRequest request, CancellationToken ct = default);
+    Task<PagedResult<UserDto>> SearchInTenantAsync(string tenantId, string? search, CancellationToken ct = default);
 }

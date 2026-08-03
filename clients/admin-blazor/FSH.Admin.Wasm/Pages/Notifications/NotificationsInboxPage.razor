@@ -1,0 +1,231 @@
+@page "/notifications/inbox"
+@attribute [Authorize]
+@using FSH.BlazorShared.Models.Notifications
+@using FSH.BlazorShared.Formatting
+@using FSH.BlazorShared.Realtime
+@using Microsoft.AspNetCore.SignalR.Client
+
+<FshPageHeader Title="Notifications"
+               Icon="@Icons.Material.Filled.Notifications"
+               Tone="Color.Primary"
+               Count="@(_items.Count)"
+               Unit="item"
+               Description="Events the system has surfaced for you. Live-updates as new notifications arrive — no refresh needed.">
+    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh"
+               Disabled="@_isFetching" OnClick="LoadAsync">
+        Refresh
+    </MudButton>
+    <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.DoneAll" OnClick="MarkAllReadAsync"
+               Disabled="@(_isMarkingAll || _items.All(n => n.IsRead))">
+        @(_isMarkingAll ? "Marking…" : "Mark all read")
+    </MudButton>
+</FshPageHeader>
+
+<FshFilterBar Caption="Inbox">
+    <div style="min-width: 10rem;">
+        <MudSelect T="string"
+                   @bind-Value="_filter"
+                   @bind-Value:after="OnFilterChangedAsync"
+                   Label="Filter"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense"
+                   Dense="true">
+            <MudSelectItem Value="@("unread")">Unread</MudSelectItem>
+            <MudSelectItem Value="@("all")">All</MudSelectItem>
+        </MudSelect>
+    </div>
+</FshFilterBar>
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+else if (_loading && _items.Count == 0)
+{
+    <FshLoadingRow Label="Loading notifications" />
+}
+else if (_items.Count == 0)
+{
+    <FshEmptyState Icon="@Icons.Material.Filled.Notifications"
+                   Kicker="// inbox zero"
+                   Title="@EmptyTitle"
+                   Description="@EmptyDescription" />
+}
+else
+{
+    <MudPaper Elevation="1" Class="pa-2 pa-md-4">
+        @foreach (var notif in _items)
+        {
+            var unread = !notif.IsRead;
+            <div class="d-flex align-start gap-3 px-3 py-4 @(unread ? "fsh-notif-unread" : null)">
+                <span aria-hidden class="fsh-notif-dot @(unread ? "fsh-notif-dot-active" : "fsh-notif-dot-read")"></span>
+                <FshStatusPill Text="@notif.Source" Tone="Color.Default" />
+                <div class="min-w-0 flex-grow-1">
+                    <div class="d-flex flex-wrap align-baseline gap-2">
+                        <span class="fsh-mono-medium" style="font-size: 14px;">@notif.Title</span>
+                        <code class="fsh-code-chip">@notif.Type</code>
+                        <span class="fsh-mono-label" style="text-transform: none; letter-spacing: 0.02em;">
+                            @FshFormat.DateTimeLong(notif.CreatedAtUtc)
+                        </span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(notif.Body))
+                    {
+                        <p class="mt-1 mb-0 fsh-mono-muted" style="font-size: 13px;">@notif.Body</p>
+                    }
+                    @if (!string.IsNullOrEmpty(notif.Link))
+                    {
+                        <a href="@notif.Link"
+                           target="@(notif.Link!.StartsWith("http") ? "_blank" : "_self")"
+                           rel="noopener noreferrer"
+                           class="fsh-inline-link">Open</a>
+                    }
+                </div>
+                @if (unread)
+                {
+                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.DoneAll" OnClick="@(() => MarkReadAsync(notif.Id))">
+                        Mark read
+                    </MudButton>
+                }
+            </div>
+        }
+    </MudPaper>
+}
+
+@code {
+    [Inject]
+    private INotificationService NotificationService { get; set; } = default!;
+
+    [Inject]
+    private IHubConnectionService Hub { get; set; } = default!;
+
+    [Inject]
+    private ISnackbar Snackbar { get; set; } = default!;
+
+    private readonly List<NotificationDto> _items = [];
+    private string _filter = "unread";
+    private string? _error;
+    private bool _loading = true;
+    private bool _isFetching;
+    private bool _isMarkingAll;
+    private IDisposable? _hubSub;
+    private bool _disposed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        TrySubscribeHub();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (_isFetching)
+        {
+            return;
+        }
+
+        _isFetching = true;
+        _loading = _items.Count == 0;
+        _error = null;
+        try
+        {
+            var items = await NotificationService.ListAsync(
+                unreadOnly: _filter == "unread",
+                page: 1,
+                pageSize: 100);
+            _items.Clear();
+            _items.AddRange(items);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+            _items.Clear();
+        }
+        finally
+        {
+            _isFetching = false;
+            _loading = false;
+        }
+    }
+
+    private async Task OnFilterChangedAsync() => await LoadAsync();
+
+    private async Task MarkReadAsync(Guid id)
+    {
+        try
+        {
+            await NotificationService.MarkReadAsync(id);
+            var target = _items.FirstOrDefault(n => n.Id == id);
+            if (target is not null)
+            {
+                var index = _items.IndexOf(target);
+                _items[index] = target with { ReadAtUtc = DateTime.UtcNow };
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Mark read failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task MarkAllReadAsync()
+    {
+        _isMarkingAll = true;
+        try
+        {
+            var updated = await NotificationService.MarkAllReadAsync();
+            for (var i = 0; i < _items.Count; i++)
+            {
+                _items[i] = _items[i] with { ReadAtUtc = DateTime.UtcNow };
+            }
+
+            Snackbar.Add($"{updated} {(updated == 1 ? "notification" : "notifications")} marked read", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Mark all read failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isMarkingAll = false;
+        }
+    }
+
+    private string EmptyTitle => _filter == "unread" ? "Nothing unread." : "No notifications yet.";
+
+    private string EmptyDescription => _filter == "unread"
+        ? "You're all caught up. Live updates will pop in here as they fire."
+        : "Notifications from the system will appear here as they're generated.";
+
+    private void TrySubscribeHub()
+    {
+        if (_hubSub is not null || Hub.State != HubConnectionState.Connected)
+        {
+            return;
+        }
+
+        _hubSub = Hub.On<NotificationDto>("NotificationCreated", OnNotificationPushedAsync);
+    }
+
+    private async Task OnNotificationPushedAsync(NotificationDto notification)
+    {
+        if (_filter == "all" && !_items.Any(n => n.Id == notification.Id))
+        {
+            _items.Insert(0, notification);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _hubSub?.Dispose();
+    }
+}

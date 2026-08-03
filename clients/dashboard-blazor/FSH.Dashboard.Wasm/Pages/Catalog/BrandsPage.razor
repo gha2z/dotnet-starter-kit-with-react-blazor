@@ -1,0 +1,113 @@
+@page "/catalog/brands"
+@attribute [Authorize]
+@using FSH.BlazorShared.Formatting
+@using MudBlazor
+
+<FshPageHeader Title="Brands"
+               Description="Curate the maker imprints behind every product. Each brand carries its own slug, story, and logo."
+               Icon="@Icons.Material.Filled.LocalOffer"
+               Count="@(_totalCount == 0 && _loading ? null : _totalCount)"
+               Unit="brand">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add"
+               OnClick="() => OpenEditorAsync(null)">
+        New brand
+    </MudButton>
+</FshPageHeader>
+
+<MudTextField @bind-Value="_search"
+              Placeholder="Search by name or slug…"
+              Variant="Variant.Outlined"
+              Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Filled.Search"
+              Class="mb-4"
+              Immediate="true" />
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+@if (_loading)
+{
+    @for (var i = 0; i < 4; i++)
+    {
+        <div class="fsh-skeleton" style="height: 56px; border-radius: 12px; margin-bottom: 8px;"></div>
+    }
+}
+else if (Filtered.Count == 0)
+{
+    <FshEmptyState Icon="@(SearchActive ? Icons.Material.Filled.Search : Icons.Material.Filled.LocalOffer)"
+                   Title="@(SearchActive ? "No brands found" : "No brands yet")"
+                   Description="@EmptyStateDescription">
+        @if (SearchActive)
+        {
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="ClearSearch">Clear search</MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="() => OpenEditorAsync(null)">
+                Add brand
+            </MudButton>
+        }
+    </FshEmptyState>
+}
+else
+{
+    <div class="d-flex justify-space-between align-center mb-3">
+        <p class="fsh-muted-copy" style="font-size: 12px; font-weight: 500; margin: 0;">@MetaText</p>
+    </div>
+
+    <div class="fsh-brands-grid fsh-list-head">
+        <span>Brand</span>
+        <span>Slug</span>
+        <span>Created</span>
+        <span></span>
+    </div>
+
+    @for (var i = 0; i < Filtered.Count; i++)
+    {
+        var brand = Filtered[i];
+        var isLast = i == Filtered.Count - 1;
+        <div class="fsh-brands-grid fsh-list-row @(isLast ? "" : "fsh-row-border")">
+            <div class="d-flex align-center gap-3 min-w-0">
+                <span class="fsh-prod-thumb">
+                    @if (!string.IsNullOrEmpty(brand.LogoUrl))
+                    {
+                        <img src="@brand.LogoUrl" alt="" loading="lazy" referrerpolicy="no-referrer" />
+                    }
+                    else
+                    {
+                        <span class="fsh-prod-initial">@Initial(brand.Name)</span>
+                    }
+                </span>
+                <div class="min-w-0">
+                    <div class="fsh-truncate" style="font-size: 14px; font-weight: 500; color: var(--mud-palette-text-primary);">@brand.Name</div>
+                    @if (!string.IsNullOrEmpty(brand.Description))
+                    {
+                        <div class="fsh-truncate fsh-muted-copy" style="font-size: 12px;" title="@brand.Description">@brand.Description</div>
+                    }
+                </div>
+            </div>
+            <code class="fsh-truncate fsh-mono-muted" style="font-size: 12px;" title="@brand.Slug">@brand.Slug</code>
+            <div class="min-w-0" style="font-size: 12px; color: var(--mud-palette-text-secondary); font-variant-numeric: tabular-nums;">
+                <div class="fsh-truncate">@FshFormat.DateShort(brand.CreatedAtUtc)</div>
+            </div>
+            <div class="d-flex align-center justify-end gap-1">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                               Color="Color.Default" aria-label="@($"Edit {brand.Name}")"
+                               OnClick="() => OpenEditorAsync(brand)" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                               Color="Color.Error" aria-label="@($"Delete {brand.Name}")"
+                               OnClick="() => ConfirmDeleteAsync(brand)" />
+            </div>
+        </div>
+    }
+
+    @if (!SearchActive && _totalPages > 1)
+    {
+        <div class="d-flex align-center justify-center gap-2 mt-4">
+            <FshPager TotalCount="@_totalCount" PageNumber="@_pageNumber" PageSize="@PageSize" PageChanged="GoToPage" />
+        </div>
+    }
+}

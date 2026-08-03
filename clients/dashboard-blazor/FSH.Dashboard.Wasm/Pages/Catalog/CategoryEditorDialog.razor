@@ -1,0 +1,196 @@
+@namespace FSH.Dashboard.Wasm.Pages.Catalog
+@using FSH.BlazorShared.Models.Catalog
+@using FSH.BlazorShared.Services
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex align-center gap-2 mb-2">
+            <FshToneIconTile Icon="@Icons.Material.Filled.FolderShared" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
+            <MudText Typo="Typo.h6" Style="margin: 0;">@(Category is null ? "Add a category" : "Edit category")</MudText>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
+            @(Category is null
+                ? "Add a category to your catalog. The slug is generated automatically from the name."
+                : $"Update details for {Category.Name}. The slug is re-derived from the name.")
+        </MudText>
+
+        <MudTextField T="string"
+                      @bind-Value="_name"
+                      Label="Name"
+                      Placeholder="Outdoor"
+                      Required="true"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Class="mb-4"
+                      MaxLength="128" />
+
+        <div class="mb-4">
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">Slug</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">Auto-derived from the name. Used in URLs.</MudText>
+            <div class="fsh-slug-preview fsh-mono-muted">@SlugPreview</div>
+        </div>
+
+        <div class="mb-4">
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">Parent</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">Optional. Leave empty to make this a root category.</MudText>
+            <MudSelect T="Guid?" @bind-Value="_parentCategoryId"
+                       Label="Parent category"
+                       Placeholder="No parent (root)"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Clearable="true"
+                       Class="mt-1">
+                @foreach (var option in _parentOptions)
+                {
+                    <MudSelectItem T="Guid?" Value="@option.Id">
+                        <span style="font-family: var(--fsh-mono, monospace); font-size: 11px; letter-spacing: -0.01em; color: var(--mud-palette-text-secondary);">
+                            @(option.Depth > 0 ? new string(' ', option.Depth) + "↳" : "root")
+                        </span>
+                        <span style="font-size: 13px;">@option.Name</span>
+                    </MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+
+        <MudTextField T="string"
+                      @bind-Value="_description"
+                      Label="Description"
+                      HelperText="Shown on category browse pages."
+                      Placeholder="Gear for the great outdoors."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Lines="3"
+                      Class="mb-4"
+                      MaxLength="1024" />
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="mt-4">
+                <FshErrorBand Message="@_error" />
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync"
+                   Disabled="_isSubmitting || string.IsNullOrWhiteSpace(_name)">
+            @(_isSubmitting ? "Saving…" : Category is null ? "Add category" : "Save changes")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private sealed record ParentOption(Guid Id, string Name, int Depth);
+
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Inject] private ICatalogService Catalog { get; set; } = default!;
+
+    [Parameter] public CategoryDto? Category { get; set; }
+
+    private string _name = string.Empty;
+    private string _description = string.Empty;
+    private Guid? _parentCategoryId;
+    private string? _error;
+    private bool _isSubmitting;
+    private List<ParentOption> _parentOptions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Category is not null)
+        {
+            _name = Category.Name;
+            _description = Category.Description ?? string.Empty;
+            _parentCategoryId = Category.ParentCategoryId;
+        }
+
+        await LoadParentOptionsAsync();
+    }
+
+    private async Task LoadParentOptionsAsync()
+    {
+        try
+        {
+            var tree = await Catalog.GetCategoryTreeAsync();
+            var flat = new List<ParentOption>();
+            void Walk(IEnumerable<CategoryTreeNodeDto> nodes, int depth, IReadOnlyList<Guid> ancestors)
+            {
+                foreach (var node in nodes)
+                {
+                    flat.Add(new ParentOption(node.Id, node.Name, depth));
+                    if (node.Children.Count > 0)
+                    {
+                        Walk(node.Children, depth + 1, [.. ancestors, node.Id]);
+                    }
+                }
+            }
+
+            Walk(tree, 0, []);
+            _parentOptions = Category is null
+                ? flat
+                : flat.Where(o => o.Id != Category!.Id && !o.Name.Equals(Category!.Name)).ToList();
+        }
+        catch
+        {
+            // parent options are a nicety; the form still works without the tree
+        }
+    }
+
+    private string SlugPreview => string.IsNullOrWhiteSpace(_name) ? "—" : Slugify(_name);
+
+    private static string Slugify(string value)
+    {
+        var sb = new System.Text.StringBuilder();
+        var prevDash = false;
+        foreach (var ch in value.ToLowerInvariant().Trim())
+        {
+            if (char.IsLetterOrDigit(ch))
+            {
+                sb.Append(ch);
+                prevDash = false;
+            }
+            else if (!prevDash && sb.Length > 0)
+            {
+                sb.Append('-');
+                prevDash = true;
+            }
+        }
+        return sb.ToString().TrimEnd('-');
+    }
+
+    private async Task SubmitAsync()
+    {
+        var name = _name.Trim();
+        if (string.IsNullOrEmpty(name))
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+        _error = null;
+        try
+        {
+            var description = string.IsNullOrWhiteSpace(_description) ? null : _description.Trim();
+            if (Category is not null)
+            {
+                await Catalog.UpdateCategoryAsync(new UpdateCategoryRequest(Category.Id, name, description, _parentCategoryId));
+            }
+            else
+            {
+                await Catalog.CreateCategoryAsync(new CreateCategoryRequest(name, description, _parentCategoryId));
+            }
+
+            Dialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private void Cancel() => Dialog.Cancel();
+}

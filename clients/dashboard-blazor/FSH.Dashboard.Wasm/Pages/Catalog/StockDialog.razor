@@ -1,0 +1,84 @@
+@namespace FSH.Dashboard.Wasm.Pages.Catalog
+@using FSH.BlazorShared.Models.Catalog
+@using FSH.BlazorShared.Services
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex align-center gap-2 mb-2">
+            <FshToneIconTile Icon="@Icons.Material.Filled.Inventory2" Tone="Color.Success" TileSize="32px" IconSize="Size.Small" />
+            <MudText Typo="Typo.h6" Style="margin: 0;">Adjust stock</MudText>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
+            Adjust the on-hand quantity of <span style="font-weight: 500; color: var(--mud-palette-text-primary);">@Product.Name</span>.
+            Use a positive delta for stock in, a negative delta for stock out or write-offs.
+        </MudText>
+
+        <div class="d-flex align-center gap-3 mb-2">
+            <MudIconButton Icon="@Icons.Material.Filled.Remove" Color="Color.Default" Variant="Variant.Outlined"
+                           Disabled="_isSubmitting" OnClick="() => Adjust(-1)" />
+            <MudTextField T="int" @bind-Value="_delta"
+                          Adornment="@Adornment.Start"
+                          AdornmentText="@DeltaSign"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Style="min-width: 140px;" />
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Default" Variant="Variant.Outlined"
+                           Disabled="_isSubmitting" OnClick="() => Adjust(1)" />
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Current <span style="font-variant-numeric: tabular-nums; color: var(--mud-palette-text-primary);">@Product.Stock</span>
+            → new <span style="font-variant-numeric: tabular-nums; font-weight: 500; color: var(--mud-palette-text-primary);">@(Product.Stock + _delta)</span>
+        </MudText>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="mt-4">
+                <FshErrorBand Message="@_error" />
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync"
+                   Disabled="_isSubmitting || _delta == 0">
+            @(_isSubmitting ? "Saving…" : "Apply adjustment")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Inject] private ICatalogService Catalog { get; set; } = default!;
+
+    [Parameter] public ProductDto Product { get; set; } = default!;
+
+    private int _delta = 1;
+    private string? _error;
+    private bool _isSubmitting;
+
+    private string DeltaSign => _delta >= 0 ? "+" : "-";
+
+    private void Adjust(int step) => _delta = Math.Clamp(_delta + step, -9999, 9999);
+
+    private async Task SubmitAsync()
+    {
+        _isSubmitting = true;
+        _error = null;
+        try
+        {
+            await Catalog.AdjustProductStockAsync(Product.Id, new AdjustProductStockRequest(_delta));
+            Dialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private void Cancel() => Dialog.Cancel();
+}

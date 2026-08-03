@@ -1,0 +1,181 @@
+@namespace FSH.Admin.Wasm.Pages.Webhooks
+@using FSH.BlazorShared.Models.Webhooks
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex align-center gap-2 mb-2">
+            <FshToneIconTile Icon="@Icons.Material.Filled.Hub" Tone="Color.Secondary" TileSize="32px" IconSize="Size.Small" />
+            <MudText Typo="Typo.h6" Style="margin: 0;">New webhook subscription</MudText>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
+            Your endpoint receives a JSON payload with the event details. We sign each request
+            with HMAC-SHA256 in the <code class="fsh-code-chip">X-FSH-Signature</code> header
+            using the secret below — store it on your side and verify before trusting the body.
+        </MudText>
+
+        <MudTextField T="string"
+                      @bind-Value="_url"
+                      Label="Endpoint URL"
+                      Placeholder="https://api.acme.com/webhooks/fsh"
+                      Required="true"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Class="mb-4"
+                      Style="font-family: var(--fsh-mono);" />
+
+        <MudTextField T="string"
+                      @bind-Value="_secret"
+                      Label="Signing secret"
+                      HelperText="Optional but recommended. At least 16 characters for HMAC-SHA256 security."
+                      Placeholder="••••••••••••••••"
+                      InputType="InputType.Password"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Class="mb-4" />
+
+        <div class="mb-1">
+            <MudText Typo="Typo.subtitle2" Style="margin: 0;">Events</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">
+                Pick the event types this endpoint should receive. Subscriptions with no events never fire.
+            </MudText>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-2">
+            @foreach (var evt in _events)
+            {
+                <MudChip T="string" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                         OnClose="@((MudChip<string> _) => RemoveEvent(evt))"
+                         Style="font-family: var(--fsh-mono); font-size: 11px;">
+                    @evt
+                </MudChip>
+            }
+        </div>
+
+        <div class="d-flex gap-2 mb-3">
+            <MudTextField T="string"
+                          @bind-Value="_draftEvent"
+                          @bind-Value:after="OnDraftChanged"
+                          Label="Custom event"
+                          Placeholder="tenant.created"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="flex-grow-1"
+                          Style="font-family: var(--fsh-mono);"
+                          OnKeyDown="OnDraftKeyDown" />
+                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => AddEvent())"
+                           Disabled="string.IsNullOrWhiteSpace(_draftEvent)">
+                    Add
+                </MudButton>
+        </div>
+
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">Suggested</MudText>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var suggestion in SuggestionsToShow)
+            {
+                <MudChip T="string" Size="Size.Small" OnClick="@(() => AddEvent(suggestion))"
+                         Style="font-family: var(--fsh-mono); font-size: 11px;">
+                    + @suggestion
+                </MudChip>
+            }
+            @if (SuggestionsToShow.Length == 0)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary">All suggestions selected.</MudText>
+            }
+        </div>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="mt-4">
+                <FshErrorBand Message="@_error" />
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync" Disabled="_isSubmitting">
+            @(_isSubmitting ? "Creating…" : "Create subscription")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private readonly List<string> _events = [];
+    private string _url = string.Empty;
+    private string _secret = string.Empty;
+    private string _draftEvent = string.Empty;
+    private string? _error;
+    private bool _isSubmitting;
+
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Inject] private IWebhookService WebhookService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private string[] SuggestionsToShow => SuggestedEventTypes.All
+        .Where(s => !_events.Contains(s))
+        .ToArray();
+
+    private void OnDraftChanged() => StateHasChanged();
+
+    private void OnDraftKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddEvent();
+        }
+    }
+
+    private void AddEvent(string? value = null)
+    {
+        var raw = value ?? _draftEvent;
+        var name = raw.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(name) || _events.Contains(name))
+        {
+            return;
+        }
+
+        _events.Add(name);
+        _draftEvent = string.Empty;
+    }
+
+    private void RemoveEvent(string name)
+    {
+        _events.Remove(name);
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_events.Count == 0)
+        {
+            Snackbar.Add("Pick at least one event", Severity.Warning);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_url) || !Uri.TryCreate(_url.Trim(), UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            Snackbar.Add("Must be a valid http(s) URL.", Severity.Warning);
+            return;
+        }
+
+        _isSubmitting = true;
+        _error = null;
+        try
+        {
+            var secret = string.IsNullOrWhiteSpace(_secret) ? null : _secret.Trim();
+            var id = await WebhookService.CreateSubscriptionAsync(
+                new CreateWebhookSubscriptionRequest(_url.Trim(), _events.ToArray(), secret));
+            Dialog.Close(id);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private void Cancel() => Dialog.Cancel();
+}

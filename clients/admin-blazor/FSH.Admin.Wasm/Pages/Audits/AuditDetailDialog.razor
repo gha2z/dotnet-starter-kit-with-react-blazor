@@ -1,0 +1,93 @@
+@namespace FSH.Admin.Wasm.Pages.Audits
+@implements IDisposable
+@using FSH.BlazorShared.Models.Audits
+@using FSH.BlazorShared.Formatting
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex flex-column" style="max-height: 82vh;">
+            <div class="d-flex align-center gap-3 px-6 py-5" style="border-bottom: 1px solid var(--mud-palette-divider);">
+                <span class="fsh-tile-icon" style="width: 40px; height: 40px;">
+                    <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Size="Size.Small"
+                             Style="color: var(--mud-palette-text-secondary);" />
+                </span>
+                <div class="flex-grow-1">
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">
+                        @(_detail is null ? "Audit event" : $"{_detail.EventType} event")
+                    </MudText>
+                    <MudText Typo="Typo.caption" Class="fsh-mono-label" Color="Color.Secondary" Style="margin: 0;">
+                        @(_detail is null ? "Loading…" : FshFormat.TimestampIso(_detail.OccurredAtUtc))
+                    </MudText>
+                </div>
+            </div>
+
+            <div class="fsh-scroll-y">
+                @if (_loading)
+                {
+                    <div class="pa-6">
+                        <FshLoadingRow Label="Loading event" />
+                    </div>
+                }
+                else if (_error is not null)
+                {
+                    <div class="pa-6">
+                        <FshErrorBand Message="@_error" />
+                    </div>
+                }
+                else if (_detail is not null)
+                {
+                    <AuditIdentitySection Detail="@_detail" />
+                    <AuditCorrelationSection Detail="@_detail" />
+                    <AuditContextSection Detail="@_detail" />
+                    <AuditPayloadSection Detail="@_detail" />
+                }
+            </div>
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public Guid AuditId { get; set; }
+
+    [Inject]
+    private FSH.BlazorShared.Services.IAuditService AuditService { get; set; } = default!;
+
+    [Inject]
+    private ISnackbar Snackbar { get; set; } = default!;
+
+    private AuditDetailDto? _detail;
+    private string? _error;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _detail = await AuditService.GetAsync(AuditId);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+    }
+}

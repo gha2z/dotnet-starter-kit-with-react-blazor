@@ -1,0 +1,114 @@
+@page "/webhooks"
+@attribute [Authorize(Policy = WebhooksPermissions.Subscriptions.View)]
+@using FSH.BlazorShared.Formatting
+@using FSH.BlazorShared.Models.Webhooks
+
+<FshPageHeader Title="Webhooks"
+               Icon="@Icons.Material.Filled.Hub"
+               Tone="Color.Secondary"
+               Count="@(_data?.TotalCount ?? (_loading ? null : 0))"
+               Unit="subscription"
+               Description="Subscribe HTTP endpoints to domain events. Payloads are signed with HMAC-SHA256 using the secret you provide — verify the X-FSH-Signature header on your side before trusting the body.">
+    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh"
+               Disabled="@_loading" OnClick="ReloadAsync">
+        Refresh
+    </MudButton>
+    <FshPermissionGate Perms="@(new[] { WebhooksPermissions.Subscriptions.Create })">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateAsync">
+            New subscription
+        </MudButton>
+    </FshPermissionGate>
+</FshPageHeader>
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+else if (_loading && _items.Count == 0)
+{
+    <div class="d-flex flex-column gap-3">
+        @for (var i = 0; i < 5; i++)
+        {
+            <div class="d-flex align-center justify-space-between gap-4 py-3" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                <div style="flex: 1;">
+                    <div class="fsh-skeleton" style="width: 55%; height: 16px;"></div>
+                    <div class="fsh-skeleton mt-2" style="width: 70%; height: 12px;"></div>
+                </div>
+                <div class="fsh-skeleton" style="width: 90px; height: 24px;"></div>
+            </div>
+        }
+    </div>
+}
+else if (_items.Count == 0)
+{
+    <FshEmptyState Icon="@Icons.Material.Filled.Hub"
+                   Kicker="// no subscriptions"
+                   Title="No webhook subscriptions yet."
+                   Description="Add an endpoint and pick which events should fire. We'll retry failed deliveries automatically.">
+        <FshPermissionGate Perms="@(new[] { WebhooksPermissions.Subscriptions.Create })">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateAsync">
+                New subscription
+            </MudButton>
+        </FshPermissionGate>
+    </FshEmptyState>
+}
+else
+{
+    <MudPaper Elevation="1" Class="pa-2 pa-md-4">
+        @foreach (var sub in _items)
+        {
+            var idx = (_pageNumber - 1) * PageSize + _items.IndexOf(sub) + 1;
+            var busy = _busyId == sub.Id;
+            <div class="d-flex align-center justify-space-between gap-4 py-3 px-2" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                <div class="d-flex align-center gap-3 min-w-0">
+                    <span class="fsh-mono-label">#@idx.ToString("000")</span>
+                    <span class="fsh-dot @(sub.IsActive ? "fsh-dot-active" : "fsh-dot-muted")"
+                          title="@(sub.IsActive ? "Active" : "Inactive")"></span>
+                    <div class="min-w-0">
+                        <button type="button" class="fsh-row-link"
+                                @onclick="@(() => Nav.NavigateTo($"/webhooks/{sub.Id}"))">
+                            <div class="fsh-truncate fsh-mono-medium">@sub.Url</div>
+                            <div class="d-flex flex-wrap align-center gap-2 mt-1">
+                                @foreach (var evt in sub.Events.Take(4))
+                                {
+                                    <code class="fsh-code-chip">@evt</code>
+                                }
+                                @if (sub.Events.Length > 4)
+                                {
+                                    <span class="fsh-mono-muted">+@(sub.Events.Length - 4) more</span>
+                                }
+                                <span class="fsh-mono-muted">· since @FshFormat.DateShort(sub.CreatedAtUtc)</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                <div class="d-flex align-center gap-2">
+                    <FshStatusPill Text="@(sub.IsActive ? "Active" : "Inactive")"
+                                   Tone="@(sub.IsActive ? Color.Success : Color.Default)" />
+                    <FshPermissionGate Perms="@(new[] { WebhooksPermissions.Subscriptions.Test })">
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                                   Disabled="@busy" OnClick="@(() => TestAsync(sub))">
+                            Test
+                        </MudButton>
+                    </FshPermissionGate>
+                    <FshPermissionGate Perms="@(new[] { WebhooksPermissions.Subscriptions.Delete })">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                       Size="Size.Small" Disabled="@busy" aria-label="@($"Delete subscription to {sub.Url}")"
+                                       OnClick="@(() => DeleteAsync(sub))" />
+                    </FshPermissionGate>
+                </div>
+            </div>
+        }
+
+        @if (_data is not null && _data.TotalPages > 1)
+        {
+            <div class="mt-2">
+                <FshPager TotalCount="@_data.TotalCount"
+                          PageNumber="@_data.PageNumber"
+                          PageSize="@_data.PageSize"
+                          PageChanged="OnPageChangedAsync" />
+            </div>
+        }
+    </MudPaper>
+}

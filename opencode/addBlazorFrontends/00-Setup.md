@@ -1,4 +1,5 @@
 # Setup Checklist — Zero to Running in 10 Minutes
+Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-free).
 
 > Paste each command into your terminal. Match the ✅ expected output.
 

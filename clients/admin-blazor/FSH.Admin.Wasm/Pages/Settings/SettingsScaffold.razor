@@ -1,0 +1,41 @@
+@namespace FSH.Admin.Wasm.Pages.Settings
+
+<FshPageHeader Title="Settings"
+               Description="Your identity, security, active sessions, and appearance preferences."
+               Icon="@Icons.Material.Filled.Settings"
+               Tone="Color.Primary" />
+
+<div class="d-flex align-center gap-1 mb-4" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+    @foreach (var tab in Tabs)
+    {
+        <MudButton Variant="Variant.Text"
+                   Class="fsh-billing-tab rounded-0 px-4 py-2"
+                   Style="@(IsActive(tab) ? "border-bottom: 2px solid var(--mud-palette-primary); color: var(--mud-palette-primary); font-weight: 600;" : "color: var(--mud-palette-text-secondary);")"
+                   OnClick="@(() => Nav.NavigateTo(tab.Href))">
+            <MudIcon Icon="@tab.Icon" Size="Size.Small" Class="me-1" />
+            @tab.Label
+        </MudButton>
+    }
+</div>
+
+<div class="pt-1">
+    @ChildContent
+</div>
+
+@code {
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private sealed record SettingsTab(string Href, string Label, string Icon);
+
+    private static readonly SettingsTab[] Tabs =
+    [
+        new("/settings/profile", "Profile", Icons.Material.Filled.Person),
+        new("/settings/security", "Security", Icons.Material.Filled.Shield),
+        new("/settings/sessions", "Sessions", Icons.Material.Filled.Devices),
+        new("/settings/appearance", "Appearance", Icons.Material.Filled.Palette),
+    ];
+
+    private bool IsActive(SettingsTab tab) => Nav.Uri.TrimEnd('/').EndsWith(tab.Href.TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
+}

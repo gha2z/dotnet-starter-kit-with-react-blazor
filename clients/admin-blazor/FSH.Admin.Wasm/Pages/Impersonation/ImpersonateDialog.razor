@@ -1,0 +1,237 @@
+@namespace FSH.Admin.Wasm.Pages.Impersonation
+@using FSH.BlazorShared.Models.Identity
+@using FSH.BlazorShared.Services
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        @if (_step == 1)
+        {
+            <MudText Typo="Typo.h6" Class="mb-4">Pick a user to impersonate</MudText>
+
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                Search for an active user in the target tenant.
+            </MudText>
+
+            <MudTextField @bind-Value="_searchInput"
+                          @bind-Value:after="@(async () => await OnSearchChangedAsync(_searchInput))"
+                          Placeholder="Search by name, username, or email…"
+                          Clearable="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Variant="Variant.Outlined"
+                          FullWidth="true"
+                          Margin="Margin.Dense"
+                          DebounceInterval="250" />
+
+            @if (_isSearching)
+            {
+                <div class="d-flex justify-center py-4">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                </div>
+            }
+            else if (_userResults.Count == 0 && !string.IsNullOrWhiteSpace(_searchInput))
+            {
+                <FshEmptyState Icon="@Icons.Material.Filled.SearchOff"
+                               Title="No users found."
+                               Description="Try a different search term." />
+            }
+            else
+            {
+                <MudList T="UserDto" Dense="true" Style="max-height: 300px; overflow: auto;">
+                    @foreach (var user in _userResults)
+                    {
+                        var isSelected = _selectedUser?.Id == user.Id;
+                        <MudListItem T="UserDto" OnClick="@(() => SelectUser(user))" Class="@(isSelected ? "mud-selected" : "")" Style="cursor: pointer;">
+                            <div class="d-flex align-center gap-3 px-2 py-1" style="min-width: 0;">
+                                <MudAvatar Size="Size.Small">
+                                    @(string.IsNullOrEmpty(user.ImageUrl)
+                                        ? (user.FirstName?[0] ?? user.UserName?[0] ?? '?').ToString().ToUpper()
+                                        : null)
+                                </MudAvatar>
+                                <div class="d-flex flex-column" style="min-width: 0;">
+                                    <MudText Typo="Typo.body1" Style="margin: 0;">@(user.FirstName) @(user.LastName)</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">
+                                        @user.UserName · @user.Email
+                                    </MudText>
+                                </div>
+                                @if (isSelected)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Primary" Size="Size.Medium" Class="ms-auto" />
+                                }
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+
+                <div class="d-flex justify-end mt-3">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               Disabled="@(_selectedUser is null)"
+                               OnClick="GoToStep2Async">
+                        Next: Configure &rarr;
+                    </MudButton>
+                </div>
+            }
+        }
+        else
+        {
+            <MudText Typo="Typo.h6" Class="mb-4">Configure impersonation</MudText>
+
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                Impersonating <strong>@(_selectedUser?.FirstName) @(_selectedUser?.LastName) (@_selectedUser?.Email)</strong>
+                in tenant <strong>@TargetTenantId</strong>.
+            </MudText>
+
+            <MudAlert Severity="Severity.Warning" Class="mb-4">
+                <MudText Typo="Typo.body2" Style="margin: 0;">
+                    This creates a short-lived dashboard session for the target user. All actions are fully audited with operator attribution.
+                    The impersonated user can end the session at any time from the dashboard banner.
+                </MudText>
+            </MudAlert>
+
+            <MudForm @ref="_form">
+                <div class="mb-3">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2" Style="margin: 0;">Duration</MudText>
+                    <MudRadioGroup T="int" @bind-Value="_durationMinutes">
+                        <MudRadio T="int" Value="10">10 minutes</MudRadio>
+                        <MudRadio T="int" Value="15">15 minutes</MudRadio>
+                        <MudRadio T="int" Value="30">30 minutes</MudRadio>
+                    </MudRadioGroup>
+                </div>
+
+                <MudTextField @bind-Value="_reason"
+                              Label="Reason (required)"
+                              Placeholder="Why are you starting this impersonation?"
+                              Required="true"
+                              RequiredError="Reason is required"
+                              MaxLength="500"
+                              HelperText="4–500 characters. This will appear in the audit trail."
+                              Variant="Variant.Outlined"
+                              FullWidth="true"
+                              Margin="Margin.Dense" />
+
+                @if (!_isValidReason)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Error" Class="mt-1">
+                        Reason must be at least 4 characters.
+                    </MudText>
+                }
+            </MudForm>
+
+            <div class="d-flex justify-end mt-3 gap-2">
+                <MudButton Variant="Variant.Text" OnClick="@(() => _step = 1)">Back</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           Disabled="@(_isSubmitting || !_isValidReason)"
+                           OnClick="SubmitAsync">
+                    @(_isSubmitting ? "Starting…" : "Start & open dashboard")
+                </MudButton>
+            </div>
+        }
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Parameter] public string TargetTenantId { get; set; } = string.Empty;
+    [Parameter] public UserDto? PrefillUser { get; set; }
+
+    [Inject] private IUserService UserService { get; set; } = default!;
+    [Inject] private IImpersonationService ImpersonationService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private int _step = 1;
+    private string _searchInput = string.Empty;
+    private readonly List<UserDto> _userResults = [];
+    private UserDto? _selectedUser;
+    private bool _isSearching;
+    private bool _isSubmitting;
+
+    private int _durationMinutes = 15;
+    private string _reason = string.Empty;
+    private MudForm? _form;
+
+    private bool _isValidReason => !string.IsNullOrWhiteSpace(_reason) && _reason.Length >= 4;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (PrefillUser is not null)
+        {
+            _selectedUser = PrefillUser;
+            _step = 2;
+        }
+    }
+
+    private async Task OnSearchChangedAsync(string? value)
+    {
+        _searchInput = value ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(_searchInput))
+        {
+            _userResults.Clear();
+            return;
+        }
+
+        _isSearching = true;
+        try
+        {
+            var results = await UserService.SearchInTenantAsync(TargetTenantId, _searchInput);
+            _userResults.Clear();
+            _userResults.AddRange(results.Items);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Search failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSearching = false;
+        }
+    }
+
+    private void SelectUser(UserDto user)
+    {
+        _selectedUser = user;
+    }
+
+    private void GoToStep2Async()
+    {
+        if (_selectedUser is not null)
+        {
+            _step = 2;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_selectedUser is null || !_isValidReason)
+        {
+            return;
+        }
+
+        await _form!.ValidateAsync();
+        if (!_form.IsValid)
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+        try
+        {
+            var request = new StartImpersonationRequest(
+                TargetUserId: _selectedUser.Id!,
+                TargetTenantId: TargetTenantId,
+                Reason: _reason,
+                DurationMinutes: _durationMinutes);
+
+            var response = await ImpersonationService.StartImpersonationAsync(request);
+            Dialog.Close(response);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to start impersonation: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}

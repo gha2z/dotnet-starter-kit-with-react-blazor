@@ -2,6 +2,7 @@ using Bunit;
 using FSH.BlazorShared.Models;
 using FSH.BlazorShared.Models.Billing;
 using FSH.BlazorShared.Models.Identity;
+using FSH.BlazorShared.Models.Webhooks;
 using FSH.BlazorShared.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -156,6 +157,112 @@ public sealed class RouteBindingRegressionTests : TestSetup
 
         // React parity: /billing redirects (replace) to /billing/invoices.
         router.WaitForAssertion(() => router.Markup.ShouldContain("No invoices found."));
+        router.Markup.ShouldNotContain("route-not-found");
+    }
+
+    [Fact]
+    public void Navigating_to_webhook_detail_route_binds_string_id()
+    {
+        var webhookService = Substitute.For<IWebhookService>();
+        webhookService.GetSubscriptionsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<WebhookSubscriptionDto>(
+                [new WebhookSubscriptionDto(Guid.Parse(RoleId), "https://api.acme.com/webhooks/fsh", ["user.registered"], true, DateTime.UtcNow)],
+                1, 200, 1, 1, false, false));
+        webhookService.GetDeliveriesAsync(Arg.Any<Guid>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<WebhookDeliveryDto>([], 1, 25, 0, 0, false, false));
+        Services.AddSingleton(webhookService);
+
+        var router = RenderRouter($"/webhooks/{RoleId}");
+
+        router.WaitForAssertion(() => router.Markup.ShouldContain("https://api.acme.com/webhooks/fsh"));
+        router.Markup.ShouldNotContain("route-not-found");
+    }
+
+    [Fact]
+    public void Navigating_to_audits_route_renders_page()
+    {
+        var auditService = Substitute.For<IAuditService>();
+        auditService.ListAsync(Arg.Any<FSH.BlazorShared.Models.Audits.ListAuditsRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<FSH.BlazorShared.Models.Audits.AuditSummaryDto>([], 1, 25, 0, 0, false, false));
+        auditService.GetSummaryAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(new FSH.BlazorShared.Models.Audits.AuditSummaryAggregateDto());
+        Services.AddSingleton(auditService);
+
+        var router = RenderRouter("/audits");
+
+        router.WaitForAssertion(() => router.Markup.ShouldContain("Audit trail"));
+        router.Markup.ShouldNotContain("route-not-found");
+    }
+
+    [Fact]
+    public void Navigating_to_settings_profile_route_renders_page()
+    {
+        var userService = Substitute.For<IUserService>();
+        userService.GetMyProfileAsync(Arg.Any<CancellationToken>())
+            .Returns(new UserDto("u1", "jane", "Jane", "Doe", "jane@example.com", true, true, null, null, false));
+        Services.AddSingleton(userService);
+
+        var router = RenderRouter("/settings/profile");
+
+        router.WaitForAssertion(() => router.Markup.ShouldContain("jane@example.com"));
+        router.Markup.ShouldNotContain("route-not-found");
+    }
+
+    [Fact]
+    public void Navigating_to_settings_security_route_renders_page()
+    {
+        var userService = Substitute.For<IUserService>();
+        userService.GetMyProfileAsync(Arg.Any<CancellationToken>())
+            .Returns(new UserDto("u1", "jane", "Jane", "Doe", "jane@example.com", true, true, null, null, false));
+        Services.AddSingleton(userService);
+        Services.AddSingleton(Substitute.For<ITwoFactorService>());
+
+        var router = RenderRouter("/settings/security");
+
+        router.WaitForAssertion(() => router.Markup.ShouldContain("Two-factor authentication"));
+        router.Markup.ShouldNotContain("route-not-found");
+    }
+
+    [Fact]
+    public void Navigating_to_settings_sessions_route_renders_page()
+    {
+        var sessionService = Substitute.For<ISessionService>();
+        sessionService.GetMySessionsAsync(Arg.Any<CancellationToken>()).Returns([]);
+        Services.AddSingleton(sessionService);
+
+        var router = RenderRouter("/settings/sessions");
+
+        router.WaitForAssertion(() => router.Markup.ShouldContain("No active sessions."));
+        router.Markup.ShouldNotContain("route-not-found");
+    }
+
+    [Fact]
+    public void Navigating_to_settings_appearance_route_renders_page()
+    {
+        var theme = new FSH.BlazorShared.Theming.FshThemeService(
+            JSInterop.JSRuntime,
+            "fsh.admin.theme",
+            FSH.BlazorShared.Theming.ThemeMode.Dark);
+        Services.AddSingleton(theme);
+
+        var router = RenderRouter("/settings/appearance");
+
+        router.WaitForAssertion(() => router.Markup.ShouldContain("Console-default. Lower glare for long sessions."));
+        router.Markup.ShouldNotContain("route-not-found");
+    }
+
+    [Fact]
+    public void Navigating_to_impersonation_route_renders_page()
+    {
+        var userService = Substitute.For<IUserService>();
+        userService.GetMyProfileAsync(Arg.Any<CancellationToken>())
+            .Returns(new UserDto("u1", "jane", "Jane", "Doe", "jane@example.com", true, true, null, null, false));
+        Services.AddSingleton(userService);
+        Services.AddSingleton(Substitute.For<IImpersonationService>());
+
+        var router = RenderRouter("/impersonation");
+
+        router.WaitForAssertion(() => router.Markup.ShouldContain("Impersonation"));
         router.Markup.ShouldNotContain("route-not-found");
     }
 

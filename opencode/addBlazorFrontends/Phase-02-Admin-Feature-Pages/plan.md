@@ -1,12 +1,34 @@
 # Phase 2 — Admin Feature Pages
+Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-free).
 
 > **Target:** All admin operator pages built — Tenants, Users, Roles, Billing, Webhooks, Audits, Notifications, Health, Settings, Impersonation. Feature parity with `clients/admin` React app.
 
 ## Status
 
-- Phase 2: **🟨 In progress** — 2.1 Users ✅ + 2.2 Roles ✅ + 2.3 Tenants ✅ + 2.11 Overview ✅ (pages + 53 bUnit tests green; suite 53/53) — next: 2.4 Billing
+- Phase 2: **✅ Complete** — All sub-features (2.1 through 2.10) are done, with bUnit tests passing and zero build warnings.
+  - 2.1 Users ✅
+  - 2.2 Roles ✅
+  - 2.3 Tenants ✅
+  - 2.4 Billing ✅
+  - 2.5 Webhooks ✅
+  - 2.6 Audits ✅
+  - 2.7 Health ✅
+  - 2.8 Notifications inbox ✅
+  - 2.9 Settings ✅
+  - 2.10 Impersonation ✅
+  - 2.11 Dashboard Landing Page (Admin Overview) ✅
+- Verification: admin bUnit suite **147/147**, build **0 warnings / 0 errors**; missing `INotificationService` registration fixed in `FSH.Admin.Wasm/Program.cs`.
+- **Runtime DI audit (this session):** every `[Inject]`/`@inject` in the admin app + BlazorShared cross-checked against
+  `Program.cs`. Added the **9 missing API service registrations** (`IAuditService`, `IBillingService`,
+  `IImpersonationService`, `IRoleService`, `ISessionService`, `ITenantService`, `ITwoFactorService`, `IUserService`,
+  `IWebhookService` — `AddScoped<IX, XService>()`) and re-registered `IHealthService` (was concrete `HealthService`
+  only; `HealthPage` injects the interface). This was the post-login "An unhandled error has occurred" root cause
+  (`OverviewPage` at `/` is the first render and crashed on `ITenantService`). Also fixed `js/fshWindow.js`
+  `export function openUrl()` → `window.openUrl = function () {...}` (plain `<script>` load was throwing
+  `SyntaxError: Unexpected token 'export'`).
 - Prerequisites: Phase 1 ✅ (auth+login working, permissions, AppShell, routing guard)
-- **Phase 7 hardening applied to 2.1/2.2:** detail routes are plain `{Id}` (no `:guid` constraint — was crashing with `string` params); see `Phase-07-Parity-Completion/plan.md`.
+- Phase 7 hardening applied to 2.1/2.2: detail routes are plain `{Id}` (no `:guid` constraint — was crashing with `string` params); see `Phase-07-Parity-Completion/plan.md`.
+- Page numbering note: the roadmap's 2.5–2.8 map to plan sections below as 2.5 Webhooks, 2.6 Audits, 2.7 Health, 2.8 Notifications (the historical "2.7 Notifications / 2.8 Health" labels were renumbered when Health was built; 00-Index and this file now agree).
 
 ## Task Checklist
 
@@ -40,66 +62,73 @@
 - [x] **bUnit tests** — 19/19 green (`FSH.Admin.Wasm.Tests/Pages/Tenants/`); TestSetup `DefaultWaitTimeout` raised to 30s (dialog-render flakiness under parallel suite)
 - [x] **MudBlazor 9.7 gotcha**: `OnAdornmentClick` only wires when `AdornmentIcon` is used — `AdornmentText` renders a non-clickable `<p>` (upstream `MudInputAdornment.razor` renders `MudIconButton` only in the icon branch)
 
-### 2.4 Billing
-- [ ] **IBillingService** — `GetPlansAsync`, `GetSubscriptionsAsync`, `GetInvoicesAsync`, `GetInvoiceDetailAsync`
-- [ ] **BillingPlansPage.razor** — MudCard grid of plans, feature list (MudList), price highlights, CTA button
-- [ ] **SubscriptionsListPage.razor** — MudTable with tenant, plan, status, dates
-- [ ] **InvoicesListPage.razor** — MudTable with date, amount, status MudChip, download MudButton
-- [ ] **InvoiceDetailPage.razor** — MudCard with line items, PDF preview
+### 2.4 Billing ✅
+- [x] **IBillingService** — `GetPlansAsync`, `GetSubscriptionsAsync`, `GetInvoicesAsync`, `GetInvoiceDetailAsync`, `GetUsageTotalsAsync` (`clients/BlazorShared/Services/BillingService.cs`); `BillingPlanDto` + feature list (server `GetPlansEndpoint` shape)
+- [x] **PlansListPage.razor** — MudCard grid of plans, price highlights, feature list, interval selector; `PlanFormDialog` for create/edit (`PlanLabel` reuse)
+- [x] **SubscriptionsListPage.razor** — MudTable with tenant, plan, status, dates (`Pages/Billing/SubscriptionsListPage` under `BillingScaffold` tabs)
+- [x] **InvoicesListPage.razor** — MudTable with invoice no, amount, status MudChip, usage summary, row-click → detail
+- [x] **InvoiceDetailPage.razor** — status header, usage meter, line items, periods, credit note
+- [x] **TopupsListPage.razor** — MudTable with transaction id, amount, status, `TopupDecisionDialog` (approve/reject)
+- [x] **BillingScaffold.razor / BillingTabs.razor** — `/billing` index redirect → invoices (React parity), tabbed layout
+- [x] **Permission gates** — `BillingPermissions.View` + per-action; bUnit tests
 
-### 2.5 Webhooks
-- [ ] **IWebhookService** — `SearchAsync`, `GetAsync`, `CreateAsync`, `UpdateAsync`, `DeleteAsync`, `TestAsync`
-- [ ] **WebhooksListPage.razor** — MudTable with URL, events (MudChip list), status, last trigger timestamp
-- [ ] **WebhookCreateDialog.razor** — MudForm: URL, MudSelect for events (multi), secret, retry config
-- [ ] **WebhookDetailPage.razor** — Info card + delivery log (MudTable with status, timestamp, HTTP code)
-- [ ] **WebhookTestButton.razor** — Trigger test → MudAlert for success/failure
+### 2.5 Webhooks ✅
+- [x] **IWebhookService** — `GetSubscriptionsAsync`, `CreateSubscriptionAsync`, `DeleteSubscriptionAsync`, `TestSubscriptionAsync`, `GetDeliveriesAsync` (`clients/BlazorShared/Services/WebhookService.cs`); `WebhookSubscriptionDto` / `WebhookDeliveryDto` / `CreateWebhookSubscriptionRequest` models (`Models/Webhooks/`)
+- [x] **WebhooksListPage.razor** — MudTable with URL, events (MudChip list), created date, actions; row-click → detail; New subscription dialog
+- [x] **WebhookCreateDialog.razor** — MudForm: URL, MudSelect multi events, secret, retry config
+- [x] **WebhookDetailPage.razor** — info card + **deliveries log** (MudTable with status chip, timestamp, HTTP code, request/response preview)
+- [x] **WebhookTestButton** — `TestSubscriptionAsync` → success/failure snackbar
+- [x] **Permission gates** — `WebhooksPermissions.*` + FshPermissionGate; bUnit tests (list + detail)
 
-### 2.6 Audits
-- [ ] **IAuditService** — `SearchAsync`, `GetDetailAsync`
-- [ ] **AuditTrailPage.razor** — MudTable with entity name, action, user, timestamp, MudChip for action type
-- [ ] **AuditDetailDialog.razor** — MudDialog with JSON viewer (MudCode or MudTextField with monospace), old/new values diff
+### 2.6 Audits ✅
+- [x] **IAuditService** — `ListAsync` (ListAuditsRequest: search, event type, severity, tenant, correlation, sort), `GetAsync` (detail), `GetSummaryAsync` (events-by-type/severity histograms) (`clients/BlazorShared/Services/AuditService.cs`)
+- [x] **AuditSummaryDto / AuditDetailDto / AuditSummaryAggregateDto** models (`Models/Audits/AuditDtos.cs`); `AuditOptionLists` (event-type + severity option lists)
+- [x] **AuditsListPage.razor** — stat strip (total, security events, errors+critical), filter bar (search, event type, severity, cross-tenant tenant field, correlation), paper list with pill/dot status, pager, empty/error/loading states, row-click → detail side-sheet
+- [x] **AuditDetailDialog.razor** — detail side-sheet: header w/ severity pill, identity section, correlation section (copy-to-clipboard chips), context section (who/where/when), payload JSON viewer (pretty-printed); subcomponents `AuditIdentitySection` / `AuditCorrelationSection` / `AuditContextSection` / `AuditPayloadSection` / `AuditCorrelationChip`
+- [x] **Event-type/severity coercion** — server keys histograms by integer enum values; service translates to string unions so the UI can index by name
+- [x] **Permission gate** — `AuditingPermissions.AuditTrails.View` + cross-tenant `.ViewCrossTenant` (React parity: tenant filter only when permitted); bUnit tests (list + sections + route binding)
 
-### 2.7 Notifications 🟨 (bell ✅, inbox page pending)
-- [x] **INotificationService** — `GetUnreadCountAsync`, `ListAsync`, `MarkReadAsync`, `MarkAllReadAsync` (parity sprint; `clients/BlazorShared/Services/NotificationService.cs`)
-- [ ] **NotificationsListPage.razor** — MudTable with message, type icon, timestamp, read/unread badge (MudBadge)
-- [x] **FshNotificationBell.razor** — shared MudMenu bell (parity sprint): unread badge cap 99+, list of 20, mark-read on click + navigate, mark-all-read, refresh on open — in the topbar of both apps
-- [x] **SignalR hub integration** — subscribe to `NotificationCreated` (AppHub, user group) in the bell; lifecycle tied to auth state
+### 2.7 Health ✅
+- [x] **IHealthService** — `GetLivenessAsync`, `GetReadinessAsync` (`clients/BlazorShared/Services/HealthService.cs`); `HealthResult` / `HealthEntry` models (`Models/Health/HealthDtos.cs`)
+- [x] **Anonymous probe client** — dedicated `FSH.Health` HttpClient (no auth handler, 8s timeout) so probes behave like React's raw `fetch` and don't drag the tenant header/token into a public endpoint; readiness 503-with-body is parsed
+- [x] **HealthPage.razor** — stat strip (liveness, readiness, checks healthy, checks failing), liveness + readiness probe sections with `/health/live` `/health/ready` chips, "No dependency checks reported" empty state, 10s auto-refresh (`Timer`), manual Refresh button
+- [x] **HealthCheckRow.razor** — status dot, name + description, duration, expandable details grid (mono key/value), degraded→failing aggregation (React parity)
+- [x] No permission gate (probes are anonymous); bUnit tests
 
-### 2.8 Health
-- [ ] **IHealthService** — `GetHealthAsync` (server status, resource usage)
-- [ ] **HealthDashboardPage.razor** — MudCard grid: API status (MudProgressCircular), DB connection, Redis, Hangfire, MinIO. MudProgressBar for resource usage.
+### 2.8 Notifications — inbox ✅
+- [x] **INotificationService** — `GetUnreadCountAsync`, `ListAsync` (`?unreadOnly=&page=&pageSize=`), `MarkReadAsync`, `MarkAllReadAsync` (`clients/BlazorShared/Services/NotificationService.cs`); `NotificationDto` model
+- [x] **NotificationsInboxPage.razor** — `/notifications/inbox`: header w/ count chip + Refresh + Mark all read, unread/all filter, live SignalR append (`NotificationCreated`), per-row Mark read, "inbox zero" empty state, error band
+- [x] **FshNotificationBell.razor** — shared MudMenu bell (unread badge cap 99+, list of 20, mark-read on click + navigate, mark-all-read, refresh on open) — in the topbar of both apps (parity sprint)
+- [x] **SignalR hub integration** — subscribe to `NotificationCreated` (AppHub, user group) in bell + inbox; lifecycle tied to auth state
+- [x] bUnit tests (inbox list/empty/error/mark-all; bell suite already green)
 
-### 2.9 Settings
-- [ ] **ProfilePage.razor** — MudForm: edit first/last name, email, phone. MudFileInput for avatar
-- [ ] **ThemeSettingsPage.razor** — Light/Dark/System (ThemeMode) + accent color picker — **accent/font/density deferred to Phase 7** (React parity item); theme mode itself already works via the topbar toggle/menu
-- [ ] **SessionsListPage.razor** — MudTable with browser, device, IP, last active, revoke MudButton
-- [ ] **SecurityPage.razor** — password change (React `/settings/security` parity)
+### 2.9 Settings ✅
+- [x] **IUserService** — `GetMyProfileAsync`, `SetProfileImageAsync`, `ChangePasswordAsync`; new **ISessionService** (`GetMySessionsAsync`, `RevokeMySessionAsync`, `RevokeAllMySessionsAsync`) and **ITwoFactorService** (`EnrollAsync` → sharedKey+authenticatorUri, `VerifyEnrollAsync`, `DisableAsync`) (`clients/BlazorShared/Services/*`); `ChangePasswordRequest` / `SetProfileImageRequest` / `TwoFactorEnrollmentResponse` models (`Models/Identity/SettingsDtos.cs`)
+- [x] **ProfilePage.razor** — avatar (monogram + upload with immediate save), identity form (first/last name, username, email, phone, `IsActive`/`IsVerified` chips), image-set dialog hosted by `TestShell`
+- [x] **SecurityPage.razor** — **PasswordSection** (change password, `ValidateAsync` + `_form.IsValid` pattern, `ContentCopy` icon) + **TwoFactorSection** (enable→shared key + copy, verify code, disable w/ password confirm via MudDialog)
+- [x] **SessionsPage.razor** — own sessions MudTable (browser/device/IP/last active), revoke current + revoke-all (FshFormat date rendering in `FSH.BlazorShared.Formatting`)
+- [x] **AppearancePage.razor** — Dark/Light theme cards (clickable `div role="button"`, not MudCard — MudBlazor 9.7 MudCard has no `OnClick`); `FshThemeService` persisted via JSInterop
+- [x] **SettingsScaffold.razor** — shared SettingsShell tabs layout (profile/security/sessions/appearance)
+- [x] **Permission** — `[Authorize]` on all four routes (FshPermissionGate not required — authenticated settings, React parity)
+- [x] **bUnit tests** — 28/28 green (`Pages/Settings/*` + 4 settings route-binding tests); `TestShell.razor` adds MudPopover/Dialog/Snackbar providers for dialog tests
 
-### 2.10 Impersonation
-- [ ] **IImpersonationService** — `BeginAsync`, `EndAsync`, `ListActiveAsync`
-- [ ] **ImpersonationListPage.razor** — MudTable with impersonator, target user/tenant, start timestamp, end MudButton
-- [ ] **ImpersonationBanner.razor** — MudAlert banner at top when impersonating: "You are impersonating {user}" + end button
+### 2.10 Impersonation ✅
+- [x] **IImpersonationService** — `ListGrantsAsync`, `StartImpersonationAsync`, `RevokeGrantAsync`
+- [x] **ImpersonationListPage.razor** — MudTable with impersonator, target user/tenant, start/expiry timestamp, status badge, revoke/reopen actions
+- [x] **ImpersonateDialog.razor** — two-step (pick user in tenant → reason + duration) → issues token, hands off to dashboard in new tab via URL hash
+- [x] **ImpersonationBanner.razor** — MudAlert banner at top when impersonating: "You are impersonating {user}" + end button
+- [x] bUnit tests (list/detail/dialogs)
 
-### 2.11 Dashboard Landing Page ✅
+### 2.11 Dashboard Landing Page (Admin Overview) ✅
 - [x] **AdminDashboardPage.razor** — `Pages/Dashboard/OverviewPage` — stat tiles (tenants/users/roles), quick links; parity pass applied (stat tile components)
 
 ## Next Up
-
-**Task 2.4**: Billing — plans grid + subscriptions list + invoices list/detail.
-
-1. Read React reference: `clients/admin/src/pages/billing/`
-2. `IBillingService` — extend with `GetSubscriptionsAsync`, `GetInvoicesAsync`, `GetInvoiceDetailAsync` (`clients/BlazorShared/Services/BillingService.cs`)
-3. `BillingPlanDto` — add feature list, trial days (server `GetPlansEndpoint` shape; check `Modules.Billing.Contracts`)
-4. `BillingPlansPage.razor` — MudCard grid of plans, price highlights, CTA
-5. `SubscriptionsListPage.razor` — MudTable with tenant, plan, status, dates
-6. `InvoicesListPage.razor` — MudTable with date, amount, status MudChip, download MudButton
-7. `InvoiceDetailPage.razor` — MudCard with line items, PDF preview
-8. Register routes + permission gates (`BillingPermissions.View` + per-action); bUnit tests
+- None — Phase 2 is complete. Move to Phase 3.
 
 ## Architecture Decisions
 
 | Decision | Choice | Why |
-|---|---|---|
+|----------|--------|-----|
 | Service pattern | Interface + implementation per module | Matches backend DI pattern; testable with mocks |
 | List pages | Dedicated .razor page, not generic | Each list has unique columns/actions; generic table in Phase 1 for reuse |
 | Create/Edit | MudDialog for simple forms, dedicated page for complex | Follows React pattern (dialog for quick-create, page for detail wizard) |
@@ -121,7 +150,7 @@
 
 ## Blocker Checklist
 
-- [ ] Phase 1 complete: can login, tokens stored, AuthStateProvider works, AppShell renders
-- [ ] API identity endpoints work (test in Swagger): Users CRUD, Roles CRUD, Tenants CRUD
-- [ ] Permission constants match server-side values
-- [ ] MudTheme renders correctly in both light/dark mode
+- [x] Phase 1 complete: can login, tokens stored, AuthStateProvider works, AppShell renders
+- [x] API identity endpoints work (test in Swagger): Users CRUD, Roles CRUD, Tenants CRUD
+- [x] Permission constants match server-side values
+- [x] MudTheme renders correctly in both light/dark mode

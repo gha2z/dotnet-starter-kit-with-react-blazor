@@ -1,0 +1,58 @@
+@page "/settings/security"
+@attribute [Authorize]
+@namespace FSH.Admin.Wasm.Pages.Settings
+@using FSH.BlazorShared.Models.Identity
+
+<SettingsScaffold>
+    @if (_profileError is not null)
+    {
+        <FshErrorBand Message="@_profileError" />
+    }
+    else if (_profileLoading)
+    {
+        <FshLoadingRow Label="Loading security state" />
+    }
+    else
+    {
+        <div class="space-y-5">
+            <PasswordSection />
+            <TwoFactorSection Enabled="@(_profile?.TwoFactorEnabled ?? false)" OnChanged="OnTwoFactorChanged" />
+        </div>
+    }
+</SettingsScaffold>
+
+@code {
+    [Inject] private IUserService UserService { get; set; } = default!;
+
+    private UserDto? _profile;
+    private bool _profileLoading = true;
+    private string? _profileError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _profile = await UserService.GetMyProfileAsync();
+        }
+        catch (Exception ex)
+        {
+            _profileError = ex.Message;
+        }
+        finally
+        {
+            _profileLoading = false;
+        }
+    }
+
+    private async Task OnTwoFactorChanged()
+    {
+        try
+        {
+            _profile = await UserService.GetMyProfileAsync();
+        }
+        catch
+        {
+            // 2FA section already surfaces the error; keep the stale profile.
+        }
+    }
+}

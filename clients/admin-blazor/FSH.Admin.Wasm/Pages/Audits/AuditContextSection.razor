@@ -1,0 +1,51 @@
+@namespace FSH.Admin.Wasm.Pages.Audits
+@using FSH.BlazorShared.Models.Audits
+@using FSH.BlazorShared.Formatting
+
+<div class="px-6 py-4" style="border-bottom: 1px solid var(--mud-palette-divider);">
+    <div class="d-flex align-center gap-2 mb-2">
+        <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Size="Size.Small"
+                 Style="color: var(--mud-palette-text-secondary);" />
+        <MudText Class="fsh-mono-label mb-0">CONTEXT</MudText>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <AuditFactTile Label="Occurred at" Value="@FshFormat.TimestampIso(Detail.OccurredAtUtc)" Mono="true" />
+        <AuditFactTile Label="Received at" Value="@FshFormat.TimestampIso(Detail.ReceivedAtUtc)" Mono="true" />
+        <AuditFactTile Label="Tenant" Value="@(Detail.TenantId ?? "—")" Mono="true" />
+        <AuditFactTile Label="User" Value="@UserLine" Mono="true" />
+        <AuditFactTile Label="Source" Value="@(Detail.Source ?? "—")" Mono="true" />
+        <AuditFactTile Label="Tags" Value="@TagLabels" Mono="true" />
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public AuditDetailDto Detail { get; set; } = default!;
+
+    private string UserLine =>
+        !string.IsNullOrEmpty(Detail.UserName)
+            ? $"{Detail.UserName} ({Detail.UserId})"
+            : Detail.UserId ?? "—";
+
+    private string TagLabels
+    {
+        get
+        {
+            if (Detail.Tags == AuditTag.None)
+            {
+                return "—";
+            }
+
+            var tags = new List<string>();
+            foreach (AuditTag tag in Enum.GetValues<AuditTag>())
+            {
+                if (tag != AuditTag.None && Detail.Tags.HasFlag(tag))
+                {
+                    tags.Add(tag.ToString());
+                }
+            }
+
+            return tags.Count == 0 ? "—" : string.Join(", ", tags);
+        }
+    }
+}

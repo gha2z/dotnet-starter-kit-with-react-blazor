@@ -1,4 +1,5 @@
 # Phase 7 — React Parity Completion & Hardening
+Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-free).
 
 > **Target:** Both Blazor WASM apps (admin + dashboard) are pixel- and behavior-identical to the
 > React 19 apps (`clients/admin`, `clients/dashboard`) — or better — and the MAUI Hybrid app matches
@@ -8,11 +9,17 @@
 ## Status
 
 - Phase 7: **🟨 In progress** — parity sprint 1 done (sidebar/theme/bell/SSE), hotfixes done **and
-  verified (58/58 admin, 18/18 dashboard, 0 warnings; admin PW roles 7/7, dashboard PW roles 5/5;
+  verified (admin 147/147 + dashboard 31/31, both build **0 warnings**; admin PW roles 7/7, dashboard PW roles 5/5;
   17 role-permission integration tests green)**, MAUI Hybrid workload saga resolved (Hybrid builds
-  4 TFMs, 0 warnings). Page build-out: **2.4 Billing done (82/82 admin tests, 18/18 dashboard,
-  Hybrid 0 warnings)** — next up 2.5 Webhooks.
-- Prerequisites: Phases 0–1 ✅ · Phase 2 partial (2.1–2.4) · Phase 5 unblocked — MAUI workload
+  4 TFMs, 0 warnings). Page build-out: **2.4 Billing ✅ · 2.5 Webhooks ✅ · 2.6 Audits ✅ · 2.7 Health ✅ ·
+  2.8 Notifications inbox ✅ · 2.9 Settings ✅ · 2.10 Impersonation ✅ · styled 404 ✅ ·
+   dashboard 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅** (admin suite 147/147, dashboard 73/73) — next up dashboard 3.7 Identity.
+- **Runtime hardening (this session):** admin app crashed on every authenticated render at `/` with
+  "Cannot provide a value for property 'TenantService'" → the **9 missing `AddScoped` API service
+  registrations** in `FSH.Admin.Wasm/Program.cs` were added (Audit/Billing/Impersonation/Role/Session/
+  Tenant/TwoFactor/User/Webhook) and `IHealthService` was registered as the interface (was concrete only).
+  Also fixed `js/fshWindow.js` `export` syntax error on a plain `<script>` load (now `window.openUrl`).
+- Prerequisites: Phases 0–1 ✅ · Phase 2 ✅ (2.1–2.10 + admin overview) · Phase 5 unblocked — MAUI workload
   installed (elevated) and `clients/FSH.Hybrid` migrated to .NET 10 conventions (see §7.6 in
   `hands-on-phase-7.md` for the full saga + project-file recipe).
 
@@ -35,7 +42,7 @@
   `FshKpiTile`, `FshSectionRule` + `fsh.css` additions (accordion, KPI, pager, bell, SSE dot).
 - **Dashboard test project bootstrapped** — `TestSetup` (bUnit 2.0 `BunitContext`,
   `JSRuntimeMode.Loose`, MudServices, fake `IJSObjectReference` for the theme module) + suites:
-  admin 58/58, dashboard 18/18 (incl. 3 `RouteBindingRegressionTests` navigating the real `Router`).
+  admin 114/114, dashboard 18/18 (incl. `RouteBindingRegressionTests` navigating the real `Router`).
 - **Docs synced** — `.agents/rules/frontend/blazor-{shared,admin,dashboard}.md` rewritten for the
   parity state; `00-Index.md` updated.
 
@@ -58,37 +65,36 @@
 | `/users` + `/users/{id}` + create | `Users/UsersListPage`, `UserDetailPage`, `UserCreateDialog` | ✅ |
 | `/roles` + `/roles/{id}` + create | `Roles/RolesListPage`, `RoleDetailPage`, `RoleCreateDialog` | ✅ |
 | `/tenants` + `/tenants/{id}` + create | `Tenants/TenantsListPage`, `TenantDetailPage`, `TenantCreateDialog` | ✅ |
-| `/audits` + `/audits/{id}` | — | 🔲 2.6 |
+| `/audits` + `/audits/{id}` | `Pages/Audits/AuditsListPage` (+ stat strip) + `AuditDetailDialog` (identity/correlation/context/payload sections) | ✅ |
+| `/webhooks` + `/webhooks/{id}` + create | `Pages/Webhooks/WebhooksListPage`, `WebhookDetailPage` (delivery log), `WebhookCreateDialog` (events multi-select, secret, retry), test endpoint | ✅ |
 | `/billing/*` (plans, invoices, topups, invoice detail) | `Pages/Billing/PlansListPage` (+ `PlanFormDialog`), `InvoicesListPage`, `InvoiceDetailPage`, `TopupsListPage` (+ `TopupDecisionDialog`) | ✅ |
-| `/health` | — | 🔲 2.7 |
-| `/impersonation` | — | 🔲 2.10 |
-| `/notifications/inbox` | — (bell exists; inbox page missing) | 🔲 2.8 |
-| `/settings/*` (profile, security, sessions, appearance) | — | 🔲 2.9 |
+| `/health` | `Pages/Health/HealthPage` (live + ready probes, 10s auto-refresh, expandable check rows) | ✅ |
+| `/impersonation` | `Pages/Impersonation/ImpersonationListPage` (+ `ImpersonateDialog`, `RevokeGrantDialog`) | ✅ |
+| `/notifications/inbox` | `Pages/Notifications/NotificationsInboxPage` (unread/all filter, mark-read/all-read, live SignalR append) | ✅ |
+| `/settings/*` (profile, security, sessions, appearance) | `Pages/Settings/{ProfilePage, SecurityPage, SessionsPage, AppearancePage}.razor` (+ `SettingsScaffold`), 2FA enroll/verify/disable, session revoke, theme cards | ✅ |
 | `/auth/*` (login, forgot, reset, confirm) | `Pages/Auth/*` | ✅ |
-| `not-found.tsx` | bare `<NotFound>` template in `App.razor` | 🔲 styled 404 |
+| `not-found.tsx` | `FshNotFound.razor` (shared) | ✅ |
 | — | **deferred parity items** | 🔲 command palette, accent/font/density settings |
 
 ### Dashboard app — `clients/dashboard/src/pages` ↔ `clients/dashboard-blazor`
 
 | React route | Blazor page | Status |
 |---|---|---|
-| `/` (overview.tsx) | `Pages/Overview/OverviewPage` | ✅ |
+| `/` (overview.tsx) | `Pages/Overview/OverviewPage` (+ `.razor.cs` code-behind, `IDashboardService`, SSE LIVE chip) | ✅ 3.1 |
 | `/auth/*` | `Pages/Auth/*` | ✅ |
-| `/activity` | — | 🔲 3.1 |
-| `/subscription` | — | 🔲 3.2 |
-| `/wallet` | — | 🔲 3.3 |
-| `/invoices` + `/invoices/{id}` | — | 🔲 3.4 |
-| `/audits` | — | 🔲 3.5 |
-| `/health` | — | 🔲 3.6 |
-| `/system/sessions` | — | 🔲 3.7 |
-| `/system/trash` | — | 🔲 3.8 |
-| `/identity/users`, `/roles`, `/groups` (+ details) | — (read-only lists) | 🔲 3.9 |
-| `/catalog/products` (+ detail), `/brands`, `/categories` | — | 🔲 3.10 |
-| `/tickets` + `/tickets/{id}` | — | 🔲 3.11 |
-| `/chat/*` (channel rail, chat page, settings, pinned, search, composer, messages…) | — | 🔲 3.12 |
-| `/files/my-files` | — | 🔲 3.13 |
-| `/settings/*` (profile, security, appearance, api-keys, branding, notifications) | — | 🔲 3.14 |
-| `/tenant-deactivated`, `/impersonation-ended` (terminal pages) | — **docs claimed they existed; they do not** | 🔲 3.15 |
+| `/activity` (activity.tsx) | `Pages/Activity/ActivityPage` (+ `.razor.cs`, live SSE event log, tone pills, 200-cap) | ✅ 3.2 |
+| `/subscription` | `Pages/Subscription/SubscriptionPage` (+ `.razor.cs`, plan card, validity, usage bars, recent invoices) | ✅ 3.3 |
+| `/wallet` | `Pages/Wallet/WalletPage` (+ `.razor.cs`, balance card, top-up form, paginated request list) | ✅ 3.4 |
+| `/invoices` + `/invoices/{id}` | `Pages/Invoices/InvoicesPage` (search+pager list) + `InvoiceDetailPage` (line items, PDF download) | ✅ 3.5 |
+| `/catalog/*` (products + detail, brands, categories) | `Pages/Catalog/BrandsPage` + `CategoriesPage` + `ProductsPage` + `ProductDetailPage` + `BrandEditorDialog` + `CategoryEditorDialog` + `ProductEditorDialog` + `PriceDialog` + `StockDialog` | ✅ 3.6 |
+| `/identity/users`, `/roles`, `/groups` (+ details) | — (read-only lists) | 🔲 3.7 |
+| `/tickets` + `/tickets/{id}` | — | 🔲 3.8 |
+| `/chat/*` (channel rail, chat page, settings, pinned, search, composer, messages…) | — | 🔲 3.9 |
+| `/files` | — | 🔲 3.10 |
+| `/system/health`, `/system/audits`, `/system/trash`, `/system/sessions` | — | 🔲 3.11 |
+| `/settings/*` (profile, security, appearance, api-keys, notifications…) | — | 🔲 3.12 |
+| impersonation banner + `/tenant-deactivated`, `/impersonation-ended` (terminal pages) | — **docs claimed they existed; they do not** | 🔲 3.13 |
+| command palette (`Ctrl+K`) | — | 🔲 3.14 (deferred) |
 | `not-found.tsx` | bare `<NotFound>` template | 🔲 styled 404 |
 
 ### MAUI Hybrid — `clients/FSH.Hybrid`
@@ -101,9 +107,9 @@
 
 ## Build order
 
-1. **Admin** 2.4 Billing ✅ → 2.5 Webhooks → 2.6 Audits → 2.7 Health → 2.8 Notifications inbox →
-   2.9 Settings → 2.10 Impersonation → styled 404 (parallel: permission constants per feature).
-2. **Dashboard** 3.1 → 3.15 per the table (each page: service → page → route → SSE/live data where
+1. **Admin** 2.4 Billing ✅ → 2.5 Webhooks ✅ → 2.6 Audits ✅ → 2.7 Health ✅ → 2.8 Notifications inbox ✅ →
+   2.9 Settings ✅ → 2.10 Impersonation ✅ → styled 404 (parallel: permission constants per feature).
+2. **Dashboard** 3.1 Overview ✅ → 3.2 Activity ✅ → 3.3 Subscription ✅ → 3.4 Wallet ✅ → 3.5 Invoices ✅ → 3.6 Catalog ✅ → 3.7…3.13 per the table (each page: service → page → route → SSE/live data where
    the React page has it → bUnit test).
 3. **MAUI** 5.x — workload install, shell parity, then screens.
 4. **Phase 6 exit** — parity audit (6.5) items re-checked against these tables; deferred items

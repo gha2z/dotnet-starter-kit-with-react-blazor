@@ -1,0 +1,223 @@
+@page "/catalog/products/{Id}"
+@attribute [Authorize]
+@using FSH.BlazorShared.Formatting
+@using MudBlazor
+
+<MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-2" OnClick="GoBack">
+    Back to products
+</MudButton>
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+@if (_loading)
+{
+    <div class="d-flex flex-column gap-3">
+        <div class="fsh-skeleton" style="height: 96px; border-radius: 12px;"></div>
+        <div class="fsh-skeleton" style="height: 256px; border-radius: 12px;"></div>
+    </div>
+}
+else if (_product is null)
+{
+    <FshEmptyState Icon="@Icons.Material.Filled.SearchOff"
+                   Title="Product not found"
+                   Description="This product doesn't exist, or you don't have access to it." />
+}
+else
+{
+    <div class="fsh-enter overflow-hidden rounded-xl border fsh-detail-card">
+        <div class="fsh-detail-accent-bar" aria-hidden="true"></div>
+        <div class="d-flex flex-column gap-4 p-4 fsh-detail-header-row">
+            <div class="d-flex align-center gap-4 min-w-0">
+                <span class="fsh-detail-icon" aria-hidden="true">
+                    @if (!string.IsNullOrEmpty(_product.ThumbnailUrl))
+                    {
+                        <img src="@_product.ThumbnailUrl" alt="" style="width: 44px; height: 44px; object-fit: cover; border-radius: 10px;" referrerpolicy="no-referrer" />
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Medium" />
+                    }
+                </span>
+                <div class="min-w-0">
+                    <div class="d-flex flex-wrap align-center gap-2">
+                        <h1 class="fsh-detail-title">@_product.Name</h1>
+                        @if (_product.IsActive)
+                        {
+                            <FshStatusPill Text="active" Tone="Color.Success" />
+                        }
+                        else
+                        {
+                            <FshStatusPill Text="hidden" Tone="Color.Default" />
+                        }
+                    </div>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="font-family: var(--fsh-mono, monospace); font-size: 12.5px;">
+                        @_product.Sku
+                    </MudText>
+                </div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh"
+                           Disabled="@_loading" OnClick="ReloadAsync">
+                    Refresh
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Payments" OnClick="OpenPriceAsync">
+                    Change price
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Success" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Inventory2" OnClick="OpenStockAsync">
+                    Adjust stock
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit" OnClick="OpenEditorAsync">
+                    Edit
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Delete" OnClick="ConfirmDeleteAsync">
+                    Delete
+                </MudButton>
+            </div>
+        </div>
+    </div>
+
+    <div class="fsh-prod-detail-grid mt-4">
+        <div class="d-flex flex-column gap-4">
+            @* Pricing *@
+            <MudPaper Elevation="0" Class="fsh-section-card">
+                <div class="d-flex align-center gap-2 mb-1" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mud-palette-text-secondary);">
+                    <MudIcon Icon="@Icons.Material.Filled.Payments" Size="Size.Small" />
+                    Pricing
+                </div>
+                <div class="mt-2">
+                    <span class="fsh-balance-amount">@FshFormat.Money(_product.Price.Amount, _product.Price.Currency)</span>
+                </div>
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" Class="mt-1" OnClick="OpenPriceAsync">
+                    Change price
+                </MudButton>
+            </MudPaper>
+
+            @* Inventory *@
+            <MudPaper Elevation="0" Class="fsh-section-card">
+                <div class="d-flex align-center gap-2 mb-1" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mud-palette-text-secondary);">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" />
+                    Inventory
+                </div>
+                <div class="mt-2 d-flex align-center gap-2">
+                    <span class="fsh-balance-amount" style="font-size: 26px;">@_product.Stock</span>
+                    <span class="fsh-muted-copy" style="font-size: 12px;">in stock</span>
+                </div>
+                @StockChipInline(_product)
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" Class="mt-1" OnClick="OpenStockAsync">
+                    Adjust stock
+                </MudButton>
+            </MudPaper>
+
+            @* Identifiers *@
+            <MudPaper Elevation="0" Class="fsh-section-card">
+                <div class="d-flex align-center gap-2 mb-1" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mud-palette-text-secondary);">
+                    <MudIcon Icon="@Icons.Material.Filled.Tag" Size="Size.Small" />
+                    Identifiers
+                </div>
+                <dl class="mt-2 mb-0">
+                    <div class="fsh-prod-meta-row">
+                        <dt>SKU</dt>
+                        <dd class="fsh-truncate" style="font-family: var(--fsh-mono, monospace);">@_product.Sku</dd>
+                    </div>
+                    <div class="fsh-prod-meta-row">
+                        <dt>Slug</dt>
+                        <dd class="fsh-truncate" style="font-family: var(--fsh-mono, monospace);">@_product.Slug</dd>
+                    </div>
+                    <div class="fsh-prod-meta-row">
+                        <dt>Brand</dt>
+                        <dd class="fsh-truncate">@(_brand?.Name ?? "—")</dd>
+                    </div>
+                    <div class="fsh-prod-meta-row">
+                        <dt>Category</dt>
+                        <dd class="fsh-truncate">@(_category?.Name ?? "—")</dd>
+                    </div>
+                </dl>
+            </MudPaper>
+        </div>
+
+        <div class="d-flex flex-column gap-4">
+            @* Description *@
+            <MudPaper Elevation="0" Class="fsh-section-card">
+                <div class="d-flex align-center gap-2 mb-1" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mud-palette-text-secondary);">
+                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" />
+                    Description
+                </div>
+                @if (string.IsNullOrEmpty(_product.Description))
+                {
+                    <div class="fsh-muted-copy" style="font-size: 13px;">No description for this product yet.</div>
+                }
+                else
+                {
+                    <div class="mt-2" style="font-size: 13.5px; line-height: 1.6; color: var(--mud-palette-text-primary); white-space: pre-line;">@_product.Description</div>
+                }
+            </MudPaper>
+
+            @* Images *@
+            <MudPaper Elevation="0" Class="fsh-section-card">
+                <div class="d-flex align-center gap-2 mb-3" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mud-palette-text-secondary);">
+                    <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Small" />
+                    Images
+                    <span class="fsh-count-chip" style="margin-left: 2px;">@_product.Images.Count</span>
+                </div>
+                @if (_product.Images.Count == 0)
+                {
+                    <div class="fsh-muted-copy" style="font-size: 13px;">No images for this product yet.</div>
+                }
+                else
+                {
+                    <div class="fsh-prod-images">
+                        @foreach (var image in _product.Images.OrderBy(i => i.SortOrder))
+                        {
+                            <div class="fsh-prod-image-tile">
+                                @if (image.IsThumbnail)
+                                {
+                                    <span class="fsh-prod-thumb-badge">cover</span>
+                                }
+                                <img src="@image.Url" alt="" loading="lazy" referrerpolicy="no-referrer" />
+                                <div class="fsh-prod-image-actions">
+                                    @if (!image.IsThumbnail)
+                                    {
+                                        <MudTooltip Text="Set as cover">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Star" Size="Size.Small" Color="Color.Warning"
+                                                           aria-label="Set as cover"
+                                                           OnClick="() => SetThumbnailAsync(image)" />
+                                        </MudTooltip>
+                                    }
+                                    <MudTooltip Text="Remove image">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                                       aria-label="Remove image"
+                                                       OnClick="() => DeleteImageAsync(image)" />
+                                    </MudTooltip>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </MudPaper>
+
+            @* Audit *@
+            <MudPaper Elevation="0" Class="fsh-section-card">
+                <div class="d-flex align-center gap-2 mb-1" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mud-palette-text-secondary);">
+                    <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" />
+                    Audit
+                </div>
+                <dl class="mt-2 mb-0">
+                    <div class="fsh-prod-meta-row">
+                        <dt>Created</dt>
+                        <dd>@FshFormat.DateTimeShort(_product.CreatedAtUtc)</dd>
+                    </div>
+                    <div class="fsh-prod-meta-row">
+                        <dt>Updated</dt>
+                        <dd>@FshFormat.DateTimeShort(_product.UpdatedAtUtc)</dd>
+                    </div>
+                </dl>
+            </MudPaper>
+        </div>
+    </div>
+}

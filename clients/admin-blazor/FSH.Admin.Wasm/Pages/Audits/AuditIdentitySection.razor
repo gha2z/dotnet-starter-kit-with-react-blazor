@@ -1,0 +1,41 @@
+@namespace FSH.Admin.Wasm.Pages.Audits
+@using FSH.BlazorShared.Models.Audits
+@using FSH.BlazorShared.Formatting
+
+<div class="px-6 py-4" style="border-bottom: 1px solid var(--mud-palette-divider);" aria-label="Event identity">
+    <MudText Class="fsh-mono-label mb-2">IDENTITY</MudText>
+    <div class="d-flex flex-wrap align-center gap-4">
+        <FshStatusPill Text="@Detail.EventType.ToString()" Tone="@EventTypeTone(Detail.EventType)" />
+        <FshStatusPill Text="@Detail.Severity.ToString()" Tone="@SeverityTone(Detail.Severity)" />
+        @if (!string.IsNullOrEmpty(Detail.Source))
+        {
+            <span class="fsh-mono-muted fsh-truncate">
+                <span class="opacity-60">source · </span>
+                <span style="color: var(--mud-palette-text-primary);">@Detail.Source</span>
+            </span>
+        }
+        <span class="ml-auto fsh-mono-label">@FshFormat.Timestamp(Detail.OccurredAtUtc)</span>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public AuditDetailDto Detail { get; set; } = default!;
+
+    private static Color EventTypeTone(AuditEventType type) => type switch
+    {
+        AuditEventType.Exception => Color.Error,
+        AuditEventType.Security => Color.Warning,
+        AuditEventType.EntityChange or AuditEventType.Activity => Color.Info,
+        _ => Color.Default,
+    };
+
+    private static Color SeverityTone(AuditSeverity severity) => severity switch
+    {
+        AuditSeverity.Critical or AuditSeverity.Error => Color.Error,
+        AuditSeverity.Warning => Color.Warning,
+        AuditSeverity.Information => Color.Info,
+        AuditSeverity.Trace or AuditSeverity.Debug => Color.Default,
+        _ => Color.Default,
+    };
+}

@@ -55,6 +55,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 // Tenant-scoped data services
 builder.Services.AddScoped<IBillingService, BillingService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<ICatalogService, CatalogService>();
 
 builder.Services.AddAuthorizationCore();
 
