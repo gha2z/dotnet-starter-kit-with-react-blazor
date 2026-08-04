@@ -1,5 +1,5 @@
 # Phase 3 — Dashboard Feature Pages
-Last Update: 2026-Aug-04 18:30:00, by: opencode (auto/coding, model: opencode/big-pickle).
+Last Update: 2026-Aug-04 18:30:00, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
 
 > **Target:** All tenant-facing dashboard pages built — Overview (SSE), Activity, Subscription, Wallet, Catalog, Invoices, Identity (profile/user/role), Tickets, Chat, Files, System. Feature parity with `clients/dashboard` React app.
 
