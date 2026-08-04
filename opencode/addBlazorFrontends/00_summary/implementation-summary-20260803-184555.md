@@ -3,6 +3,7 @@
 ---
 **Description:** Completed dashboard feature pages 3.3 Subscription, 3.4 Wallet, and 3.5 Invoices (list + detail) with full React parity and bUnit tests, plus the readme/documentation conventions pass for the addBlazorFrontends workspace.
 **Creator:** opencode (auto/coding, model: mimo-v2.5-free)
+**Duration:** 2h 45m
 ---
 
 ## Phase 3 - Dashboard Feature Pages: 3.3 Subscription

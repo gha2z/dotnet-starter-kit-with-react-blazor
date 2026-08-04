@@ -124,6 +124,13 @@ clients/
   click + link nav, mark-all-read, SignalR `NotificationCreated` subscription, refresh on open),
   `FshPager` ("Showing N–M of T · folio PP/TT" + prev/next), `FshFilterBar`, `FshLoadingRow`,
   `FshKpiTile`, `FshSectionRule`. All expose a `Class` parameter when used with spacing utility classes.
+- `FshErrorBoundary` is a **real error boundary** (`@inherits ErrorBoundaryBase`): it renders its
+  `ChildContent` (the whole app when used around `<Router>` in `App.razor`) and swaps to the styled
+  "Something went wrong" card only when `CurrentException` is set. Do NOT add a second `ChildContent`
+  parameter (inherited) and do NOT call `base.OnErrorAsync` (abstract — log + return `Task.CompletedTask`).
+  The global `#blazor-error-ui` banner is styled by the shared `.fsh-error-*` rules in `fsh.css`, surfaced
+  by `_content/FSH.BlazorShared/js/fshError.js` (both apps' `index.html` reference the shared script —
+  no per-app copies).
 
 ## MudBlazor 9.x form gotchas
 

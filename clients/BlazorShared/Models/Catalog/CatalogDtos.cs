@@ -81,4 +81,5 @@ public sealed record UpdateProductRequest(
     bool IsActive);
 public sealed record ChangeProductPriceRequest(decimal Amount, string Currency);
 public sealed record AdjustProductStockRequest(int Delta);
+public sealed record AdjustProductStockResponse(int Stock);
 public sealed record AddProductImageRequest(Guid? FileAssetId, string Url);

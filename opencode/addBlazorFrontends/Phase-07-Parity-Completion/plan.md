@@ -1,5 +1,5 @@
 # Phase 7 — React Parity Completion & Hardening
-Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-free).
+Last Update: 2026-Aug-04 18:30:00, by: opencode (auto/coding, model: opencode/big-pickle).
 
 > **Target:** Both Blazor WASM apps (admin + dashboard) are pixel- and behavior-identical to the
 > React 19 apps (`clients/admin`, `clients/dashboard`) — or better — and the MAUI Hybrid app matches
@@ -13,7 +13,7 @@ Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-f
   17 role-permission integration tests green)**, MAUI Hybrid workload saga resolved (Hybrid builds
   4 TFMs, 0 warnings). Page build-out: **2.4 Billing ✅ · 2.5 Webhooks ✅ · 2.6 Audits ✅ · 2.7 Health ✅ ·
   2.8 Notifications inbox ✅ · 2.9 Settings ✅ · 2.10 Impersonation ✅ · styled 404 ✅ ·
-   dashboard 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅** (admin suite 147/147, dashboard 73/73) — next up dashboard 3.7 Identity.
+   dashboard 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅** (admin suite 147/147, dashboard 105/105) — next up dashboard 3.9 Chat.
 - **Runtime hardening (this session):** admin app crashed on every authenticated render at `/` with
   "Cannot provide a value for property 'TenantService'" → the **9 missing `AddScoped` API service
   registrations** in `FSH.Admin.Wasm/Program.cs` were added (Audit/Billing/Impersonation/Role/Session/
@@ -87,8 +87,8 @@ Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-f
 | `/wallet` | `Pages/Wallet/WalletPage` (+ `.razor.cs`, balance card, top-up form, paginated request list) | ✅ 3.4 |
 | `/invoices` + `/invoices/{id}` | `Pages/Invoices/InvoicesPage` (search+pager list) + `InvoiceDetailPage` (line items, PDF download) | ✅ 3.5 |
 | `/catalog/*` (products + detail, brands, categories) | `Pages/Catalog/BrandsPage` + `CategoriesPage` + `ProductsPage` + `ProductDetailPage` + `BrandEditorDialog` + `CategoryEditorDialog` + `ProductEditorDialog` + `PriceDialog` + `StockDialog` | ✅ 3.6 |
-| `/identity/users`, `/roles`, `/groups` (+ details) | — (read-only lists) | 🔲 3.7 |
-| `/tickets` + `/tickets/{id}` | — | 🔲 3.8 |
+| `/identity/users`, `/roles`, `/groups` (+ details) | `Pages/Identity/UsersListPage` + `UserCreateDialog` + `UserDetailPage` (roles/sessions/impersonate) + `RolesListPage` + `RoleEditorDialog` + `RoleDetailPage` (grouped permission editor) + `GroupsListPage` + `GroupEditorDialog` + `GroupDetailPage` + `AddGroupMembersDialog` | ✅ 3.7 |
+| `/tickets` + `/tickets/{id}` | `Pages/Tickets/TicketsListPage` + `TicketDetailPage` + `CreateTicketDialog` + `ResolveDialog` + `AssignDialog` | ✅ 3.8 |
 | `/chat/*` (channel rail, chat page, settings, pinned, search, composer, messages…) | — | 🔲 3.9 |
 | `/files` | — | 🔲 3.10 |
 | `/system/health`, `/system/audits`, `/system/trash`, `/system/sessions` | — | 🔲 3.11 |
@@ -109,7 +109,7 @@ Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-f
 
 1. **Admin** 2.4 Billing ✅ → 2.5 Webhooks ✅ → 2.6 Audits ✅ → 2.7 Health ✅ → 2.8 Notifications inbox ✅ →
    2.9 Settings ✅ → 2.10 Impersonation ✅ → styled 404 (parallel: permission constants per feature).
-2. **Dashboard** 3.1 Overview ✅ → 3.2 Activity ✅ → 3.3 Subscription ✅ → 3.4 Wallet ✅ → 3.5 Invoices ✅ → 3.6 Catalog ✅ → 3.7…3.13 per the table (each page: service → page → route → SSE/live data where
+2. **Dashboard** 3.1 Overview ✅ → 3.2 Activity ✅ → 3.3 Subscription ✅ → 3.4 Wallet ✅ → 3.5 Invoices ✅ → 3.6 Catalog ✅ → 3.7 Identity ✅ → 3.8…3.13 per the table (each page: service → page → route → SSE/live data where
    the React page has it → bUnit test).
 3. **MAUI** 5.x — workload install, shell parity, then screens.
 4. **Phase 6 exit** — parity audit (6.5) items re-checked against these tables; deferred items

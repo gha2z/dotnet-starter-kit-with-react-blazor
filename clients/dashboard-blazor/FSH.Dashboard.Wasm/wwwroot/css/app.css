@@ -21,38 +21,3 @@
 @keyframes fsh-spin {
     to { transform: rotate(360deg); }
 }
-
-.fsh-error-ui {
-    display: none;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: #FEF2F2;
-    border-top: 2px solid #FCA5A5;
-    padding: 16px;
-    z-index: 9999;
-    font-family: 'Inter', sans-serif;
-}
-
-.fsh-error-content {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    color: #991B1B;
-}
-
-.fsh-reload-btn {
-    background: #DC2626;
-    color: white;
-    border: none;
-    padding: 8px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.fsh-reload-btn:hover {
-    background: #B91C1C;
-}

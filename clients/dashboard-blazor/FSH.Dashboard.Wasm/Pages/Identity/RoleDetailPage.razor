@@ -1,0 +1,181 @@
+@page "/identity/roles/{Id}"
+@attribute [Authorize]
+@using FSH.BlazorShared.Models.Identity
+@using MudBlazor
+
+<MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-2" OnClick="GoBack">
+    Back to roles
+</MudButton>
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+@if (_loading)
+{
+    <div class="d-flex flex-column gap-3">
+        <div class="fsh-skeleton" style="height: 96px; border-radius: 12px;"></div>
+        <div class="fsh-skeleton" style="height: 256px; border-radius: 12px;"></div>
+    </div>
+}
+else if (_role is null)
+{
+    <FshEmptyState Icon="@Icons.Material.Filled.SearchOff"
+                   Title="Role not found"
+                   Description="This role doesn't exist, or you don't have access to it." />
+}
+else
+{
+    <div class="fsh-enter overflow-hidden rounded-xl border fsh-detail-card">
+        <div class="fsh-detail-accent-bar" aria-hidden="true"></div>
+        <div class="d-flex flex-column gap-4 p-4 fsh-detail-header-row">
+            <div class="d-flex flex-wrap align-center gap-4 min-w-0">
+                <FshToneIconTile Icon="@Icons.Material.Filled.Shield" Tone="Color.Primary" TileSize="52px" IconSize="Size.Medium" />
+                <div class="min-w-0 flex-fill">
+                    <div class="d-flex flex-wrap align-center gap-2">
+                        <span style="font-size: 18px; font-weight: 600; color: var(--mud-palette-text-primary);">@_role.Name</span>
+                        @if (IsSystemRole)
+                        {
+                            <MudChip T="string" Size="Size.Small" Class="fsh-id-chip" Variant="Variant.Outlined"
+                                     Icon="@Icons.Material.Filled.Lock" Color="Color.Default">
+                                System
+                            </MudChip>
+                        }
+                    </div>
+                    <div class="fsh-muted-copy" style="font-size: 13px;">
+                        @(string.IsNullOrWhiteSpace(_role.Description) ? "No description on file." : _role.Description)
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <FshPermissionGate Perms="@(new[] { IdentityPermissions.Roles.Update })">
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@IsSystemRole" OnClick="OpenEditorAsync">
+                            Edit profile
+                        </MudButton>
+                    </FshPermissionGate>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (IsSystemRole)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            <MudText Typo="Typo.body2" Style="margin: 0;">
+                <b>Built-in role — read only.</b>
+                @_role.Name ships with the framework. Its name, description, and permissions are managed
+                centrally. Create a custom role if you need a different set of grants.
+            </MudText>
+        </MudAlert>
+    }
+
+    <div class="fsh-detail-card fsh-detail-section mt-4">
+        <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-3">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.Key" Color="Color.Primary" Size="Size.Small" />
+                <span style="font-weight: 600; font-size: 14px;">Permission grants</span>
+            </div>
+            <span class="fsh-mono-muted" style="font-size: 12px;">@(_totalPermissions) total</span>
+        </div>
+
+        @if (_catalogGroups is null)
+        {
+            <div class="d-flex justify-center py-6">
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            </div>
+        }
+        else if (_catalogGroups.Count == 0)
+        {
+            <div class="fsh-muted-copy" style="font-size: 13px;">No permissions in the catalog.</div>
+        }
+        else
+        {
+            @foreach (var group in _catalogGroups)
+            {
+                <div class="mb-4">
+                    <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-1">
+                        <div>
+                            <span style="font-weight: 600; font-size: 13px;">@group.Resource</span>
+                            <span class="fsh-mono-muted" style="font-size: 11px; margin-left: 8px;">
+                                @(group.SelectedCount.ToString("00")) / @(group.Entries.Count.ToString("00"))
+                            </span>
+                        </div>
+                        @if (!IsSystemRole)
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => ToggleGroup(group)">
+                                @(group.AllSelected ? "Clear all" : group.AnySelected ? "Select remaining" : "Select all")
+                            </MudButton>
+                        }
+                    </div>
+                    <div class="fsh-perm-group">
+                        @foreach (var entry in group.Entries)
+                        {
+                            <div class="fsh-perm-row">
+                                <MudCheckBox T="bool"
+                                             Value="@GetChecked(entry.Name)"
+                                             ValueChanged="@((bool value) => OnPermissionToggled(entry.Name, value))"
+                                             Disabled="@IsSystemRole" />
+                                <div style="flex: 1; min-width: 0;">
+                                    <div class="d-flex flex-wrap align-center gap-2">
+                                        <span style="font-size: 13px; font-weight: 500;">@entry.Description</span>
+                                        @if (entry.IsRoot)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">root</MudChip>
+                                        }
+                                        @if (entry.IsBasic)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">basic</MudChip>
+                                        }
+                                    </div>
+                                    <div class="fsh-mono-muted" style="font-size: 11px;">@entry.Name</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="d-flex gap-2 mt-2">
+                <FshPermissionGate Perms="@(new[] { IdentityPermissions.Roles.Update })">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               Disabled="@(!_permissionsDirty || _isSavingPermissions || IsSystemRole)" OnClick="SavePermissionsAsync">
+                        @(_isSavingPermissions ? "Saving…" : "Save permissions")
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                               Disabled="@(!_permissionsDirty || _isSavingPermissions || IsSystemRole)" OnClick="DiscardPermissions">
+                        Discard
+                    </MudButton>
+                </FshPermissionGate>
+            </div>
+        }
+    </div>
+
+    @if (!IsSystemRole)
+    {
+        <FshPermissionGate Perms="@(new[] { IdentityPermissions.Roles.Delete })">
+            <div class="fsh-detail-card fsh-detail-section mt-4" style="border: 1px solid var(--mud-palette-error);">
+                <div class="d-flex align-center gap-2 mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" />
+                    <span style="font-weight: 600; font-size: 14px; color: var(--mud-palette-error);">Danger zone</span>
+                </div>
+                <div class="fsh-muted-copy mb-3" style="font-size: 13px;">
+                    Delete this role. Users assigned to it will lose every permission it grants — this is not reversible.
+                </div>
+                <div class="d-flex flex-wrap align-center gap-2">
+                    <MudTextField T="string"
+                                  Value="@_deleteConfirm"
+                                  ValueChanged="@OnDeleteConfirmChanged"
+                                  Placeholder="@($"Type {_role.Name} to confirm deletion")"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Style="max-width: 360px; flex: 1;" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small"
+                               Disabled="@(!_deleteReady || _isDeleting)" OnClick="DeleteRoleAsync">
+                        @(_isDeleting ? "Deleting…" : "Delete role")
+                    </MudButton>
+                </div>
+            </div>
+        </FshPermissionGate>
+    }
+}
+

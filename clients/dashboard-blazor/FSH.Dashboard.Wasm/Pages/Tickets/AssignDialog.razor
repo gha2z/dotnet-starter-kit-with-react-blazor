@@ -1,0 +1,97 @@
+@using FSH.BlazorShared.Models.Tickets
+
+<MudDialog @bind-Visible="Open" Options="DialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-3" Color="Color.Primary" />
+            @Ticket?.Number — @Ticket?.Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Class="mb-2" Style="font-size: 13px;">
+            Paste a user ID. Picking up the ticket transitions it to
+            <code>In progress</code>; clearing the assignee on an in-progress ticket sends it back to
+            <code>Open</code>.
+        </MudText>
+        <MudTextField @bind-Value="_assignee"
+                      Label="Assignee"
+                      Placeholder="User ID"
+                      Variant="Variant.Outlined"
+                      Class="mb-2" />
+
+        @if (_touched && string.IsNullOrWhiteSpace(_assignee))
+        {
+            <MudText Style="font-size: 12px;" Class="fsh-muted-copy">
+                Clearing the assignee will <strong>unassign</strong> the ticket.
+            </MudText>
+        }
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Disabled="_submitting">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit"
+                   Disabled="_submitting" StartIcon="@Icons.Material.Filled.Save">
+            @if (_submitting) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Save assignment
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public TicketDto? Ticket { get; set; }
+    [Parameter] public EventCallback OnAssigned { get; set; }
+
+    [Inject] private ITicketService Tickets { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private string _assignee = string.Empty;
+    private bool _touched;
+    private bool _submitting;
+    private string? _error;
+
+    private static readonly DialogOptions DialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+
+    protected override void OnParametersSet()
+    {
+        if (Open)
+        {
+            _assignee = Ticket?.AssignedToUserId?.ToString() ?? string.Empty;
+            _touched = false;
+        }
+    }
+
+    private async Task Close()
+    {
+        Open = false;
+        await OpenChanged.InvokeAsync(false);
+    }
+
+    private async Task Submit()
+    {
+        if (Ticket is null) return;
+        _touched = true;
+        _submitting = true;
+        _error = null;
+        try
+        {
+            Guid? userId = string.IsNullOrWhiteSpace(_assignee) ? null : Guid.Parse(_assignee.Trim());
+            await Tickets.AssignTicketAsync(Ticket.Id, new AssignTicketRequest(userId));
+            Snackbar.Add(userId.HasValue ? "Ticket assigned" : "Ticket unassigned", Severity.Success);
+            await OnAssigned.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}

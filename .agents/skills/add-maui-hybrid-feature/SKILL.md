@@ -8,6 +8,12 @@ argument-hint: "[push|biometric|camera|offline|deeplink|connectivity]"
 
 Read `.agents/rules/frontend/maui-hybrid.md` first.
 
+Companion MAUI skills (loaded globally via `skills.paths`, available in every project):
+`dotnet-maui-doctor` (toolchain/env validation), `maui-app-lifecycle`, `maui-safe-area`
+(.NET 10 `SafeAreaRegions` — FSH.Hybrid targets net10.0), `maui-dependency-injection`,
+`maui-theming`, `maui-data-binding`, `maui-collectionview`, `maui-shell-navigation`.
+Use them alongside this skill for the native-layer details.
+
 ## Step 1 — Create the platform service interface
 
 Define the interface in `BlazorShared/Services/` (or MAUI-specific location for truly native-only services):
@@ -51,6 +57,12 @@ public sealed class BiometricService : IBiometricService
     }
 }
 ```
+
+Note: **verify the biometric API before using this snippet.** `Platform.Current.AuthenticateAsync`,
+`AuthenticationRequest`, and `BiometricAvailability` are not backed by any package currently referenced in
+`FSH.Hybrid.csproj` (it references `CommunityToolkit.Maui` 13 only — which has no biometrics API). Confirm the
+exact call shape against the installed MAUI/CommunityToolkit version, or add a biometrics package first
+(e.g. `Plugin.Fingerprint`). Treat the snippet as a scaffold, not the source of truth.
 
 ## Step 3 — Register in MauiProgram.cs
 

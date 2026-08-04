@@ -163,7 +163,8 @@ public sealed class CatalogService(HttpClient http) : ICatalogService
     {
         var response = await http.PatchAsJsonAsync($"{CatalogBase}/products/{id}/stock", request, ct);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<int>(ct);
+        var result = await response.Content.ReadFromJsonAsync<AdjustProductStockResponse>(ct);
+        return result?.Stock ?? 0;
     }
 
     public async Task DeleteProductImageAsync(Guid productId, Guid imageId, CancellationToken ct = default)

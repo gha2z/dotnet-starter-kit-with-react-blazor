@@ -87,6 +87,40 @@ public sealed class UserService(HttpClient http) : IUserService
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task DeleteAsync(string userId, CancellationToken ct = default)
+    {
+        var response = await http.DeleteAsync($"{UsersBase}/{userId}", ct);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task ConfirmEmailAsync(string userId, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync($"{UsersBase}/{userId}/confirm-email", new { }, ct);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task ResendConfirmationEmailAsync(string userId, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync($"{UsersBase}/{userId}/resend-confirmation-email", new { }, ct);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task RevokeSessionAsync(string userId, Guid sessionId, CancellationToken ct = default)
+    {
+        var response = await http.DeleteAsync($"{UsersBase}/{userId}/sessions/{sessionId}", ct);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<int> RevokeAllSessionsAsync(string userId, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync($"{UsersBase}/{userId}/sessions/revoke-all", new { }, ct);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<RevokeAllSessionsResponse>(cancellationToken: ct);
+        return result?.RevokedCount ?? 0;
+    }
+
+    private sealed record RevokeAllSessionsResponse(int RevokedCount);
+
     public async Task<PagedResult<UserDto>> SearchInTenantAsync(string tenantId, string? search, CancellationToken ct = default)
     {
         var query = $"PageNumber=1&PageSize=25";

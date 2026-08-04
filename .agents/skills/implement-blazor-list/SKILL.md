@@ -6,6 +6,9 @@ argument-hint: "[admin|dashboard] [Resource]"
 
 # Implement Blazor List
 
+Companion skills: `author-component` (generic Blazor component patterns) and `plan-ui-change`
+(component decomposition). This skill is the MudTable + `PagedResult<T>` variant specific to FSH.
+
 ## Step 1 — Service method
 
 ```csharp

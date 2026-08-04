@@ -8,6 +8,9 @@ argument-hint: "[admin|dashboard] [Resource]"
 
 Read `.agents/rules/frontend/blazor-shared.md` and `blazor-admin.md` (if admin).
 
+Companion skill: `collect-user-input` (generic Blazor forms/validation) — this skill is the
+MudForm + DataAnnotations variant specific to FSH.
+
 ## Step 1 — Model with data annotations
 
 ```csharp

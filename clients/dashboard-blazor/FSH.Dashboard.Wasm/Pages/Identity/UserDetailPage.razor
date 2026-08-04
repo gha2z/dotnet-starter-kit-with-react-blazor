@@ -1,0 +1,221 @@
+@page "/identity/users/{Id}"
+@attribute [Authorize]
+@using FSH.BlazorShared.Formatting
+@using FSH.BlazorShared.Models.Identity
+@using MudBlazor
+
+<MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-2" OnClick="GoBack">
+    Back to users
+</MudButton>
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+@if (_loading)
+{
+    <div class="d-flex flex-column gap-3">
+        <div class="fsh-skeleton" style="height: 96px; border-radius: 12px;"></div>
+        <div class="fsh-skeleton" style="height: 256px; border-radius: 12px;"></div>
+    </div>
+}
+else if (_user is null)
+{
+    <FshEmptyState Icon="@Icons.Material.Filled.SearchOff"
+                   Title="User not found"
+                   Description="This user doesn't exist, or you don't have access to it." />
+}
+else
+{
+    <div class="fsh-enter overflow-hidden rounded-xl border fsh-detail-card">
+        <div class="fsh-detail-accent-bar" aria-hidden="true"></div>
+        <div class="d-flex flex-column gap-4 p-4 fsh-detail-header-row">
+            <div class="d-flex flex-wrap align-center gap-4 min-w-0">
+                <FshMonogram Seed="@(_user.UserName ?? _user.Email)" Name="@DisplayName" PixelSize="52" />
+                <div class="min-w-0 flex-fill">
+                    <div class="d-flex flex-wrap align-center gap-2">
+                        <span style="font-size: 18px; font-weight: 600; color: var(--mud-palette-text-primary);">@DisplayName</span>
+                        <MudChip T="string" Size="Size.Small" Class="fsh-id-chip"
+                                 Color="@(_user.IsActive ? Color.Success : Color.Error)"
+                                 Variant="Variant.Outlined">
+                            @(_user.IsActive ? "Active" : "Inactive")
+                        </MudChip>
+                        <MudChip T="string" Size="Size.Small" Class="fsh-id-chip"
+                                 Color="@(_user.EmailConfirmed ? Color.Success : Color.Default)"
+                                 Variant="Variant.Outlined">
+                            @(_user.EmailConfirmed ? "Email confirmed" : "Email pending")
+                        </MudChip>
+                        @if (_user.TwoFactorEnabled)
+                        {
+                            <MudChip T="string" Size="Size.Small" Class="fsh-id-chip" Variant="Variant.Outlined" Color="Color.Info">
+                                2FA
+                            </MudChip>
+                        }
+                    </div>
+                    <div class="fsh-muted-copy" style="font-size: 13px;">@@@(_user.UserName) · @(_user.Email ?? "no email")</div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary"
+                               Disabled="@_isToggling" OnClick="ToggleStatusAsync">
+                        @(_isToggling ? "Updating…" : _user.IsActive ? "Deactivate" : "Activate")
+                    </MudButton>
+                    <FshPermissionGate Perms="@(new[] { IdentityPermissions.Users.Impersonate })">
+                        @if (_user.Id is not null)
+                        {
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                                       Disabled="@(!_user.IsActive)" OnClick="ConfirmImpersonateAsync">
+                                Impersonate
+                            </MudButton>
+                        }
+                    </FshPermissionGate>
+                    <FshPermissionGate Perms="@(new[] { IdentityPermissions.Users.Delete })">
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" OnClick="ConfirmDeleteAsync">
+                            Delete
+                        </MudButton>
+                    </FshPermissionGate>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-3 mt-4">
+        <div class="fsh-detail-card fsh-detail-section flex-fill" style="min-width: 320px;">
+            <div class="d-flex align-center gap-2 mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Badge" Color="Color.Primary" Size="Size.Small" />
+                <span style="font-weight: 600; font-size: 14px;">Identity card</span>
+            </div>
+            <dl class="fsh-def-list">
+                <div><dt>User ID</dt><dd><code class="fsh-mono-muted">@(_user.Id ?? "—")</code></dd></div>
+                <div><dt>Username</dt><dd>@(_user.UserName ?? "—")</dd></div>
+                <div><dt>Email</dt><dd>@(_user.Email ?? "—")</dd></div>
+                <div><dt>Phone</dt><dd>@(_user.PhoneNumber ?? "—")</dd></div>
+                <div><dt>Status</dt><dd>@(_user.IsActive ? "Active" : "Inactive")</dd></div>
+                <div><dt>Email confirmed</dt><dd>@(_user.EmailConfirmed ? "Yes" : "Pending confirmation")</dd></div>
+                <div><dt>Two-factor</dt><dd>@(_user.TwoFactorEnabled ? "Enabled" : "Disabled")</dd></div>
+            </dl>
+        </div>
+
+        <div class="fsh-detail-card fsh-detail-section flex-fill" style="min-width: 320px;">
+            <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-3">
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Shield" Color="Color.Primary" Size="Size.Small" />
+                    <span style="font-weight: 600; font-size: 14px;">Role assignment</span>
+                </div>
+                @if (_dirtyCount > 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">@_dirtyCount pending</MudChip>
+                }
+            </div>
+
+            @if (_roles is null)
+            {
+                <div class="d-flex justify-center py-6">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                </div>
+            }
+            else if (_roles.Count == 0)
+            {
+                <div class="fsh-muted-copy" style="font-size: 13px;">No roles defined for this tenant.</div>
+            }
+            else
+            {
+                <div class="fsh-role-switches">
+                    @foreach (var role in _roles)
+                    {
+                        var key = role.RoleId ?? role.RoleName ?? string.Empty;
+                        <MudSwitch T="bool" Value="@GetRoleEnabled(role)" ValueChanged="@((bool v) => OnRoleToggledAsync(role, v))"
+                                   Color="Color.Primary" Class="fsh-role-switch">
+                            <span style="font-size: 13px; font-weight: 500;">@(role.RoleName ?? "Untitled role")</span>
+                        </MudSwitch>
+                    }
+                </div>
+                <div class="d-flex gap-2 mt-3">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               Disabled="@(_dirtyCount == 0 || _isSavingRoles)" OnClick="SaveRolesAsync">
+                        @(_isSavingRoles ? "Saving…" : "Save roles")
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@(_dirtyCount == 0)" OnClick="DiscardRoles">
+                        Discard
+                    </MudButton>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mt-3">
+        @if (!_user.EmailConfirmed)
+        {
+            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ConfirmEmailAsync">
+                Mark email confirmed
+            </MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ResendConfirmationAsync">
+                Resend confirmation email
+            </MudButton>
+        }
+    </div>
+
+    <FshPermissionGate Perms="@(new[] { SessionsPermissions.ViewAll })">
+        <div class="fsh-detail-card fsh-detail-section mt-4">
+            <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-3">
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Wifi" Color="Color.Primary" Size="Size.Small" />
+                    <span style="font-weight: 600; font-size: 14px;">Active sessions</span>
+                </div>
+                <FshPermissionGate Perms="@(new[] { SessionsPermissions.RevokeAll })">
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" Disabled="@_isRevokingAll" OnClick="RevokeAllAsync">
+                        @(_isRevokingAll ? "Revoking…" : "Revoke all")
+                    </MudButton>
+                </FshPermissionGate>
+            </div>
+
+            @if (_sessions is null)
+            {
+                <div class="d-flex justify-center py-6">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                </div>
+            }
+            else if (_sessions.Count == 0)
+            {
+                <div class="fsh-muted-copy" style="font-size: 13px;">No active sessions.</div>
+            }
+            else
+            {
+                <div class="fsh-sessions-grid fsh-list-head">
+                    <span>Session</span>
+                    <span>Device</span>
+                    <span>Last activity</span>
+                    <span></span>
+                </div>
+                @for (var i = 0; i < _sessions.Count; i++)
+                {
+                    var session = _sessions[i];
+                    var isLast = i == _sessions.Count - 1;
+                    <div class="fsh-sessions-grid fsh-list-row @(isLast ? "" : "fsh-row-border")">
+                        <div class="min-w-0">
+                            <div class="d-flex align-center gap-2">
+                                <span style="font-size: 13.5px; font-weight: 500;">@SessionLabel(session)</span>
+                                @if (session.IsCurrentSession)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">current</MudChip>
+                                }
+                            </div>
+                            <div class="fsh-truncate fsh-muted-copy" style="font-size: 12px;" title="@session.IpAddress">@session.IpAddress</div>
+                        </div>
+                        <span class="fsh-truncate fsh-muted-copy" style="font-size: 12.5px;">@DeviceLabel(session)</span>
+                        <span class="fsh-muted-copy" style="font-size: 12.5px;">@FshFormat.DateTimeShort(session.LastActivityAt)</span>
+                        <div class="d-flex align-center justify-end" @onclick:stopPropagation="true">
+                            <FshPermissionGate Perms="@(new[] { SessionsPermissions.Revoke })">
+                                <MudIconButton Icon="@Icons.Material.Filled.Logout" Size="Size.Small" Color="Color.Default"
+                                               aria-label="Revoke session"
+                                               Disabled="@(_isRevokingSessions.Contains(session.Id))"
+                                               OnClick="() => RevokeOneAsync(session)" />
+                            </FshPermissionGate>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </FshPermissionGate>
+}
+

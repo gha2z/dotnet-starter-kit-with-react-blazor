@@ -17,8 +17,14 @@ This header goes in every root doc (`00-Index.md`, `00-Setup.md`, `99-Glossary.m
 document inside each phase folder — `plan.md`, or `pre-plan.md` in the `Phase 00-The foundation` folder
 (it is the exception: literally named `Phase 00-The foundation`, with a space, and holds `pre-plan.md`
 instead of `plan.md`).
-Replace `<you>` with your actual identity, e.g. `by: opencode (auto/coding).`, 
-or even better `by: opencode (auto/coding, model: mimo-v2.5-free).`.
+Replace `<you>` with your actual identity, e.g. `by: opencode (auto/coding, model: <actual-model>).`.  
+`auto`, `auto/coding` and other `auto/*` patterns are just OmniRoute routing combos — not the real LLM  
+(see https://github.com/diegosouzapw/OmniRoute/blob/release/v3.8.50/docs/getting-started/AUTO-COMBO-GUIDE.md).  
+To discover the actual model your session uses:
+1. Log in to OmniRoute at http://localhost:20128/login (password: CHANGEME) to create a session cookie.
+2. Fetch `GET http://localhost:20128/api/usage/call-logs?status=ok&limit=1` (authenticated by the browser session).
+3. Read the `requestedModel` field from the JSON response — that is the real model name to write.  
+Example: `by: opencode (auto/coding, model: opencode/big-pickle).`
 
 Write an MD file named "implementation-summary-<yyyy-MM-dd-hh-mm-ss>.md" in the "./opencode/addBlazorFrontends/00_summary/" 
 folder containing the summary of implementation steps you have made in a session:
@@ -64,7 +70,10 @@ these projects are production-grade ready. Feel free to add/modify phases, and p
 You can modify the existing @AGENTS.md, @README.md, @README-template.md along with Agent Skill.md and rules files, 
 and add the new ones related to the current BLAZOR WASM and .NET MAUI Hybrid front-ends projects when necessary.
 
-Test the apps yourself and fix any issues relevant to the current development progress after you finish the implementations.
+Test the apps yourself and fix any issues relevant to the current development progress after you finish the 
+implementations. We don't want the end users seeing "An unhandled error has occurred" + "Reload" button shown up on any 
+single page/feature we have been implemented due to **the unfixed bugs**, so make sure to test thoroughly before 
+claiming completion.
 
 ---
 run FSH.Starter.AppHost and wait until everything is wired up

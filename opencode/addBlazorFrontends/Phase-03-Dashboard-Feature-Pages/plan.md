@@ -1,11 +1,11 @@
 # Phase 3 — Dashboard Feature Pages
-Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-free).
+Last Update: 2026-Aug-04 18:30:00, by: opencode (auto/coding, model: opencode/big-pickle).
 
 > **Target:** All tenant-facing dashboard pages built — Overview (SSE), Activity, Subscription, Wallet, Catalog, Invoices, Identity (profile/user/role), Tickets, Chat, Files, System. Feature parity with `clients/dashboard` React app.
 
 ## Status
 
-- Phase 3: **🟨 In progress** — 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · **3.6 Catalog ✅** — dashboard suite **73/73** — next: 3.7 Identity
+- Phase 3: **🟨 In progress** — 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · **3.7 Identity ✅** · **3.8 Tickets ✅** — dashboard suite **105/105** — next: 3.9 Chat
 - Prerequisites: Phase 1 ✅ (auth+login working, AppShell)
 - **Parity sprint deliverables already in place:** `SseService` (token flow `POST /api/v1/sse/token` → `GET /api/v1/sse/stream?token=`, backoff reconnect, `ConnectionChanged` event), SSE status dot in topbar, full sidebar (accordion, permission-gated) — no rebuilds needed, only page work.
 - Terminal pages `/tenant-deactivated` + `/impersonation-ended` do **not** exist yet (docs previously claimed they did) — tracked as 3.15 in `Phase-07-Parity-Completion/plan.md`.
@@ -102,9 +102,19 @@ Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-f
 - [x] **CategoriesPage.razor** — MudTable: name, parent, product count, search + pager, create/edit (parent combobox)/delete dialogs. React parity: `clients/dashboard/src/pages/catalog/categories.tsx`
 
 ### 3.7 Identity (Dashboard)
-- [ ] **ProfilePage.razor** — MudForm: edit profile info, MudFileInput for avatar, MudButton for save
-- [ ] **UsersListPage.razor** — MudTable: tenant-scoped user list (view only, no edit/delete)
-- [ ] **RolesListPage.razor** — MudTable with permission viewer (read-only MudTreeView)
+Full React parity — 6 pages + 4 dialogs, full CRUD (the plan's original read-only-only scope was superseded by the React app's CRUD implementation).
+- [x] **GroupDtos.cs** (`BlazorShared/Models/Identity/`) — `GroupDto`, `GroupMemberDto`, `CreateGroupRequest`, `UpdateGroupRequest`, `AddUsersToGroupRequest` — mirrors server `Modules.Identity.Contracts` DTOs
+- [x] **IGroupService/GroupService** (`BlazorShared/Services/`) — `ListAsync(search)`, `GetByIdAsync`, `CreateAsync`, `UpdateAsync`, `DeleteAsync`, `GetMembersAsync`, `AddUsersAsync`, `RemoveUserAsync` — endpoints `/api/v1/identity/groups/...`
+- [x] **IUserService extensions** — `DeleteAsync`, `ConfirmEmailAsync`, `ResendConfirmationEmailAsync`
+- [x] **UsersListPage.razor** — MudTable: avatar, name, email, role, status + email-confirmed chips; search + active/email filters + pager; create (register) dialog; row → detail. React parity: `clients/dashboard/src/pages/identity/users.tsx`
+- [x] **UserCreateDialog.razor** — MudForm: first/last name, email, userName, password + confirm, phone
+- [x] **UserDetailPage.razor** — hero (avatar/name/email/badges), meta (phone/joined/2FA), **roles assignment** (toggle switches, dirty-state save), **sessions panel** (revoke all / revoke one via session service), **impersonate action**, actions: toggle status, delete, confirm email, resend confirmation. React parity: `clients/dashboard/src/pages/identity/user-detail.tsx`
+- [x] **RolesListPage.razor** — MudTable: name, description, permission count, search + pager, upsert dialog, system-role read-only (lock chip). React parity: `clients/dashboard/src/pages/identity/roles.tsx`
+- [x] **RoleEditorDialog.razor** — MudForm: name + description (create/update)
+- [x] **RoleDetailPage.razor** — profile card, **grouped permission catalog editor** (MudTreeView or MudCheckbox groups by resource, dirty-state save, root-only note), delete (non-system). React parity: `clients/dashboard/src/pages/identity/role-detail.tsx`
+- [x] **GroupsListPage.razor** — MudTable: name, description, member count, default/system chips, search + pager, create dialog, row → detail. React parity: `clients/dashboard/src/pages/identity/groups.tsx`
+- [x] **GroupEditorDialog.razor** — MudForm: name, description, isDefault switch, role multi-select
+- [x] **GroupDetailPage.razor** — hero (name/desc/member count/chips), members table (add users, remove member), edit + delete. React parity: `clients/dashboard/src/pages/identity/group-detail.tsx`
 
 ### 3.8 Tickets
 - [ ] **ITicketService** — `SearchAsync`, `GetAsync`, `CreateAsync`, `ReplyAsync`, `CloseAsync`

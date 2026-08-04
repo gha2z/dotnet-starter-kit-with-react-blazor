@@ -1,0 +1,89 @@
+@page "/identity/roles"
+@attribute [Authorize]
+@using FSH.BlazorShared.Models.Identity
+@using MudBlazor
+
+<FshPageHeader Title="Roles"
+               Description="What each role can do in this tenant. Pick a role to inspect or edit its permission grants."
+               Icon="@Icons.Material.Filled.AdminPanelSettings"
+               Count="@(_totalCount == 0 && _loading ? null : _totalCount)"
+               Unit="role">
+    <FshPermissionGate Perms="@(new[] { IdentityPermissions.Roles.Create })">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="() => OpenEditorAsync(null)">
+            New role
+        </MudButton>
+    </FshPermissionGate>
+</FshPageHeader>
+
+<MudTextField @bind-Value="_search"
+              Placeholder="Search roles…"
+              Variant="Variant.Outlined"
+              Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Filled.Search"
+              Class="mb-4"
+              Immediate="true" />
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+@if (_loading)
+{
+    @for (var i = 0; i < 4; i++)
+    {
+        <div class="fsh-skeleton" style="height: 56px; border-radius: 12px; margin-bottom: 8px;"></div>
+    }
+}
+else if (_roles.Count == 0)
+{
+    <FshEmptyState Icon="@(SearchActive ? Icons.Material.Filled.Search : Icons.Material.Filled.AdminPanelSettings)"
+                   Title="@(SearchActive ? "No roles found" : "No roles yet")"
+                   Description="@EmptyStateDescription">
+        @if (SearchActive)
+        {
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="ClearSearch">Clear search</MudButton>
+        }
+    </FshEmptyState>
+}
+else
+{
+    <div class="d-flex justify-space-between align-center mb-3">
+        <p class="fsh-muted-copy" style="font-size: 12px; font-weight: 500; margin: 0;">@MetaText</p>
+    </div>
+
+    <div class="fsh-roles-grid fsh-list-head">
+        <span>Role</span>
+        <span class="fsh-col-desc">Description</span>
+        <span class="fsh-col-perms">Permissions</span>
+        <span></span>
+    </div>
+
+    @for (var i = 0; i < Filtered.Count; i++)
+    {
+        var role = Filtered[i];
+        var isLast = i == Filtered.Count - 1;
+        <div class="fsh-roles-grid fsh-list-row @(isLast ? "" : "fsh-row-border")" @onclick="() => OpenDetail(role)" style="cursor: pointer;">
+            <div class="d-flex align-center gap-2 min-w-0">
+                <span class="fsh-prod-initial">@Initial(role.Name)</span>
+                <div class="min-w-0">
+                    <div class="fsh-truncate d-flex align-center gap-2" style="font-size: 14px; font-weight: 500; color: var(--mud-palette-text-primary);">
+                        <span class="fsh-truncate">@role.Name</span>
+                        @if (IsSystemRole(role))
+                        {
+                            <span class="fsh-status-tag">system</span>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="fsh-truncate fsh-muted-copy fsh-col-desc" style="font-size: 12.5px;" title="@role.Description">
+                @(string.IsNullOrWhiteSpace(role.Description) ? "No description on file." : role.Description)
+            </div>
+            <span class="fsh-mono-muted fsh-col-perms" style="font-size: 12px;">@(role.Permissions?.Count ?? 0)</span>
+            <div class="d-flex align-center justify-end" @onclick:stopPropagation="true">
+                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Color="Color.Default" />
+            </div>
+        </div>
+    }
+}

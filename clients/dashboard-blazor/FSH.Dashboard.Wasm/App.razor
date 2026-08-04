@@ -8,23 +8,25 @@
 <MudSnackbarProvider />
 
 <CascadingAuthenticationState>
-    <Router AppAssembly="@typeof(App).Assembly">
-        <Found Context="routeData">
-            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-                <NotAuthorized>
-                    <RedirectToLogin />
-                </NotAuthorized>
-                <Authorizing>
-                    <MudOverlay Visible="true">
-                        <MudProgressCircular Indeterminate="true" />
-                    </MudOverlay>
-                </Authorizing>
-            </AuthorizeRouteView>
-        </Found>
-        <NotFound>
-            <FshNotFound />
-        </NotFound>
-    </Router>
+    <FshErrorBoundary>
+        <Router AppAssembly="@typeof(App).Assembly">
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                    <NotAuthorized>
+                        <RedirectToLogin />
+                    </NotAuthorized>
+                    <Authorizing>
+                        <MudOverlay Visible="true">
+                            <MudProgressCircular Indeterminate="true" />
+                        </MudOverlay>
+                    </Authorizing>
+                </AuthorizeRouteView>
+            </Found>
+            <NotFound>
+                <FshNotFound />
+            </NotFound>
+        </Router>
+    </FshErrorBoundary>
 </CascadingAuthenticationState>
 
 @code {

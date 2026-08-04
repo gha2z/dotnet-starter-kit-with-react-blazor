@@ -55,4 +55,15 @@ public static class FshFormat
 
         return utc.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
     }
+
+    /// <summary>Relative time like "2 hours ago", "3 days ago" (React formatRelative).</summary>
+    public static string DateRelative(DateTime utc)
+    {
+        var span = DateTime.UtcNow - utc;
+        if (span.TotalSeconds < 60) return "just now";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
+        if (span.TotalDays < 30) return $"{(int)span.TotalDays}d ago";
+        return DateShort(utc);
+    }
 }

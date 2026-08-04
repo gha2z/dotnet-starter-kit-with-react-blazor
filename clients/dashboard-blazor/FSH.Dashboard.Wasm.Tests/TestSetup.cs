@@ -1,18 +1,35 @@
 using Bunit;
 using Bunit.TestDoubles;
+using FSH.BlazorShared.Auth;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using MudBlazor.Services;
+using NSubstitute;
 using Xunit;
 
 namespace FSH.Dashboard.Wasm.Tests;
 
 public abstract class TestSetup : BunitContext, IAsyncLifetime
 {
+    protected readonly BunitAuthorizationContext Authorization;
+    protected readonly ITokenStore TokenStore;
+    protected readonly IPermissionsProvider PermissionsProvider;
+
     protected TestSetup()
     {
         DefaultWaitTimeout = TimeSpan.FromSeconds(30);
         JSInterop.Mode = JSRuntimeMode.Loose;
+        TokenStore = Substitute.For<ITokenStore>();
+        PermissionsProvider = Substitute.For<IPermissionsProvider>();
+
+        Services.AddSingleton(TokenStore);
+        Services.AddScoped<AuthStateProvider>();
+        Services.AddScoped<AuthenticationStateProvider>(sp =>
+            sp.GetRequiredService<AuthStateProvider>());
+        Services.AddScoped(_ => PermissionsProvider);
         Services.AddMudServices();
+        Authorization = AddAuthorization();
     }
 
     /// <summary>

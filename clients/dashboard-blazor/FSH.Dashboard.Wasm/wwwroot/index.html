@@ -19,12 +19,16 @@
     </div>
     <div id="blazor-error-ui" class="fsh-error-ui">
         <div class="fsh-error-content">
-            <p>An unhandled error has occurred.</p>
+            <div>
+                <p style="margin: 0;">An unhandled error has occurred.</p>
+                <p class="fsh-error-detail" style="margin: 4px 0 0;"></p>
+            </div>
             <button class="fsh-reload-btn" onclick="window.location.reload()">Reload</button>
         </div>
     </div>
     <script src="_framework/blazor.webassembly.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="js/fshDownload.js"></script>
+    <script src="_content/FSH.BlazorShared/js/fshError.js"></script>
 </body>
 </html>

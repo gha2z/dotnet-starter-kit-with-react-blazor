@@ -1497,3 +1497,365 @@
     background: color-mix(in srgb, var(--mud-palette-background-grey) 80%, var(--mud-palette-text-primary) 20%);
     color: var(--mud-palette-text-secondary);
 }
+
+/* ============================================================
+   Identity (users, roles, groups) — dashboard parity
+   ============================================================ */
+
+.fsh-users-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) 130px 170px 24px;
+    gap: 16px;
+    align-items: center;
+}
+
+.fsh-users-grid .fsh-col-username,
+.fsh-users-grid .fsh-col-status {
+    display: none;
+}
+
+@media (min-width: 900px) {
+    .fsh-users-grid {
+        grid-template-columns: minmax(0, 1.6fr) 150px 200px 24px;
+    }
+
+    .fsh-users-grid .fsh-col-username,
+    .fsh-users-grid .fsh-col-status {
+        display: block;
+    }
+}
+
+.fsh-roles-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 24px;
+    gap: 16px;
+    align-items: center;
+}
+
+.fsh-roles-grid .fsh-col-desc,
+.fsh-roles-grid .fsh-col-perms {
+    display: none;
+}
+
+@media (min-width: 900px) {
+    .fsh-roles-grid {
+        grid-template-columns: minmax(0, 1.4fr) 2fr 110px 24px;
+    }
+
+    .fsh-roles-grid .fsh-col-desc,
+    .fsh-roles-grid .fsh-col-perms {
+        display: block;
+    }
+}
+
+.fsh-groups-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 24px;
+    gap: 16px;
+    align-items: center;
+}
+
+.fsh-groups-grid .fsh-col-composition,
+.fsh-groups-grid .fsh-col-flags {
+    display: none;
+}
+
+@media (min-width: 900px) {
+    .fsh-groups-grid {
+        grid-template-columns: minmax(0, 1.4fr) 1.6fr 130px 24px;
+    }
+
+    .fsh-groups-grid .fsh-col-composition,
+    .fsh-groups-grid .fsh-col-flags {
+        display: block;
+    }
+}
+
+.fsh-sessions-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) 24px;
+    gap: 16px;
+    align-items: center;
+}
+
+.fsh-sessions-grid > span:nth-child(2),
+.fsh-sessions-grid > span:nth-child(3) {
+    display: none;
+}
+
+@media (min-width: 900px) {
+    .fsh-sessions-grid {
+        grid-template-columns: minmax(0, 1.6fr) 180px 140px 24px;
+    }
+
+    .fsh-sessions-grid > span:nth-child(2),
+    .fsh-sessions-grid > span:nth-child(3) {
+        display: block;
+    }
+}
+
+.fsh-members-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) 140px 24px;
+    gap: 16px;
+    align-items: center;
+}
+
+.fsh-members-grid .fsh-col-joined {
+    display: none;
+}
+
+@media (min-width: 900px) {
+    .fsh-members-grid {
+        grid-template-columns: minmax(0, 1.6fr) 140px 140px 24px;
+    }
+
+    .fsh-members-grid .fsh-col-joined {
+        display: block;
+    }
+}
+
+.fsh-detail-section {
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.fsh-detail-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 72px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--mud-palette-background-grey) 50%, transparent);
+}
+
+.fsh-detail-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--mud-palette-text-primary);
+    line-height: 1.2;
+}
+
+.fsh-detail-stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--mud-palette-text-secondary);
+}
+
+.fsh-def-list {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.fsh-def-list > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
+    font-size: 13px;
+}
+
+.fsh-def-list > div:last-child {
+    border-bottom: none;
+}
+
+.fsh-def-list dt {
+    color: var(--mud-palette-text-secondary);
+    font-weight: 500;
+}
+
+.fsh-def-list dd {
+    margin: 0;
+    text-align: right;
+    color: var(--mud-palette-text-primary);
+    overflow-wrap: anywhere;
+}
+
+.fsh-role-switches {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.fsh-role-switch {
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 8px;
+}
+
+.fsh-role-switch:hover {
+    background: color-mix(in srgb, var(--mud-palette-background-grey) 50%, transparent);
+}
+
+.fsh-perm-group {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.fsh-perm-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 60%, transparent);
+}
+
+.fsh-perm-row:last-child {
+    border-bottom: none;
+}
+
+.fsh-perm-row:hover {
+    background: color-mix(in srgb, var(--mud-palette-background-grey) 40%, transparent);
+}
+
+.fsh-id-chip {
+    height: 22px;
+    font-size: 11px;
+}
+
+.fsh-group-thumb {
+    background: color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-surface));
+}
+
+/* Global error UI (blazor-error-ui). Shared by admin-blazor + dashboard-blazor.
+   Hidden by default; window.fshError.show() adds .fsh-error-visible. */
+.fsh-error-ui {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #FEF2F2;
+    border-top: 2px solid #FCA5A5;
+    padding: 16px;
+    z-index: 9999;
+    font-family: 'Inter', sans-serif;
+}
+
+.fsh-error-ui.fsh-error-visible {
+    display: block;
+}
+
+.fsh-error-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: #991B1B;
+}
+
+.fsh-error-detail {
+    font-size: 13px;
+    color: #7F1D1D;
+}
+
+.fsh-reload-btn {
+    background: #DC2626;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.fsh-reload-btn:hover {
+    background: #B91C1C;
+}
+
+/* ---------- tickets ---------- */
+
+.fsh-tickets-grid {
+    display: grid;
+    grid-template-columns: 1fr 100px 120px 140px 110px 24px;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+}
+
+@media (max-width: 768px) {
+    .fsh-tickets-grid.fsh-list-head { display: none; }
+    .fsh-tickets-grid {
+        grid-template-columns: 1fr auto;
+    }
+}
+
+.fsh-ticket-icon-tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--mud-palette-primary) 12%, transparent);
+    color: var(--mud-palette-primary);
+    flex-shrink: 0;
+}
+
+.fsh-ticket-icon-lg {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+}
+
+.fsh-ticket-hero {
+    border-radius: 14px;
+    border: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+    padding: 20px;
+}
+
+.fsh-ticket-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 20px;
+}
+
+@media (max-width: 1024px) {
+    .fsh-ticket-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.fsh-ticket-detail-main,
+.fsh-ticket-detail-sidebar {
+    min-width: 0;
+}
+
+.fsh-comment-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+    flex-shrink: 0;
+}
+
+.fsh-ticket-filter-pill .mud-button-root {
+    border-radius: 20px;
+    padding: 2px 14px;
+    font-size: 12px;
+    text-transform: none;
+    min-height: 28px;
+}
+
+.fsh-ticket-filter-pill .mud-button-root-active {
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+}

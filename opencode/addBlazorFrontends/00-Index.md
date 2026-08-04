@@ -1,9 +1,9 @@
 # Blazor WASM + MAUI — Implementation Roadmap
-Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-free).
+Last Update: 2026-Aug-04 18:30:00, by: opencode (auto/coding, model: opencode/big-pickle).
 
-> Status: **Phase 0 ✅ | Phase 1 ✅ | Phase 2 ✅ (2.1–2.10 done — Tenants, Users, Roles, Billing, Webhooks, Audits, Health, Notifications inbox, Settings, Impersonation — admin blazor 147/147) | Phase 3 🟨 (3.1 Overview ✅ + 3.2 Activity ✅ + 3.3 Subscription ✅ + 3.4 Wallet ✅ + 3.5 Invoices ✅ + 3.6 Catalog ✅ — dashboard suite 73/73 — next: 3.7 Identity) | Phase 4 🔲 | Phase 5 🔲 | Phase 6 🔲 | Phase 7 🟨 (parity completion — admin pages complete + runtime DI hardened, styled 404 done)**
+> Status: **Phase 0 ✅ | Phase 1 ✅ | Phase 2 ✅ (2.1–2.10 done — Tenants, Users, Roles, Billing, Webhooks, Audits, Health, Notifications inbox, Settings, Impersonation — admin blazor 147/147) | Phase 3 🟨 (3.1 Overview ✅ + 3.2 Activity ✅ + 3.3 Subscription ✅ + 3.4 Wallet ✅ + 3.5 Invoices ✅ + 3.6 Catalog ✅ + 3.7 Identity ✅ + 3.8 Tickets ✅ — dashboard suite 105/105 — next: 3.9 Chat) | Phase 4 🔲 | Phase 5 🔲 | Phase 6 🔲 | Phase 7 🟨 (parity completion — admin pages complete + runtime DI hardened, styled 404 done)**
 >
-> **Blazor WASM apps: admin 147/147 tests passing, dashboard 73/73 tests passing.**
+> **Blazor WASM apps: admin 147/147 tests passing, dashboard 105/105 tests passing.**
 >
 > **Parity sprint 1 (React ↔ Blazor, done):** both sidebars rebuilt 1:1 from `nav-items.ts` / `nav-data.ts`
 > (accordion sections, permission-gated, collapse `"true"/"false"`) · dashboard theme = `fsh.theme` +
@@ -24,7 +24,7 @@ Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-f
 > (grant list, impersonate dialog with user search + duration + reason, revoke dialog, cross-app handoff) —
 > each with bUnit coverage (**admin suite 147/147, 0 build warnings** — MudBlazor 9.7 API drift fixed).
 >
-> **Phase 3 — dashboard pages (in progress):** 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ — brands/categories/products pages with full CRUD dialogs (editor, price, stock, delete confirm), detail page with hero/pricing/inventory/images/audit panels. Next: 3.7 Identity. (**dashboard 73/73**).
+> **Phase 3 — dashboard pages (in progress):** 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ — brands/categories/products pages with full CRUD dialogs (editor, price, stock, delete confirm), detail page with hero/pricing/inventory/images/audit panels; identity users/roles/groups lists + details + register/role-editor/group-editor/add-members dialogs, grouped permission editor, sessions + impersonate. Next: 3.8 Tickets. (**dashboard 92/92**).
 >
 > **Fixed in this session:**
 > - **Admin Blazor (root cause of the post-login "An unhandled error has occurred"):** `Program.cs` was

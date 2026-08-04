@@ -15,5 +15,10 @@ public interface IUserService
     Task<UserDto> GetMyProfileAsync(CancellationToken ct = default);
     Task SetProfileImageAsync(string? imageUrl, CancellationToken ct = default);
     Task ChangePasswordAsync(ChangePasswordRequest request, CancellationToken ct = default);
+    Task DeleteAsync(string userId, CancellationToken ct = default);
+    Task ConfirmEmailAsync(string userId, CancellationToken ct = default);
+    Task ResendConfirmationEmailAsync(string userId, CancellationToken ct = default);
+    Task RevokeSessionAsync(string userId, Guid sessionId, CancellationToken ct = default);
+    Task<int> RevokeAllSessionsAsync(string userId, CancellationToken ct = default);
     Task<PagedResult<UserDto>> SearchInTenantAsync(string tenantId, string? search, CancellationToken ct = default);
 }

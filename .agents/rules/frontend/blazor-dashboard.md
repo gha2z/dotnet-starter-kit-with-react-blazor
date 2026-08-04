@@ -81,3 +81,16 @@ These are **not yet implemented** in Blazor (deferred parity items — see `open
 - Wrap page in `<MudSkeleton>` loading state via `_isLoading` property.
 - No permission constant mirroring needed.
 - SSE/subscription setup in `OnInitializedAsync` for live-data pages.
+
+## Identity pages — permission-gated actions (since 3.7)
+
+The identity pages (`/identity/users`, `/identity/roles`, `/identity/groups` + details) are the exception:
+they wrap *in-page actions* in `<FshPermissionGate>` so only users holding the matching permission see
+create/edit/delete/session controls (e.g. "Register user" behind `IdentityPermissions.Users.Create`,
+the sessions panel behind `SessionsPermissions.ViewAll`, member removal behind `GroupsPermissions.Update`).
+Pattern to follow for future privileged CRUD pages:
+- Gate the *control*, never the route — the page renders for any authenticated user; denied actions simply
+  don't render.
+- Keep the gate around the smallest fragment (a button, a panel), not the whole page.
+- bUnit tests assert gated content by calling `Authorization.SetAuthorized("admin")` +
+  `Authorization.SetPolicies(...)` on the dashboard `TestSetup` (auth services are registered there since 3.7).

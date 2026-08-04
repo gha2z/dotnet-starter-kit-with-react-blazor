@@ -1,0 +1,379 @@
+@page "/tickets/{Id}"
+@attribute [Authorize]
+@using FSH.BlazorShared.Formatting
+
+@if (_loading)
+{
+    <div class="d-flex align-center justify-center" style="min-height: 200px;">
+        <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+    </div>
+}
+else if (_error is not null)
+{
+    <div class="mb-4">
+        <FshErrorBand Message="@_error" />
+    </div>
+}
+else if (_ticket is null)
+{
+    <MudPaper Class="pa-8 text-center" Elevation="0">
+        <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber" Size="Size.Large" Color="Color.Default" Class="mb-4" />
+        <MudText Typo="Typo.h5" Class="mb-2" Style="font-weight: 600;">This ticket no longer exists.</MudText>
+        <MudText Class="fsh-muted-copy mb-4">It may have been deleted. Check the trash, or head back to the tickets desk.</MudText>
+        <MudButton Variant="Variant.Outlined" OnClick="GoToList">Back to tickets</MudButton>
+    </MudPaper>
+}
+else
+{
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Variant="Variant.Text" Size="Size.Small"
+               Class="mb-4" OnClick="GoToList">
+        Back to tickets
+    </MudButton>
+
+    <MudPaper Class="pa-4 mb-5" Elevation="0">
+        <div class="d-flex align-center gap-4">
+            <span class="fsh-ticket-icon-tile fsh-ticket-icon-lg">
+                <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber" Size="Size.Large" />
+            </span>
+            <div class="min-w-0 flex-grow-1">
+                <div class="d-flex align-center flex-wrap gap-2">
+                    <MudText Typo="Typo.h5" Class="fsh-truncate" Style="font-weight: 600;">@_ticket.Title</MudText>
+                    <FshStatusPill Text="@StatusLabel(_ticket.Status)" Tone="@StatusTone(_ticket.Status)" />
+                    <FshStatusPill Text="@PriorityLabel(_ticket.Priority)" Tone="@PriorityTone(_ticket.Priority)" />
+                </div>
+                <div class="d-flex align-center gap-2 mt-1 fsh-muted-copy" style="font-size: 13px;">
+                    <code class="fsh-mono-muted">@_ticket.Number</code>
+                    <span>·</span>
+                    <span>opened @FshFormat.DateRelative(_ticket.CreatedAtUtc) by @ReporterLabel</span>
+                </div>
+            </div>
+            <div class="d-flex align-center gap-2">
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh"
+                           Disabled="_refreshing" OnClick="RefreshAsync">
+                    Refresh
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.PersonAdd"
+                           OnClick="() => _assignDialogOpen = true">
+                    @(_ticket.AssignedToUserId.HasValue ? "Reassign" : "Assign")
+                </MudButton>
+                @if (CanResolve)
+                {
+                    <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.CheckCircle" OnClick="() => _resolveDialogOpen = true">
+                        Resolve
+                    </MudButton>
+                }
+                @if (CanReopen)
+                {
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Replay"
+                               OnClick="ReopenAsync">
+                        Reopen
+                    </MudButton>
+                }
+            </div>
+        </div>
+    </MudPaper>
+
+    <div class="fsh-ticket-detail-grid">
+        <div class="fsh-ticket-detail-main">
+            <MudPaper Class="pa-4 mb-4" Elevation="0">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" /> Description
+                </MudText>
+                @if (!string.IsNullOrEmpty(_ticket.Description))
+                {
+                    <MudText Style="white-space: pre-wrap; font-size: 14px;">@_ticket.Description</MudText>
+                }
+                else
+                {
+                    <MudText Class="fsh-muted-copy" Style="font-style: italic; font-size: 13px;">
+                        No description on file. Comments below carry the conversation.
+                    </MudText>
+                }
+
+                @if (!string.IsNullOrEmpty(_ticket.ResolutionNote))
+                {
+                    <MudAlert Severity="Severity.Success" Class="mt-4" Variant="Variant.Outlined">
+                        <MudText Typo="Typo.caption" Style="font-weight: 600; text-transform: uppercase;">Resolution</MudText>
+                        <MudText Style="white-space: pre-wrap; font-size: 13px;">@_ticket.ResolutionNote</MudText>
+                    </MudAlert>
+                }
+            </MudPaper>
+
+            <MudPaper Class="pa-4" Elevation="0">
+                <MudText Typo="Typo.subtitle2" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Comment" Size="Size.Small" Class="mr-1" />
+                    Conversation
+                    <span class="fsh-muted-copy" style="font-weight: 400;"> — @(_comments.Count == 0 ? "No comments yet" : $"{_comments.Count} comment{(_comments.Count == 1 ? "" : "s")}")</span>
+                </MudText>
+
+                @if (_commentsLoading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                }
+                else if (_comments.Count == 0)
+                {
+                    <MudText Class="fsh-muted-copy" Style="font-style: italic; font-size: 13px;">
+                        No comments yet. Add the first note below — visible to anyone with View access.
+                    </MudText>
+                }
+                else
+                {
+                    @foreach (var c in _comments)
+                    {
+                        <div class="d-flex gap-3 mb-3">
+                            <span class="fsh-comment-avatar">
+                                @c.AuthorUserId.ToString()[..1].ToUpperInvariant()
+                            </span>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="d-flex align-center gap-2 mb-1">
+                                    <MudText Style="font-size: 12px; font-weight: 600;">@c.AuthorUserId.ToString()[..8]…</MudText>
+                                    <MudText Class="fsh-muted-copy" Style="font-size: 11px;">@FshFormat.DateRelative(c.CreatedAtUtc)</MudText>
+                                </div>
+                                <MudText Style="white-space: pre-wrap; font-size: 13px;">@c.Body</MudText>
+                            </div>
+                        </div>
+                    }
+                }
+
+                <MudDivider Class="my-4" />
+
+                @if (_ticket.Status == TicketStatus.Closed)
+                {
+                    <MudText Class="fsh-muted-copy" Style="font-style: italic; font-size: 13px;">
+                        Reopen the ticket to add a new comment.
+                    </MudText>
+                }
+                else
+                {
+                    <MudTextField @bind-Value="_commentBody"
+                                  Placeholder="Add a comment to the thread…"
+                                  Lines="3"
+                                  MaxLength="8192"
+                                  Variant="Variant.Outlined"
+                                  Counter="8192"
+                                  Class="mb-2" />
+                    <div class="d-flex align-center justify-end">
+                        <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Send"
+                                   Disabled="@(string.IsNullOrWhiteSpace(_commentBody) || _commentSubmitting)"
+                                   OnClick="PostCommentAsync">
+                            @if (_commentSubmitting) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                            Post comment
+                        </MudButton>
+                    </div>
+                }
+            </MudPaper>
+        </div>
+
+        <div class="fsh-ticket-detail-sidebar">
+            <MudPaper Class="pa-4" Elevation="0">
+                <MudText Typo="Typo.subtitle2" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" /> Properties
+                </MudText>
+                <dl style="font-size: 13px;">
+                    <dt class="fsh-muted-copy" style="font-size: 11px; text-transform: uppercase; font-weight: 600;">Reporter</dt>
+                    <dd class="mb-2" style="font-weight: 500;">@ReporterLabel</dd>
+
+                    <dt class="fsh-muted-copy" style="font-size: 11px; text-transform: uppercase; font-weight: 600;">Assignee</dt>
+                    <dd class="mb-2" style="font-weight: 500;">
+                        @if (_ticket.AssignedToUserId.HasValue)
+                        {
+                            @AssigneeLabel
+                        }
+                        else
+                        {
+                            <span class="fsh-muted-copy">Unassigned</span>
+                        }
+                    </dd>
+
+                    <dt class="fsh-muted-copy" style="font-size: 11px; text-transform: uppercase; font-weight: 600;">Status</dt>
+                    <dd class="mb-2"><FshStatusPill Text="@StatusLabel(_ticket.Status)" Tone="@StatusTone(_ticket.Status)" /></dd>
+
+                    <dt class="fsh-muted-copy" style="font-size: 11px; text-transform: uppercase; font-weight: 600;">Priority</dt>
+                    <dd class="mb-2"><FshStatusPill Text="@PriorityLabel(_ticket.Priority)" Tone="@PriorityTone(_ticket.Priority)" /></dd>
+
+                    <dt class="fsh-muted-copy" style="font-size: 11px; text-transform: uppercase; font-weight: 600;">Created</dt>
+                    <dd class="mb-2">@FshFormat.DateShort(_ticket.CreatedAtUtc) <span class="fsh-muted-copy" style="font-size: 11px;">@FshFormat.DateRelative(_ticket.CreatedAtUtc)</span></dd>
+
+                    @if (_ticket.UpdatedAtUtc.HasValue)
+                    {
+                        <dt class="fsh-muted-copy" style="font-size: 11px; text-transform: uppercase; font-weight: 600;">Updated</dt>
+                        <dd class="mb-2">@FshFormat.DateShort(_ticket.UpdatedAtUtc.Value) <span class="fsh-muted-copy" style="font-size: 11px;">@FshFormat.DateRelative(_ticket.UpdatedAtUtc.Value)</span></dd>
+                    }
+
+                    @if (_ticket.ResolvedAtUtc.HasValue)
+                    {
+                        <dt class="fsh-muted-copy" style="font-size: 11px; text-transform: uppercase; font-weight: 600;">Resolved</dt>
+                        <dd class="mb-2">@FshFormat.DateShort(_ticket.ResolvedAtUtc.Value) <span class="fsh-muted-copy" style="font-size: 11px;">@FshFormat.DateRelative(_ticket.ResolvedAtUtc.Value)</span></dd>
+                    }
+                </dl>
+            </MudPaper>
+        </div>
+    </div>
+
+    <ResolveDialog @bind-Open="_resolveDialogOpen" Ticket="_ticket" OnResolved="OnTicketUpdated" />
+    <AssignDialog @bind-Open="_assignDialogOpen" Ticket="_ticket" OnAssigned="OnTicketUpdated" />
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = string.Empty;
+
+    [Inject] private ITicketService Tickets { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private TicketDto? _ticket;
+    private List<TicketCommentDto> _comments = new();
+    private bool _loading = true;
+    private bool _commentsLoading = true;
+    private bool _refreshing;
+    private string? _error;
+    private string _commentBody = string.Empty;
+    private bool _commentSubmitting;
+    private bool _resolveDialogOpen;
+    private bool _assignDialogOpen;
+
+    private bool CanResolve => _ticket is { Status: not (TicketStatus.Resolved or TicketStatus.Closed) };
+    private bool CanReopen => _ticket is { Status: TicketStatus.Resolved or TicketStatus.Closed };
+
+    private string ReporterLabel => _ticket?.ReporterUserId.ToString()[..8] + "…" ?? "—";
+    private string AssigneeLabel => _ticket?.AssignedToUserId?.ToString()[..8] + "…" ?? "—";
+
+    private void GoToList() => Navigation.NavigateTo("/tickets");
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(Id)) return;
+        await LoadTicketAsync();
+        await LoadCommentsAsync();
+    }
+
+    private async Task LoadTicketAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _ticket = await Tickets.GetTicketByIdAsync(Guid.Parse(Id));
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LoadCommentsAsync()
+    {
+        _commentsLoading = true;
+        try
+        {
+            _comments = (await Tickets.ListTicketCommentsAsync(Guid.Parse(Id))).ToList();
+        }
+        catch
+        {
+        }
+        finally
+        {
+            _commentsLoading = false;
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        _refreshing = true;
+        try
+        {
+            await LoadTicketAsync();
+            await LoadCommentsAsync();
+        }
+        finally
+        {
+            _refreshing = false;
+        }
+    }
+
+    private async Task ReopenAsync()
+    {
+        try
+        {
+            await Tickets.ReopenTicketAsync(Guid.Parse(Id));
+            Snackbar.Add("Ticket reopened", Severity.Success);
+            await OnTicketUpdated();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Reopen failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task PostCommentAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_commentBody)) return;
+        _commentSubmitting = true;
+        try
+        {
+            await Tickets.AddTicketCommentAsync(Guid.Parse(Id), new AddTicketCommentRequest(_commentBody.Trim()));
+            Snackbar.Add("Comment posted", Severity.Success);
+            _commentBody = string.Empty;
+            await LoadCommentsAsync();
+            await LoadTicketAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Comment failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _commentSubmitting = false;
+        }
+    }
+
+    private async Task OnTicketUpdated()
+    {
+        _resolveDialogOpen = false;
+        _assignDialogOpen = false;
+        await LoadTicketAsync();
+        await LoadCommentsAsync();
+    }
+
+    private static string StatusLabel(TicketStatus s) => s switch
+    {
+        TicketStatus.Open => "Open",
+        TicketStatus.InProgress => "In progress",
+        TicketStatus.Resolved => "Resolved",
+        TicketStatus.Closed => "Closed",
+        _ => s.ToString()
+    };
+
+    private static string PriorityLabel(TicketPriority p) => p switch
+    {
+        TicketPriority.Low => "Low",
+        TicketPriority.Medium => "Medium",
+        TicketPriority.High => "High",
+        TicketPriority.Critical => "Critical",
+        _ => p.ToString()
+    };
+
+    private static Color StatusTone(TicketStatus s) => s switch
+    {
+        TicketStatus.Open => Color.Info,
+        TicketStatus.InProgress => Color.Warning,
+        TicketStatus.Resolved => Color.Success,
+        TicketStatus.Closed => Color.Default,
+        _ => Color.Default
+    };
+
+    private static Color PriorityTone(TicketPriority p) => p switch
+    {
+        TicketPriority.Critical => Color.Error,
+        TicketPriority.High => Color.Warning,
+        TicketPriority.Medium => Color.Info,
+        TicketPriority.Low => Color.Default,
+        _ => Color.Default
+    };
+}

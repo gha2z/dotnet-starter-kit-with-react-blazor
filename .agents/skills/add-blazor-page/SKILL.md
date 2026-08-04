@@ -10,6 +10,9 @@ Read `.agents/rules/frontend/blazor-shared.md` plus the app file (`blazor-admin.
 
 Reference the React counterpart at `clients/{admin|dashboard}/src/pages/{area}/{page}.(tsx|ts)` for the UI pattern and API contract.
 
+Companion skills: `author-component` + `plan-ui-change` (generic Blazor component patterns) and
+`implement-blazor-list` / `implement-blazor-form` for the FSH-specific list/form building blocks.
+
 Key differences between apps:
 
 | | **admin-blazor** | **dashboard-blazor** |
