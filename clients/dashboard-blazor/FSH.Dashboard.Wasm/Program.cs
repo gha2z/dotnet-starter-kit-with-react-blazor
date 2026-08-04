@@ -63,6 +63,7 @@ builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
+builder.Services.AddScoped<IChatService, ChatService>();
 
 builder.Services.AddAuthorizationCore(options =>
 {
@@ -102,6 +103,13 @@ builder.Services.AddAuthorizationCore(options =>
     options.AddPolicy("Permissions.AuditTrails.ViewCrossTenant", p => p.RequireClaim("permission", "Permissions.AuditTrails.ViewCrossTenant"));
     options.AddPolicy("Permissions.Impersonation.View", p => p.RequireClaim("permission", "Permissions.Impersonation.View"));
     options.AddPolicy("Permissions.Impersonation.Revoke", p => p.RequireClaim("permission", "Permissions.Impersonation.Revoke"));
+    options.AddPolicy("Permissions.Chat.Channels.View", p => p.RequireClaim("permission", "Permissions.Chat.Channels.View"));
+    options.AddPolicy("Permissions.Chat.Channels.Create", p => p.RequireClaim("permission", "Permissions.Chat.Channels.Create"));
+    options.AddPolicy("Permissions.Chat.Channels.ManageAll", p => p.RequireClaim("permission", "Permissions.Chat.Channels.ManageAll"));
+    options.AddPolicy("Permissions.Chat.Messages.Send", p => p.RequireClaim("permission", "Permissions.Chat.Messages.Send"));
+    options.AddPolicy("Permissions.Chat.Messages.EditOwn", p => p.RequireClaim("permission", "Permissions.Chat.Messages.EditOwn"));
+    options.AddPolicy("Permissions.Chat.Messages.DeleteOwn", p => p.RequireClaim("permission", "Permissions.Chat.Messages.DeleteOwn"));
+    options.AddPolicy("Permissions.Chat.Messages.DeleteAny", p => p.RequireClaim("permission", "Permissions.Chat.Messages.DeleteAny"));
 });
 
 // HTTP client with auth handler (for all authenticated API calls)

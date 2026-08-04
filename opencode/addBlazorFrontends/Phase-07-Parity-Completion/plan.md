@@ -1,5 +1,5 @@
 # Phase 7 — React Parity Completion & Hardening
-Last Update: 2026-Aug-04 18:30:00, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
+Last Update: 2026-Aug-04 19:15:00, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
 
 > **Target:** Both Blazor WASM apps (admin + dashboard) are pixel- and behavior-identical to the
 > React 19 apps (`clients/admin`, `clients/dashboard`) — or better — and the MAUI Hybrid app matches
@@ -13,7 +13,7 @@ Last Update: 2026-Aug-04 18:30:00, by: opencode (auto/coding, model: opencode/mi
   17 role-permission integration tests green)**, MAUI Hybrid workload saga resolved (Hybrid builds
   4 TFMs, 0 warnings). Page build-out: **2.4 Billing ✅ · 2.5 Webhooks ✅ · 2.6 Audits ✅ · 2.7 Health ✅ ·
   2.8 Notifications inbox ✅ · 2.9 Settings ✅ · 2.10 Impersonation ✅ · styled 404 ✅ ·
-   dashboard 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅** (admin suite 147/147, dashboard 105/105) — next up dashboard 3.9 Chat.
+   dashboard 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅ · 3.9 Chat ✅** (admin suite 147/147, dashboard 113/113) — next up dashboard 3.10 Files.
 - **Runtime hardening (this session):** admin app crashed on every authenticated render at `/` with
   "Cannot provide a value for property 'TenantService'" → the **9 missing `AddScoped` API service
   registrations** in `FSH.Admin.Wasm/Program.cs` were added (Audit/Billing/Impersonation/Role/Session/
@@ -89,7 +89,7 @@ Last Update: 2026-Aug-04 18:30:00, by: opencode (auto/coding, model: opencode/mi
 | `/catalog/*` (products + detail, brands, categories) | `Pages/Catalog/BrandsPage` + `CategoriesPage` + `ProductsPage` + `ProductDetailPage` + `BrandEditorDialog` + `CategoryEditorDialog` + `ProductEditorDialog` + `PriceDialog` + `StockDialog` | ✅ 3.6 |
 | `/identity/users`, `/roles`, `/groups` (+ details) | `Pages/Identity/UsersListPage` + `UserCreateDialog` + `UserDetailPage` (roles/sessions/impersonate) + `RolesListPage` + `RoleEditorDialog` + `RoleDetailPage` (grouped permission editor) + `GroupsListPage` + `GroupEditorDialog` + `GroupDetailPage` + `AddGroupMembersDialog` | ✅ 3.7 |
 | `/tickets` + `/tickets/{id}` | `Pages/Tickets/TicketsListPage` + `TicketDetailPage` + `CreateTicketDialog` + `ResolveDialog` + `AssignDialog` | ✅ 3.8 |
-| `/chat/*` (channel rail, chat page, settings, pinned, search, composer, messages…) | — | 🔲 3.9 |
+| `/chat/*` (channel rail, chat page, settings, pinned, search, composer, messages…) | — | ✅ 3.9 |
 | `/files` | — | 🔲 3.10 |
 | `/system/health`, `/system/audits`, `/system/trash`, `/system/sessions` | — | 🔲 3.11 |
 | `/settings/*` (profile, security, appearance, api-keys, notifications…) | — | 🔲 3.12 |

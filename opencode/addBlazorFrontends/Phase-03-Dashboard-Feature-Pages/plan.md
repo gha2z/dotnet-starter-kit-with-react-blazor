@@ -1,11 +1,11 @@
 # Phase 3 — Dashboard Feature Pages
-Last Update: 2026-Aug-04 18:30:00, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
+Last Update: 2026-Aug-04 19:15:00, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
 
 > **Target:** All tenant-facing dashboard pages built — Overview (SSE), Activity, Subscription, Wallet, Catalog, Invoices, Identity (profile/user/role), Tickets, Chat, Files, System. Feature parity with `clients/dashboard` React app.
 
 ## Status
 
-- Phase 3: **🟨 In progress** — 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · **3.7 Identity ✅** · **3.8 Tickets ✅** — dashboard suite **105/105** — next: 3.9 Chat
+- Phase 3: **🟨 In progress** — 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅ · **3.9 Chat ✅** — dashboard suite **113/113** — next: 3.10 Files
 - Prerequisites: Phase 1 ✅ (auth+login working, AppShell)
 - **Parity sprint deliverables already in place:** `SseService` (token flow `POST /api/v1/sse/token` → `GET /api/v1/sse/stream?token=`, backoff reconnect, `ConnectionChanged` event), SSE status dot in topbar, full sidebar (accordion, permission-gated) — no rebuilds needed, only page work.
 - Terminal pages `/tenant-deactivated` + `/impersonation-ended` do **not** exist yet (docs previously claimed they did) — tracked as 3.15 in `Phase-07-Parity-Completion/plan.md`.
@@ -123,13 +123,14 @@ Full React parity — 6 pages + 4 dialogs, full CRUD (the plan's original read-o
 - [ ] **TicketCreateDialog.razor** — MudForm: MudTextField subject, MudSelect category/priority, MudTextArea description
 
 ### 3.9 Chat
-- [ ] **IChatService** — `GetChannelsAsync`, `GetMessagesAsync(channelId, page)`, `SendMessageAsync`
-- [ ] **SignalR hub** — Real-time message delivery (receive + send)
-- [ ] **ChatPage.razor** — Split layout:
+- [x] **IChatService** — `GetChannelsAsync`, `GetMessagesAsync(channelId, page)`, `SendMessageAsync`
+- [x] **SignalR hub** — Real-time message delivery (receive + send) via existing `HubConnectionService`
+- [x] **ChatPage.razor** — Split layout:
   - Left: channel list (MudNavMenu or MudList) with unread MudBadge
   - Right: message list (virtualized MudList) + MudTextField send box + MudButton
   - Messages show sender avatar/name, timestamp, content
   - Load older messages on scroll to top
+- [x] **CreateChannelDialog.razor** — MudForm: name, description, private toggle
 
 ### 3.10 Files
 - [ ] **IFileService** — `ListAsync(folder)`, `UploadAsync`, `DownloadAsync`, `DeleteAsync`, `GetPresignedUrlAsync`
