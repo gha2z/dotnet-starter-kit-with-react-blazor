@@ -33,6 +33,15 @@ public sealed partial class App : IDisposable
 
         try
         {
+            await Js.InvokeVoidAsync("eval", CrossTabLogoutScript);
+        }
+        catch
+        {
+            // Cross-tab logout not available (e.g. CSP restrictions)
+        }
+
+        try
+        {
             await CheckImpersonationHashAsync();
         }
         catch
@@ -114,4 +123,14 @@ public sealed partial class App : IDisposable
         public void OnError(Exception error) { }
         public void OnNext(SseEvent value) => onNext(value);
     }
+
+    private const string CrossTabLogoutScript = @"
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'fsh.dashboard.accessToken' || e.key === 'fsh.dashboard.impersonation.accessToken') {
+                if (e.newValue === null) {
+                    window.location.reload();
+                }
+            }
+        });
+    ";
 }

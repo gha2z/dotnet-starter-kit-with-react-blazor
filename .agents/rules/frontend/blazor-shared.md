@@ -132,7 +132,7 @@ clients/
   by `_content/FSH.BlazorShared/js/fshError.js` (both apps' `index.html` reference the shared script —
   no per-app copies).
 
-## MudBlazor 9.x form gotchas
+## MudBlazor 9.x gotchas
 
 - MudForm has **no submit callback** (`OnValidSubmit`/`OnSubmit` do not exist and are silently dropped).
   Enter-to-submit = `OnEnterPressed="..."` on the `MudForm`; the submit button needs its own
@@ -141,6 +141,34 @@ clients/
   `ValidateAsync()` returns `Task`, not `Task<bool>`).
 - Razor attribute tokenizer: string literals inside `@onclick="...(...)"` break parsing (both quote
   styles). Use method groups (`@onclick="GoHome"`) or parameterless lambdas — no `'/x'` or `"/x"` inside.
+- **MudMenu custom activator** (`ActivatorContent`): MudBlazor 9.7 passes a `MenuContext`, NOT
+  HTML-attribute splats. Use `ctx.ToggleAsync(new MouseEventArgs())` (Enter/Space via `@onkeydown`
+  too) — `@attributes`/`@ref` on the activator do NOT work. See `MainLayout.razor` user menu.
+- **`Pages/System` namespace clash**: a `Pages/System` folder shadows the `System.*` namespace for
+  files in sibling folders. Override the page namespace (`@namespace FSH.Dashboard.Wasm.Pages.SystemPages`)
+  and qualify `System.Net.*` usings in `_Imports.razor` with `global::`.
+- **MudTabs in bUnit**: only the ACTIVE panel's content is rendered — assert the active tab only,
+  don't expect markup from inactive panels.
+- **MudIconButton tooltip**: use `aria-label`, not `Title` (MUD0002 analyzer).
+- MudBlazor 9.7 API drift: `MudProgressCircular` (not `MudCircularProgress`), `MudChip T="string"`,
+  `MudRadioGroup @bind-Value` (no `SelectedOption`), `MudRadio Value=` (no `Option=`), `MudTextField`
+  has no `Size=`/`MinLength=`, `MudIconButton` `aria-label` (not `AriaLabel=`), no
+  `MudListItemAvatar`/`MudListItemText`/`MudList Clickable=`/`MudTabs PanelClass=`.
+
+## FshPermissionGate
+
+- **`FshPermissionGate` uses `AuthorizationService.AuthorizeAsync(user, perm)` where `perm` is a `string`.** C# overload resolution binds this to `AuthorizeAsync(ClaimsPrincipal user, string policyName)` — the **policy-name** overload, not resource-based. The gate resolves the permission string as a registered `AuthorizationPolicy` (both apps register all policies via `AddAuthorizationCore` with `RequireClaim("permission", ...)`).
+- **Every permission constant passed to `<FshPermissionGate>` must have a matching `AddPolicy(...)` in `Program.cs`** — if a policy is missing, `AuthorizeAsync` throws `InvalidOperationException` at runtime ("The AuthorizationPolicy named: ... was not found").
+- **bUnit tests** gate with `Authorization.SetPolicies(BillingPermissions.Manage)` (FakeAuthorizationService). Always add a gate test: assert gated content renders with the required SetPolicies call, and is absent without it.
+
+## FSH DTO / serialization quirks
+
+- Server `PagedResponse<T>` (TotalCount long) ↔ client `PagedResult<T>` (int) — deserializes fine.
+- `FileAssetDto`: `OriginalFileName` / `SizeBytes` (NOT `Name` / `Size`).
+- `PagedResult<T>` needs `using FSH.BlazorShared.Models;`.
+- `TicketDto`: `CreatedAtUtc` (not `CreatedAt`); `DeletedOnUtc` is `DateTimeOffset?`.
+- `UserSessionDto`: `CreatedAt`/`LastActivityAt`/`ExpiresAt` are `DateTime`.
+- Audit enums serialize as string names (server `JsonStringEnumConverter`); `[Flags]` enums stay numeric.
 
 ## Directory & naming conventions
 

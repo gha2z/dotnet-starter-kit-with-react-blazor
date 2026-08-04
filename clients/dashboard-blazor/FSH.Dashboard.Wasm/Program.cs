@@ -65,6 +65,8 @@ builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<IHealthService, HealthService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 
 builder.Services.AddAuthorizationCore(options =>
 {

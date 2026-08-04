@@ -1,55 +1,87 @@
 # AddBlazorFrontends — Session Instructions
 
-> **On session start:**
-> 1. Read `00-Index.md` status line to understand current progress
-> 2. Read the latest `00_summary/implementation-summary-*.md` for what was last done
-> 3. Read the `plan.md` for the next phase to work on
-> 4. Verify builds + tests pass (`dotnet build` + `dotnet test`) before starting work
-> 5. After completing work, update docs and commit before stopping
+## Commit Policy
+
+**NEVER commit until the user explicitly approves.**
+
+After completing a feature:
+1. `git add -A`
+2. Show: `git diff --cached --stat` + one-line summary of what changed
+3. Wait for user approval
+4. Then commit
 
 ---
 
-Make sure you have updated the `./opencode/addBlazorFrontends/00-Index.md` and the `plan.md` for **only the phase(s) you worked on** in the current session. Other phase plans should be left untouched unless you also changed them.
+## Session Start Ritual
 
-Skip updating the hands-on-phase-x.md files until all phases have completed perfectly.
+On session start:
+1. `git status` — confirm the tree is clean or matches the expected in-progress work
+2. Read `STATUS.md` — current state, next task
+3. Read the latest `00_summary/implementation-summary-*.md` — what was last done
+4. Read `.agents/rules/frontend/blazor-shared.md` — Blazor conventions (plus `blazor-admin.md`,
+   `blazor-dashboard.md`, or `maui-hybrid.md` for the target app)
+5. Load any relevant skills from `.agents/skills/` (e.g. `add-blazor-page`, `add-feature`,
+   `setup-blazor-auth`, `setup-blazor-realtime`, `implement-blazor-list`, `implement-blazor-form`,
+   `add-permission`) before you start
+6. Verify builds + tests pass before starting work
 
-Write the **Last Update** date/time and introduce who you are right after the document main title, e.g:
+---
 
-```
-# Blazor WASM + MAUI — Implementation Roadmap
-Last Update: 2026-Aug-04 19:15:00, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
-```
+## Pre-Flight Convention
 
-```
-# Phase 2 — Admin Feature Pages
-Last Update: 2026-Aug-04 19:15:00, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
-```
+Before writing any `.razor` file, read an existing working page in the same project to confirm API conventions (parameter names, component availability, attribute syntax). This prevents iterative build-error-fix cycles.
 
-This header goes in every root doc (`00-Index.md`, `00-Setup.md`, `99-Glossary.md`) and in every plan
-document inside each phase folder — `plan.md`, or `pre-plan.md` in the `Phase 00-The foundation` folder
-(it is the exception: literally named `Phase 00-The foundation`, with a space, and holds `pre-plan.md`
-instead of `plan.md`).
+---
 
-### Model identity
+## Definition of Done (every feature)
 
-Replace `<you>` with your actual identity, e.g. `by: opencode (auto/coding, model: <actual-model>).`
+- [ ] Service method + DI registration exist — no invented DTOs/endpoints
+- [ ] bUnit test asserts the **specific behavior** (gated content, redirect, data shown), not just
+      "renders without error"
+- [ ] Target project builds 0 warnings; that app's suite is green
+- [ ] If behavior is not bUnit-testable (menu opens on click, real navigation), list the exact
+      manual-verification steps and flag them in the summary
+- [ ] Fix any warning you introduce
 
-`auto`, `auto/coding` and other `auto/*` patterns are just OmniRoute routing combos — not the real LLM
-(see https://github.com/diegosouzapw/OmniRoute/blob/release/v3.8.50/docs/getting-started/AUTO-COMBO-GUIDE.md).
+---
 
-**Primary method:** Use the model name from your system prompt (e.g., `opencode/mimo-v2-pro-max`).
+## Build & Test Cadence
 
-**Fallback** (if your system prompt doesn't specify a model):
-1. Log in to OmniRoute at http://localhost:20128/login (password: CHANGEME) to create a session cookie.
-2. Fetch `GET http://localhost:20128/api/usage/call-logs?status=ok&limit=1` (authenticated by the browser session).
-3. Read the `requestedModel` field from the JSON response — that is the real model name to write.
+- After each unit of work: `dotnet build <target.csproj>` then `dotnet test <app>.Tests`
+  (fast feedback, small output)
+- Full solution build + both app suites at phase end (catches cross-project breakage)
 
-Example: `by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).`
+---
 
-### Implementation summary
+## Scope Restriction
 
-Write an MD file named `implementation-summary-<yyyy-MM-dd-HH-mm-ss>.md` (24-hour clock) in the
-`./opencode/addBlazorFrontends/00_summary/` folder containing the summary of implementation steps:
+Modify ONLY:
+
+- `./clients/BlazorShared` · `./clients/admin-blazor` · `./clients/dashboard-blazor` · `./clients/FSH.Hybrid`
+- `./opencode/addBlazorFrontends`
+- `./.agents/rules/frontend/{blazor-shared,blazor-admin,blazor-dashboard,maui-hybrid}.md` — OUR docs
+- `./.agents/skills/{add-blazor-page,add-maui-hybrid-feature,add-permission-csharp,implement-blazor-form,implement-blazor-list,setup-blazor-auth,setup-blazor-realtime,setup-blazor-sse}/SKILL.md` — OUR skills
+
+NEVER modify (upstream baseline / React reference):
+
+- `clients/admin` · `clients/dashboard` (React apps — READ-ONLY parity source)
+- `AGENTS.md` · `CLAUDE.md` · `GEMINI.md` · `.github/**` · `deploy/**` · `src/**`
+- `.agents/rules/**` (all other rule files) · `.agents/skills/*` (all other skills) · `.agents/workflows/**`
+
+---
+
+## Audit / Review Convention
+
+For parity/review tasks spanning many files, delegate to an explore subagent and require it to write
+full findings to a temp file while returning only a compact severity-ranked list
+(Critical/High/Medium/Low) — keeps the working context small.
+
+---
+
+## Implementation Summary
+
+Write an MD file named `implementation-summary-<yyyy-MM-dd-HH-mm-ss>.md` (24-hour clock) in
+`./opencode/addBlazorFrontends/00_summary/` containing the summary of implementation steps:
 
 ```
 # Implementation Summary <yyyy-MM-dd-HH-mm-ss>
@@ -57,14 +89,8 @@ Write an MD file named `implementation-summary-<yyyy-MM-dd-HH-mm-ss>.md` (24-hou
 ---
 **Description:** <The description summary>
 **Creator:** <You>
-**Duration:** <How long the implementation took place, ex: 30s, 1m 15s, 55m, 1h 12m 3s, 3h>
+**Duration:** <How long the implementation took place>
 ---
-
-## <Phase N> - <Phase Name>: <Sub Feature N> - <Sub Feature Name>
----
-- Step 1: <Description summary of the step 1>
-- Step 2: <Description summary of the step 2>
-...
 
 ## <Phase N> - <Phase Name>: <Sub Feature N> - <Sub Feature Name>
 ---
@@ -72,35 +98,18 @@ Write an MD file named `implementation-summary-<yyyy-MM-dd-HH-mm-ss>.md` (24-hou
 ...
 ```
 
-### Planning your next moves
+---
 
-Check `./opencode/addBlazorFrontends/00-Index.md`, the latest `implementation-summary-*.md` files in
-`./opencode/addBlazorFrontends/00_summary/`, and the `plan.md` file in the relevant phase folder to plan your next moves.
+## Hands-On Files
 
-Refer to the original repository (https://github.com/fullstackhero/dotnet-starter-kit),
-website (https://fullstackhero.net/) to execute the plans, review your progress and keep building, testing, fixing,
-and optimizing until all the plans completed and no more gaps between React 19 front-ends and Blazor Wasm front-ends
-and .NET MAUI front-ends.
-
-### Scope restriction
-
-Do not write/modify anything in any folders other than blazor wasm and .net maui blazor hybrid front-ends project folders
-and sub-folders (`./clients/FSH.Hybrid`, `./clients/admin-blazor`, `./clients/BlazorShared`, `./clients/dashboard-blazor`)
-and `./opencode/addBlazorFrontends`.
-
-Once you completed all phases, keep testing them to find the bugs and issues and fix and enhance them accordingly to ensure
-these projects are production-grade ready. Feel free to add/modify phases, and plans when necessary.
-You can modify the existing `AGENTS.md`, `README.md`, `README-template.md` along with Agent Skill.md and rules files,
-and add the new ones related to the current BLAZOR WASM and .NET MAUI Hybrid front-ends projects when necessary.
-
-Test the apps yourself and fix any issues relevant to the current development progress after you finish the
-implementations. We don't want the end users seeing "An unhandled error has occurred" + "Reload" button shown up on any
-single page/feature we have been implemented due to **the unfixed bugs**, so make sure to test thoroughly before
-claiming completion.
+Skip the `hands-on-phase-*.md` files until all phases have completed perfectly. After each phase
+completes, write a brief `phase-N-complete.md` snapshot (what was built, known limitations, files
+created/modified) in the phase folder. Write the full hands-on files from those snapshots + implementation
+summaries after all phases are done.
 
 ---
 
-### Dev servers
+## Dev Servers
 
 ```
 dotnet run --project src/Host/FSH.Starter.AppHost   # starts everything

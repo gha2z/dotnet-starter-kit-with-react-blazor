@@ -24,4 +24,8 @@ public interface ITicketService
     Task<Guid> ReopenTicketAsync(Guid ticketId, CancellationToken ct = default);
     Task<IReadOnlyList<TicketCommentDto>> ListTicketCommentsAsync(Guid ticketId, CancellationToken ct = default);
     Task<Guid> AddTicketCommentAsync(Guid ticketId, AddTicketCommentRequest request, CancellationToken ct = default);
+
+    // Trash / Restore
+    Task<PagedResult<TicketDto>> ListTrashedTicketsAsync(int pageNumber = 1, int pageSize = 20, CancellationToken ct = default);
+    Task RestoreTicketAsync(Guid ticketId, CancellationToken ct = default);
 }

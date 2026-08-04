@@ -1,0 +1,69 @@
+@namespace FSH.Dashboard.Wasm.Pages.SystemPages
+@using FSH.BlazorShared.Models.Audits
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Audit detail</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (AuditDetail is not null)
+        {
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6">
+                    <div class="fsh-mono-label mb-1">EVENT TYPE</div>
+                    <div class="fsh-mono-medium">@AuditDetail.EventType</div>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <div class="fsh-mono-label mb-1">SEVERITY</div>
+                    <div class="fsh-mono-medium">@AuditDetail.Severity</div>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <div class="fsh-mono-label mb-1">OCCURRED AT (UTC)</div>
+                    <div class="fsh-mono-medium">@AuditDetail.OccurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss.fff")</div>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <div class="fsh-mono-label mb-1">SOURCE</div>
+                    <div class="fsh-mono-medium">@(AuditDetail.Source ?? "—")</div>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <div class="fsh-mono-label mb-1">USER</div>
+                    <div class="fsh-mono-medium">@(AuditDetail.UserName ?? AuditDetail.UserId ?? "—")</div>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <div class="fsh-mono-label mb-1">CORRELATION ID</div>
+                    <div class="fsh-mono-medium" style="font-size: 11px;">@(AuditDetail.CorrelationId ?? "—")</div>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <div class="fsh-mono-label mb-1">TRACE ID</div>
+                    <div class="fsh-mono-medium" style="font-size: 11px;">@(AuditDetail.TraceId ?? "—")</div>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <div class="fsh-mono-label mb-1">TENANT</div>
+                    <div class="fsh-mono-medium">@(AuditDetail.TenantId ?? "—")</div>
+                </MudItem>
+                @if (AuditDetail.Tags != AuditTag.None)
+                {
+                    <MudItem xs="12">
+                        <div class="fsh-mono-label mb-1">TAGS</div>
+                        <div class="fsh-mono-medium">@AuditDetail.Tags</div>
+                    </MudItem>
+                }
+                <MudItem xs="12">
+                    <div class="fsh-mono-label mb-1">PAYLOAD</div>
+                    <pre class="fsh-code-chip" style="white-space: pre-wrap; max-height: 400px; overflow: auto; font-size: 11px;">@(AuditDetail.Payload.GetRawText())</pre>
+                </MudItem>
+            </MudGrid>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Variant="Variant.Outlined">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public AuditDetailDto? AuditDetail { get; set; }
+
+    private void Close() => MudDialog.Cancel();
+}

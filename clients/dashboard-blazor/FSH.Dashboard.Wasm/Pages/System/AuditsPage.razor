@@ -1,0 +1,225 @@
+@page "/system/audits"
+@namespace FSH.Dashboard.Wasm.Pages.SystemPages
+@using FSH.BlazorShared.Models.Audits
+
+<FshPageHeader Title="Audit trail"
+               Icon="@Icons.Material.Filled.Article"
+               Tone="Color.Info"
+               Description="Tenant-scoped activity, security, entity-change, and exception events." />
+
+<MudPaper Elevation="0" Class="pa-4 mb-4 rounded-xl" Style="border: 1px solid var(--mud-palette-divider);">
+    <div class="d-flex flex-wrap align-center gap-3 mb-3">
+        <MudSelect T="AuditEventType?" Value="@_filterEventType" ValueChanged="OnEventTypeChanged"
+                   Label="Event type" Clearable="true" Style="min-width: 160px;">
+            <MudSelectItem T="AuditEventType?" Value="null">All</MudSelectItem>
+            <MudSelectItem T="AuditEventType?" Value="AuditEventType.Activity">Activity</MudSelectItem>
+            <MudSelectItem T="AuditEventType?" Value="AuditEventType.Security">Security</MudSelectItem>
+            <MudSelectItem T="AuditEventType?" Value="AuditEventType.EntityChange">Entity</MudSelectItem>
+            <MudSelectItem T="AuditEventType?" Value="AuditEventType.Exception">Exception</MudSelectItem>
+        </MudSelect>
+        <MudSelect T="AuditSeverity?" Value="@_filterSeverity" ValueChanged="OnSeverityChanged"
+                   Label="Severity" Clearable="true" Style="min-width: 140px;">
+            <MudSelectItem T="AuditSeverity?" Value="null">All</MudSelectItem>
+            <MudSelectItem T="AuditSeverity?" Value="AuditSeverity.Information">Info</MudSelectItem>
+            <MudSelectItem T="AuditSeverity?" Value="AuditSeverity.Warning">Warning</MudSelectItem>
+            <MudSelectItem T="AuditSeverity?" Value="AuditSeverity.Error">Error</MudSelectItem>
+            <MudSelectItem T="AuditSeverity?" Value="AuditSeverity.Critical">Critical</MudSelectItem>
+        </MudSelect>
+        <MudTextField T="string" Value="@_search" ValueChanged="OnSearchChanged"
+                      Placeholder="Search source, user…" Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Small"
+                      DebounceInterval="300" Style="max-width: 280px;" />
+        <MudSpacer />
+        <MudButtonGroup Size="Size.Small" Variant="Variant.Outlined">
+            <MudButton OnClick="() => SetTimeRangeAsync(24)">24h</MudButton>
+            <MudButton OnClick="() => SetTimeRangeAsync(168)">7d</MudButton>
+            <MudButton OnClick="() => SetTimeRangeAsync(720)">30d</MudButton>
+            <MudButton OnClick="() => SetTimeRangeAsync(2160)">90d</MudButton>
+        </MudButtonGroup>
+    </div>
+
+    @if (_summary is not null)
+    {
+        <div class="d-flex flex-wrap align-center gap-4 mb-2" style="font-size: 12px;">
+            <span class="fsh-mono-label">TOTAL: <span class="fsh-mono-medium">@_summary.EventsByType.Values.Sum().ToString("N0")</span></span>
+            @foreach (var (eventType, count) in _summary.EventsByType)
+            {
+                <span class="d-flex align-center gap-1">
+                    <span class="fsh-dot" style="background: @EventTypeColor(eventType);"></span>
+                    <span class="fsh-mono-muted">@eventType: @count.ToString("N0")</span>
+                </span>
+            }
+        </div>
+    }
+</MudPaper>
+
+@if (_loading && _items.Count == 0)
+{
+    <div class="d-flex justify-center py-8">
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+    </div>
+}
+else if (_items.Count == 0)
+{
+    <FshErrorBand Message="No audit events found matching the current filters." />
+}
+else
+{
+    <MudTable T="AuditSummaryDto" Items="@_items" Hover="true" Striped="true"
+              Dense="true" Class="rounded-xl overflow-hidden">
+        <HeaderContent>
+            <MudTh>When</MudTh>
+            <MudTh>Type</MudTh>
+            <MudTh>Severity</MudTh>
+            <MudTh>Source</MudTh>
+            <MudTh>User</MudTh>
+            <MudTh></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="When">
+                <span class="fsh-mono-label" style="font-size: 12px;">@context.OccurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</span>
+            </MudTd>
+            <MudTd DataLabel="Type">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Style="font-size: 11px;">
+                    @context.EventType
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Severity">
+                <span class="fsh-dot" style="background: @SeverityColor(context.Severity); margin-right: 4px;"></span>
+                <span style="font-size: 12px;">@context.Severity</span>
+            </MudTd>
+            <MudTd DataLabel="Source">
+                <span class="fsh-mono-muted" style="font-size: 12px;">@(context.Source ?? "—")</span>
+            </MudTd>
+            <MudTd DataLabel="User">
+                <span class="fsh-mono-muted" style="font-size: 12px;">@(context.UserName ?? context.UserId ?? "—")</span>
+            </MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small"
+                               OnClick="() => ShowDetailAsync(context)" />
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 25, 50, 100 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    [Inject] private IAuditService AuditService { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+
+    private List<AuditSummaryDto> _items = [];
+    private AuditSummaryAggregateDto? _summary;
+    private AuditEventType? _filterEventType;
+    private AuditSeverity? _filterSeverity;
+    private string? _search;
+    private DateTime? _fromUtc;
+    private DateTime? _toUtc;
+    private bool _loading = true;
+    private int _pageNumber = 1;
+    private int _pageSize = 25;
+    private long _totalCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SetTimeRangeAsync(24);
+    }
+
+    private async Task SetTimeRangeAsync(int hours)
+    {
+        _fromUtc = DateTime.UtcNow.AddHours(-hours);
+        _toUtc = null;
+        _pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnEventTypeChanged(AuditEventType? value)
+    {
+        _filterEventType = value;
+        _pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnSeverityChanged(AuditSeverity? value)
+    {
+        _filterSeverity = value;
+        _pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnSearchChanged(string? value)
+    {
+        _search = value;
+        _pageNumber = 1;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var request = new ListAuditsRequest
+            {
+                PageNumber = _pageNumber,
+                PageSize = _pageSize,
+                FromUtc = _fromUtc,
+                ToUtc = _toUtc,
+                EventType = _filterEventType,
+                Severity = _filterSeverity,
+                Search = _search,
+            };
+
+            var result = await AuditService.ListAsync(request);
+            _items = result.Items.ToList();
+            _totalCount = result.TotalCount;
+
+            _summary = await AuditService.GetSummaryAsync();
+        }
+        catch
+        {
+            _items = [];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ShowDetailAsync(AuditSummaryDto summary)
+    {
+        try
+        {
+            var detail = await AuditService.GetAsync(summary.Id);
+            var parameters = new DialogParameters
+            {
+                { "AuditDetail", detail },
+            };
+            var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+            await DialogService.ShowAsync<AuditDetailDialog>("Audit detail", parameters, options);
+        }
+        catch
+        {
+            // Silently ignore — dialog simply won't open.
+        }
+    }
+
+    private static string EventTypeColor(string type) => type switch
+    {
+        "Activity" => "var(--mud-palette-info)",
+        "Security" => "var(--mud-palette-warning)",
+        "EntityChange" => "var(--mud-palette-primary)",
+        "Exception" => "var(--mud-palette-error)",
+        _ => "var(--mud-palette-text-secondary)",
+    };
+
+    private static string SeverityColor(AuditSeverity severity) => severity switch
+    {
+        AuditSeverity.Information => "var(--mud-palette-info)",
+        AuditSeverity.Warning => "var(--mud-palette-warning)",
+        AuditSeverity.Error => "var(--mud-palette-error)",
+        AuditSeverity.Critical => "var(--mud-palette-error)",
+        _ => "var(--mud-palette-text-secondary)",
+    };
+}

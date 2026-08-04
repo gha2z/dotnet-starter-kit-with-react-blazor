@@ -96,29 +96,43 @@
                                    Size="Size.Medium" OnClick="ToggleThemeAsync" />
                     <MudMenu Class="fsh-user-menu" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
                         <ActivatorContent Context="userMenuActivator">
-                            <MudIconButton Style="padding: 4px 8px; border-radius: 8px;">
-                                <div class="d-flex align-center gap-2">
-                                    <div class="fsh-user-menu-tile" style="background: color-mix(in srgb, var(--mud-palette-primary) 18%, transparent); color: var(--mud-palette-primary);">
-                                        @UserInitials
-                                    </div>
-                                    @if (!string.IsNullOrEmpty(_userName))
-                                    {
-                                        <div class="d-none d-md-flex flex-column align-start">
-                                            <span style="font-size: 13px; font-weight: 600; line-height: 1.2; color: var(--mud-palette-text-primary);">@_userName</span>
-                                            @if (!string.IsNullOrEmpty(_tenantName))
-                                            {
-                                                <span style="font-size: 11px; line-height: 1.2; color: var(--mud-palette-text-secondary);">@_tenantName</span>
-                                            }
-                                        </div>
-                                    }
-                                    <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" Color="Color.Secondary" />
+                            <div @onclick="() => userMenuActivator.ToggleAsync(new MouseEventArgs())"
+                                 @onclick:preventDefault="true"
+                                 @onkeydown="e => HandleUserMenuKey(e, userMenuActivator)"
+                                 role="button" tabindex="0"
+                                 style="padding: 4px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <div class="fsh-user-menu-tile" style="background: color-mix(in srgb, var(--mud-palette-primary) 18%, transparent); color: var(--mud-palette-primary);">
+                                    @UserInitials
                                 </div>
-                            </MudIconButton>
+                                @if (!string.IsNullOrEmpty(_userName))
+                                {
+                                    <div class="d-none d-md-flex flex-column align-start">
+                                        <span style="font-size: 13px; font-weight: 600; line-height: 1.2; color: var(--mud-palette-text-primary);">@_userName</span>
+                                        @if (!string.IsNullOrEmpty(_tenantName))
+                                        {
+                                            <span style="font-size: 11px; line-height: 1.2; color: var(--mud-palette-text-secondary);">@_tenantName</span>
+                                        }
+                                    </div>
+                                }
+                                <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" Color="Color.Secondary" />
+                            </div>
                         </ActivatorContent>
                         <ChildContent>
+                            <div class="px-3 py-2">
+                                <div style="font-size: 12px; font-weight: 600; color: var(--mud-palette-text-primary);">@(_userName ?? _userEmail)</div>
+                                @if (!string.IsNullOrEmpty(_userEmail) && !string.IsNullOrEmpty(_userName))
+                                {
+                                    <div style="font-size: 10.5px; color: var(--mud-palette-text-secondary); margin-top: 2px;">@_userEmail</div>
+                                }
+                            </div>
+                            <MudDivider Class="my-0" />
                             <MudMenuItem Icon="@(Theme.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" OnClick="ToggleThemeAsync">
                                 @(Theme.IsDarkMode ? "Light mode" : "Dark mode")
                             </MudMenuItem>
+                            <MudDivider Class="my-0" />
+                            <MudMenuItem Icon="@Icons.Material.Filled.Person" OnClick='() => Nav.NavigateTo("/settings/profile")'>Profile</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Settings" OnClick='() => Nav.NavigateTo("/settings")'>Settings</MudMenuItem>
+                            <MudDivider Class="my-0" />
                             <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="ConfirmSignOutAsync" Class="text-danger">
                                 Sign out
                             </MudMenuItem>
@@ -339,6 +353,14 @@
 
     private async Task ToggleThemeAsync()
         => await Theme.SetAsync(!Theme.IsDarkMode);
+
+    private async Task HandleUserMenuKey(KeyboardEventArgs e, MudBlazor.MenuContext ctx)
+    {
+        if (e.Key is "Enter" or " " or "Spacebar")
+        {
+            await ctx.ToggleAsync(new MouseEventArgs());
+        }
+    }
 
     private async Task ConfirmSignOutAsync()
     {

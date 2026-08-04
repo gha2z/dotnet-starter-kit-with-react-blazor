@@ -36,7 +36,7 @@ public sealed partial class App : IDisposable
 
     private const string CrossTabLogoutScript = @"
         window.addEventListener('storage', function(e) {
-            if (e.key && e.key.startsWith('fsh.admin.') && e.newValue === null) {
+            if (e.key === 'fsh.admin.accessToken' && e.newValue === null) {
                 window.location.reload();
             }
         });

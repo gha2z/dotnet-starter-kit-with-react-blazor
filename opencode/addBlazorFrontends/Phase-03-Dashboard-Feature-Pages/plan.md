@@ -1,11 +1,11 @@
 # Phase 3 — Dashboard Feature Pages
-Last Update: 2026-Aug-04 19:45:00, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
+Last Update: 2026-Aug-04, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
 
 > **Target:** All tenant-facing dashboard pages built — Overview (SSE), Activity, Subscription, Wallet, Catalog, Invoices, Identity (profile/user/role), Tickets, Chat, Files, System. Feature parity with `clients/dashboard` React app.
 
 ## Status
 
-- Phase 3: **🟨 In progress** — 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅ · 3.9 Chat ✅ · **3.10 Files ✅** — dashboard suite **119/119** — next: 3.11 System
+- Phase 3: **🟨 In progress** — 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅ · 3.9 Chat ✅ · 3.10 Files ✅ · **3.11 System ✅** — dashboard suite **133/133** — next: 3.12 Settings
 - Prerequisites: Phase 1 ✅ (auth+login working, AppShell)
 - **Parity sprint deliverables already in place:** `SseService` (token flow `POST /api/v1/sse/token` → `GET /api/v1/sse/stream?token=`, backoff reconnect, `ConnectionChanged` event), SSE status dot in topbar, full sidebar (accordion, permission-gated) — no rebuilds needed, only page work.
 - Terminal pages `/tenant-deactivated` + `/impersonation-ended` do **not** exist yet (docs previously claimed they did) — tracked as 3.15 in `Phase-07-Parity-Completion/plan.md`.
@@ -140,14 +140,18 @@ Full React parity — 6 pages + 4 dialogs, full CRUD (the plan's original read-o
 - [ ] **Breadcrumb navigation** for folders
 
 ### 3.11 System Pages
-- [ ] **HealthPage.razor** — MudCard grid: API, DB, Redis, MinIO status, uptime
-- [ ] **AuditLogPage.razor** — MudTable (tenant-scoped audit trail, view only)
-- [ ] **TrashPage.razor** — MudTable with deleted items, restore MudButton
-- [ ] **SessionsPage.razor** — MudTable with active sessions, revoke MudButton
+- [x] **HealthPage.razor** — `/system/health`, reuses admin pattern, anonymous probes, 10s auto-refresh
+- [x] **AuditsPage.razor** — `/system/audits`, MudTable with time-range presets, event-type/severity filters, summary strip, detail dialog
+- [x] **SessionsPage.razor** — `/system/sessions`, MudTable with search, include-inactive toggle, per-row revoke, auto-refresh
+- [x] **TrashPage.razor** — `/system/trash`, tabbed (Products/Brands/Categories/Tickets/Files), permission-gated tabs, restore with confirmation
+- [x] **HealthCheckRow.razor** — shared expandable row component for health check details
+- [x] **AuditDetailDialog.razor** — full audit record detail view (identity, trace, payload)
 
 ### 3.12 Settings (Dashboard)
-- [ ] **ProfileSettingsPage.razor** — Edit name, email, timezone, avatar
-- [ ] **ThemeSettingsPage.razor** — Dark/light MudSwitch, accent color (rose/indigo/violet/sky/emerald/amber) via MudSelect or MudButtonGroup
+- [ ] **ProfilePage.razor** — Edit name, email, timezone, avatar (React parity: `settings/profile.tsx`)
+- [ ] **SecurityPage.razor** — Password change, 2FA enroll/verify/disable (React parity: `settings/security.tsx`)
+- [ ] **AppearancePage.razor** — Dark/light/System mode, accent color (React parity: `settings/appearance.tsx`)
+- [ ] **ApiKeysPage.razor** — API key management (React parity: `settings/api-keys.tsx`)
 
 ### 3.13 Impersonation (Dashboard)
 - [ ] **ImpersonationBanner.razor** — MudAlert banner: "Impersonating {user}" + end button
@@ -164,16 +168,17 @@ Full React parity — 6 pages + 4 dialogs, full CRUD (the plan's original read-o
 
 ## Next Up
 
-**Task 3.6 — Catalog pages** (foundation done: `CatalogDtos.cs`, `ICatalogService`, `CatalogService` in
-BlazorShared). Build `Pages/Catalog/` in dashboard-blazor:
-1. `ProductsPage` — MudTable (search + brand/category/isActive filters, create/edit/delete, price-change + stock-adjust dialogs)
-2. `ProductDetailPage` — hero, description, images (thumbnail/delete), meta, actions
-3. `BrandsPage` — MudTable (logo/name/description, create/edit/delete)
-4. `CategoriesPage` — MudTable (parent combobox in create/edit, delete)
-Register `AddScoped<ICatalogService, CatalogService>()` in `FSH.Dashboard.Wasm/Program.cs`, add bUnit tests,
+**Task 3.11 — System pages** (services in BlazorShared already exist: `IHealthService`, `IAuditService`,
+`ISessionService`, `ICatalogService` with trash/restore, `ITicketService` with trash/restore,
+`IFileService` with trash/restore). Build `Pages/System/` in dashboard-blazor:
+1. `HealthPage` — reuses admin HealthPage pattern, route `/system/health`, anonymous probe `/health/ready`
+2. `AuditsPage` — MudTable with time-range presets, filter bar, summary strip, detail side-sheet
+3. `SessionsPage` — MudTable with search, include-inactive toggle, per-row revoke, auto-refresh
+4. `TrashPage` — tabbed (Products/Brands/Categories/Tickets/Files), each with paginated list + restore
+Register `IHealthService`/`IAuditService` in `FSH.Dashboard.Wasm/Program.cs`, add bUnit tests,
 run full solution build (0 warnings) + both test suites. React source of truth:
-`clients/dashboard/src/pages/catalog/{products,product-detail,brands,categories}.tsx` +
-`clients/dashboard/src/api/catalog.ts`.
+`clients/dashboard/src/pages/{health,audits,system/trash,system/sessions}.tsx` +
+`clients/dashboard/src/api/{health,audits,catalog,tickets,files,sessions}.ts`.
 
 ## Architecture Decisions
 

@@ -11,7 +11,7 @@
 - Audits handler always orders by `OccurredAtUtc` desc and ignores `Sort`; pagination params are `PageNumber`/`PageSize` (`GetAuditsQuery.cs`, `GetAuditsQueryHandler.cs`).
 - Dashboard `App.razor.cs` owns the SSE connection lifecycle (start/stop on login/logout) — pages should only observe `SseService.ConnectionChanged`, never call `StartAsync` themselves.
 - SSE endpoints: `POST /api/v1/sse/token` (JWT) issues opaque short-lived token; `GET /api/v1/sse/stream?token=` streams (`src/BuildingBlocks/Web/Sse/SseEndpoints.cs`).
-- MudBlazor 9.7 API drift (all fixed): `MudProgressCircular` (not `MudCircularProgress`), `MudChip T="string"`, `MudRadioGroup @bind-Value` (no `SelectedOption`), `MudRadio Value=` (no `Option=`), `MudTextField` has no `Size=`/`MinLength=`, `MudIconButton` uses `aria-label=` (not `AriaLabel=`), no `MudListItemAvatar`/`MudListItemText`/`Clickable=`.
+- MudBlazor 9.7 API drift (all fixed) is now documented canonically in `.agents/rules/frontend/blazor-shared.md` → "MudBlazor 9.x gotchas" — do not re-copy here; read that section.
 - `FlexibleEnumJsonConverter<T>` accepts string names **or** integer forms (defensive against legacy numeric payloads).
 - BlazorShared builds clean after removing unused `config` ctor param from `DashboardService`; duplicate `AddScoped<IAuthService, AuthService>()` in admin `Program.cs` removed; orphaned `clients/BlazorSharedComponents/` folder (5 stray `.razor` leftovers, unreferenced by any project) deleted.
 - Docs synced: `00-Index.md` (Phase 3.1 Overview ✅, dashboard 24/24), Phase-02 (147/147, 0 warnings + MudBlazor cleanup note), Phase-03 (3.1 done section, corrected SSE architecture note — pure C# `HttpClient` streaming, NOT JS interop), Phase-07 (status, gap table + build order).

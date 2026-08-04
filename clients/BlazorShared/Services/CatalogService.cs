@@ -178,4 +178,43 @@ public sealed class CatalogService(HttpClient http) : ICatalogService
         var response = await http.PutAsync($"{CatalogBase}/products/{productId}/images/{imageId}/thumbnail", content: null, ct);
         response.EnsureSuccessStatusCode();
     }
+
+    public async Task<PagedResult<BrandDto>> ListTrashedBrandsAsync(int pageNumber = 1, int pageSize = 20, CancellationToken ct = default)
+    {
+        var query = QueryString(("pageNumber", pageNumber.ToString()), ("pageSize", pageSize.ToString()));
+        return await http.GetFromJsonAsync<PagedResult<BrandDto>>($"{CatalogBase}/brands/trash?{query}", ct)
+            ?? EmptyPage<BrandDto>(pageSize);
+    }
+
+    public async Task RestoreBrandAsync(Guid id, CancellationToken ct = default)
+    {
+        var response = await http.PostAsync($"{CatalogBase}/brands/{id}/restore", null, ct);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<PagedResult<CategoryDto>> ListTrashedCategoriesAsync(int pageNumber = 1, int pageSize = 20, CancellationToken ct = default)
+    {
+        var query = QueryString(("pageNumber", pageNumber.ToString()), ("pageSize", pageSize.ToString()));
+        return await http.GetFromJsonAsync<PagedResult<CategoryDto>>($"{CatalogBase}/categories/trash?{query}", ct)
+            ?? EmptyPage<CategoryDto>(pageSize);
+    }
+
+    public async Task RestoreCategoryAsync(Guid id, CancellationToken ct = default)
+    {
+        var response = await http.PostAsync($"{CatalogBase}/categories/{id}/restore", null, ct);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<PagedResult<ProductDto>> ListTrashedProductsAsync(int pageNumber = 1, int pageSize = 20, CancellationToken ct = default)
+    {
+        var query = QueryString(("pageNumber", pageNumber.ToString()), ("pageSize", pageSize.ToString()));
+        return await http.GetFromJsonAsync<PagedResult<ProductDto>>($"{CatalogBase}/products/trash?{query}", ct)
+            ?? EmptyPage<ProductDto>(pageSize);
+    }
+
+    public async Task RestoreProductAsync(Guid id, CancellationToken ct = default)
+    {
+        var response = await http.PostAsync($"{CatalogBase}/products/{id}/restore", null, ct);
+        response.EnsureSuccessStatusCode();
+    }
 }

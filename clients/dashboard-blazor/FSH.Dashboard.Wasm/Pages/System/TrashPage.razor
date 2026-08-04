@@ -1,0 +1,392 @@
+@page "/system/trash"
+@namespace FSH.Dashboard.Wasm.Pages.SystemPages
+@using FSH.BlazorShared.Models.Catalog
+@using FSH.BlazorShared.Models.Tickets
+@using FSH.BlazorShared.Models.Files
+
+<FshPageHeader Title="Trash"
+               Icon="@Icons.Material.Filled.Delete"
+               Tone="Color.Warning"
+               Description="Soft-deleted records. Restore any item to return it to the active catalog." />
+
+<MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true"
+         Class="rounded-xl overflow-hidden"
+         Style="border: 1px solid var(--mud-palette-divider);">
+
+    @if (CanSeeTab(CatalogPermissions.Products.Restore))
+    {
+        <MudTabPanel Text="Products" Icon="@Icons.Material.Filled.Inventory2">
+            @if (_loadingProducts)
+            {
+                <div class="d-flex justify-center py-8"><MudProgressCircular Indeterminate="true" Size="Size.Small" /></div>
+            }
+            else if (_trashedProducts.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="text-center py-8">No trashed products.</MudText>
+            }
+            else
+            {
+                <MudList T="ProductDto" Dense="true" Class="pa-0">
+                    @foreach (var item in _trashedProducts)
+                    {
+                        <MudListItem Class="py-2">
+                            <div class="d-flex align-center justify-space-between" style="width: 100%;">
+                                <div class="min-w-0 flex-grow-1">
+                                    <MudText Typo="Typo.body2" Class="font-weight-medium">@item.Name</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Deleted @(item.DeletedOnUtc.HasValue ? FormatRelative(item.DeletedOnUtc.Value.UtcDateTime) : "unknown") by @(item.DeletedBy ?? "unknown")
+                                    </MudText>
+                                </div>
+                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                                           OnClick="() => RestoreProductAsync(item)">Restore</MudButton>
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+            }
+        </MudTabPanel>
+    }
+
+    @if (CanSeeTab(CatalogPermissions.Brands.Restore))
+    {
+        <MudTabPanel Text="Brands" Icon="@Icons.Material.Filled.LocalOffer">
+            @if (_loadingBrands)
+            {
+                <div class="d-flex justify-center py-8"><MudProgressCircular Indeterminate="true" Size="Size.Small" /></div>
+            }
+            else if (_trashedBrands.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="text-center py-8">No trashed brands.</MudText>
+            }
+            else
+            {
+                <MudList T="BrandDto" Dense="true" Class="pa-0">
+                    @foreach (var item in _trashedBrands)
+                    {
+                        <MudListItem Class="py-2">
+                            <div class="d-flex align-center justify-space-between" style="width: 100%;">
+                                <div class="min-w-0 flex-grow-1">
+                                    <MudText Typo="Typo.body2" Class="font-weight-medium">@item.Name</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Deleted @(item.DeletedOnUtc.HasValue ? FormatRelative(item.DeletedOnUtc.Value.UtcDateTime) : "unknown") by @(item.DeletedBy ?? "unknown")
+                                    </MudText>
+                                </div>
+                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                                           OnClick="() => RestoreBrandAsync(item)">Restore</MudButton>
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+            }
+        </MudTabPanel>
+    }
+
+    @if (CanSeeTab(CatalogPermissions.Categories.Restore))
+    {
+        <MudTabPanel Text="Categories" Icon="@Icons.Material.Filled.FolderShared">
+            @if (_loadingCategories)
+            {
+                <div class="d-flex justify-center py-8"><MudProgressCircular Indeterminate="true" Size="Size.Small" /></div>
+            }
+            else if (_trashedCategories.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="text-center py-8">No trashed categories.</MudText>
+            }
+            else
+            {
+                <MudList T="CategoryDto" Dense="true" Class="pa-0">
+                    @foreach (var item in _trashedCategories)
+                    {
+                        <MudListItem Class="py-2">
+                            <div class="d-flex align-center justify-space-between" style="width: 100%;">
+                                <div class="min-w-0 flex-grow-1">
+                                    <MudText Typo="Typo.body2" Class="font-weight-medium">@item.Name</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Deleted @(item.DeletedOnUtc.HasValue ? FormatRelative(item.DeletedOnUtc.Value.UtcDateTime) : "unknown") by @(item.DeletedBy ?? "unknown")
+                                    </MudText>
+                                </div>
+                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                                           OnClick="() => RestoreCategoryAsync(item)">Restore</MudButton>
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+            }
+        </MudTabPanel>
+    }
+
+    @if (CanSeeTab(TicketsPermissions.Restore))
+    {
+        <MudTabPanel Text="Tickets" Icon="@Icons.Material.Filled.ConfirmationNumber">
+            @if (_loadingTickets)
+            {
+                <div class="d-flex justify-center py-8"><MudProgressCircular Indeterminate="true" Size="Size.Small" /></div>
+            }
+            else if (_trashedTickets.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="text-center py-8">No trashed tickets.</MudText>
+            }
+            else
+            {
+                <MudList T="TicketDto" Dense="true" Class="pa-0">
+                    @foreach (var item in _trashedTickets)
+                    {
+                        <MudListItem Class="py-2">
+                            <div class="d-flex align-center justify-space-between" style="width: 100%;">
+                                <div class="min-w-0 flex-grow-1">
+                                    <MudText Typo="Typo.body2" Class="font-weight-medium">@item.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Deleted @FormatRelative(item.CreatedAtUtc)
+                                    </MudText>
+                                </div>
+                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                                           OnClick="() => RestoreTicketAsync(item)">Restore</MudButton>
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+            }
+        </MudTabPanel>
+    }
+
+    @if (CanSeeTab(FilesPermissions.ViewTrash))
+    {
+        <MudTabPanel Text="Files" Icon="@Icons.Material.Filled.FolderOpen">
+            @if (_loadingFiles)
+            {
+                <div class="d-flex justify-center py-8"><MudProgressCircular Indeterminate="true" Size="Size.Small" /></div>
+            }
+            else if (_trashedFiles.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="text-center py-8">No trashed files.</MudText>
+            }
+            else
+            {
+                <MudList T="FileAssetDto" Dense="true" Class="pa-0">
+                    @foreach (var item in _trashedFiles)
+                    {
+                        <MudListItem Class="py-2">
+                            <div class="d-flex align-center justify-space-between" style="width: 100%;">
+                                <div class="min-w-0 flex-grow-1">
+                                    <MudText Typo="Typo.body2" Class="font-weight-medium">@item.OriginalFileName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @FormatFileSize(item.SizeBytes) · @item.ContentType
+                                    </MudText>
+                                </div>
+                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                                           OnClick="() => RestoreFileAsync(item)">Restore</MudButton>
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+            }
+        </MudTabPanel>
+    }
+</MudTabs>
+
+@code {
+    [Inject] private ICatalogService CatalogService { get; set; } = default!;
+    [Inject] private ITicketService TicketService { get; set; } = default!;
+    [Inject] private IFileService FileService { get; set; } = default!;
+    [Inject] private IPermissionsProvider Permissions { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private List<BrandDto> _trashedBrands = [];
+    private List<CategoryDto> _trashedCategories = [];
+    private List<ProductDto> _trashedProducts = [];
+    private List<TicketDto> _trashedTickets = [];
+    private List<FileAssetDto> _trashedFiles = [];
+    private bool _loadingBrands = true;
+    private bool _loadingCategories = true;
+    private bool _loadingProducts = true;
+    private bool _loadingTickets = true;
+    private bool _loadingFiles = true;
+    private HashSet<string> _userPermissions = new(StringComparer.Ordinal);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await Permissions.GetPermissionsAsync();
+        _userPermissions = new HashSet<string>(state, StringComparer.Ordinal);
+
+        // Load all tabs in parallel
+        var tasks = new List<Task>
+        {
+            LoadBrandsAsync(),
+            LoadCategoriesAsync(),
+            LoadProductsAsync(),
+            LoadTicketsAsync(),
+            LoadFilesAsync(),
+        };
+        await Task.WhenAll(tasks);
+    }
+
+    private bool CanSeeTab(string permission) => _userPermissions.Contains(permission);
+
+    private async Task LoadBrandsAsync()
+    {
+        try { _trashedBrands = (await CatalogService.ListTrashedBrandsAsync()).Items.ToList(); }
+        catch { _trashedBrands = []; }
+        finally { _loadingBrands = false; }
+    }
+
+    private async Task LoadCategoriesAsync()
+    {
+        try { _trashedCategories = (await CatalogService.ListTrashedCategoriesAsync()).Items.ToList(); }
+        catch { _trashedCategories = []; }
+        finally { _loadingCategories = false; }
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        try { _trashedProducts = (await CatalogService.ListTrashedProductsAsync()).Items.ToList(); }
+        catch { _trashedProducts = []; }
+        finally { _loadingProducts = false; }
+    }
+
+    private async Task LoadTicketsAsync()
+    {
+        try { _trashedTickets = (await TicketService.ListTrashedTicketsAsync()).Items.ToList(); }
+        catch { _trashedTickets = []; }
+        finally { _loadingTickets = false; }
+    }
+
+    private async Task LoadFilesAsync()
+    {
+        try { _trashedFiles = (await FileService.ListTrashedFilesAsync()).ToList(); }
+        catch { _trashedFiles = []; }
+        finally { _loadingFiles = false; }
+    }
+
+    private async Task RestoreBrandAsync(BrandDto item)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Message", $"Restore brand \"{item.Name}\"?" },
+            { "ConfirmText", "Restore" },
+            { "CancelText", "Cancel" },
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<FshConfirmDialogContent>("Restore brand", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return;
+
+        try
+        {
+            await CatalogService.RestoreBrandAsync(item.Id);
+            Snackbar.Add("Brand restored.", Severity.Success);
+            await LoadBrandsAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Restore failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task RestoreCategoryAsync(CategoryDto item)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Message", $"Restore category \"{item.Name}\"?" },
+            { "ConfirmText", "Restore" },
+            { "CancelText", "Cancel" },
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<FshConfirmDialogContent>("Restore category", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return;
+
+        try
+        {
+            await CatalogService.RestoreCategoryAsync(item.Id);
+            Snackbar.Add("Category restored.", Severity.Success);
+            await LoadCategoriesAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Restore failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task RestoreProductAsync(ProductDto item)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Message", $"Restore product \"{item.Name}\"?" },
+            { "ConfirmText", "Restore" },
+            { "CancelText", "Cancel" },
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<FshConfirmDialogContent>("Restore product", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return;
+
+        try
+        {
+            await CatalogService.RestoreProductAsync(item.Id);
+            Snackbar.Add("Product restored.", Severity.Success);
+            await LoadProductsAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Restore failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task RestoreTicketAsync(TicketDto item)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Message", $"Restore ticket \"{item.Title}\"?" },
+            { "ConfirmText", "Restore" },
+            { "CancelText", "Cancel" },
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<FshConfirmDialogContent>("Restore ticket", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return;
+
+        try
+        {
+            await TicketService.RestoreTicketAsync(item.Id);
+            Snackbar.Add("Ticket restored.", Severity.Success);
+            await LoadTicketsAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Restore failed: {ex.Message}", Severity.Error); }
+    }
+
+    private async Task RestoreFileAsync(FileAssetDto item)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Message", $"Restore file \"{item.OriginalFileName}\"?" },
+            { "ConfirmText", "Restore" },
+            { "CancelText", "Cancel" },
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<FshConfirmDialogContent>("Restore file", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return;
+
+        try
+        {
+            await FileService.RestoreAsync(item.Id);
+            Snackbar.Add("File restored.", Severity.Success);
+            await LoadFilesAsync();
+        }
+        catch (Exception ex) { Snackbar.Add($"Restore failed: {ex.Message}", Severity.Error); }
+    }
+
+    private static string FormatRelative(DateTime utc)
+    {
+        var diff = DateTime.UtcNow - utc;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        return $"{(int)diff.TotalDays}d ago";
+    }
+
+    private static string FormatFileSize(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
+        _ => $"{bytes / (1024.0 * 1024 * 1024):F2} GB",
+    };
+}

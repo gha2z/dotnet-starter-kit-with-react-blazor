@@ -50,4 +50,12 @@ public interface ICatalogService
     Task<int> AdjustProductStockAsync(Guid id, AdjustProductStockRequest request, CancellationToken ct = default);
     Task DeleteProductImageAsync(Guid productId, Guid imageId, CancellationToken ct = default);
     Task SetProductThumbnailAsync(Guid productId, Guid imageId, CancellationToken ct = default);
+
+    // Trash / Restore
+    Task<PagedResult<BrandDto>> ListTrashedBrandsAsync(int pageNumber = 1, int pageSize = 20, CancellationToken ct = default);
+    Task RestoreBrandAsync(Guid id, CancellationToken ct = default);
+    Task<PagedResult<CategoryDto>> ListTrashedCategoriesAsync(int pageNumber = 1, int pageSize = 20, CancellationToken ct = default);
+    Task RestoreCategoryAsync(Guid id, CancellationToken ct = default);
+    Task<PagedResult<ProductDto>> ListTrashedProductsAsync(int pageNumber = 1, int pageSize = 20, CancellationToken ct = default);
+    Task RestoreProductAsync(Guid id, CancellationToken ct = default);
 }

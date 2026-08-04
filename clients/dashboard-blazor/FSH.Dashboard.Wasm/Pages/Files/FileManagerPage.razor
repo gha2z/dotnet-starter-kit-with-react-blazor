@@ -5,8 +5,8 @@
 <FshPageHeader Icon="@Icons.Material.Outlined.FolderOpen" Title="Files" Description="Manage your uploaded files and shared assets" />
 
 <MudTabs @bind-ActiveIndex="_activeTab" Class="mt-n2">
-    <MudTabItem Text="My Files" Icon="@Icons.Material.Outlined.Folder" />
-    <MudTabItem Text="Shared in Tenant" Icon="@Icons.Material.Outlined.People" />
+    <MudTabPanel Text="My Files" Icon="@Icons.Material.Outlined.Folder" />
+    <MudTabPanel Text="Shared in Tenant" Icon="@Icons.Material.Outlined.People" />
 </MudTabs>
 
 @if (_activeTab == 0)

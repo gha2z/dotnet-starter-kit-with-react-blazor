@@ -1,0 +1,16 @@
+@page "/settings"
+@attribute [Authorize]
+@inject NavigationManager Nav
+
+<MudContainer Class="d-flex align-center justify-center" Style="min-height: 50vh">
+    <MudProgressCircular Indeterminate="true" />
+</MudContainer>
+
+@code {
+    // React parity: /settings is the index route and redirects to the profile tab.
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Yield();
+        Nav.NavigateTo("/settings/profile", replace: true);
+    }
+}
