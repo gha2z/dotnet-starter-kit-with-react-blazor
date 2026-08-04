@@ -1933,3 +1933,19 @@
 .fsh-chat-message-other .fsh-chat-message-bubble {
     border-bottom-left-radius: 4px;
 }
+
+/* ───────────────────────────────────────────────────────────────────
+   Files
+   ─────────────────────────────────────────────────────────────────── */
+
+.fsh-file-dropzone {
+    border: 2px dashed var(--mud-palette-lines-default);
+    border-radius: var(--mud-default-border-radius);
+    transition: border-color 0.2s, background 0.2s;
+    cursor: pointer;
+}
+
+.fsh-file-dropzone:hover {
+    border-color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 4%, transparent);
+}

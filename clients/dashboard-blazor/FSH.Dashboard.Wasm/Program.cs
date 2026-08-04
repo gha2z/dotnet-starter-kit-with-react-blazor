@@ -64,6 +64,7 @@ builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IFileService, FileService>();
 
 builder.Services.AddAuthorizationCore(options =>
 {
@@ -110,6 +111,12 @@ builder.Services.AddAuthorizationCore(options =>
     options.AddPolicy("Permissions.Chat.Messages.EditOwn", p => p.RequireClaim("permission", "Permissions.Chat.Messages.EditOwn"));
     options.AddPolicy("Permissions.Chat.Messages.DeleteOwn", p => p.RequireClaim("permission", "Permissions.Chat.Messages.DeleteOwn"));
     options.AddPolicy("Permissions.Chat.Messages.DeleteAny", p => p.RequireClaim("permission", "Permissions.Chat.Messages.DeleteAny"));
+    options.AddPolicy("Permissions.Files.Upload", p => p.RequireClaim("permission", "Permissions.Files.Upload"));
+    options.AddPolicy("Permissions.Files.View", p => p.RequireClaim("permission", "Permissions.Files.View"));
+    options.AddPolicy("Permissions.Files.ViewTrash", p => p.RequireClaim("permission", "Permissions.Files.ViewTrash"));
+    options.AddPolicy("Permissions.Files.DeleteOwn", p => p.RequireClaim("permission", "Permissions.Files.DeleteOwn"));
+    options.AddPolicy("Permissions.Files.DeleteAny", p => p.RequireClaim("permission", "Permissions.Files.DeleteAny"));
+    options.AddPolicy("Permissions.Files.Restore", p => p.RequireClaim("permission", "Permissions.Files.Restore"));
 });
 
 // HTTP client with auth handler (for all authenticated API calls)

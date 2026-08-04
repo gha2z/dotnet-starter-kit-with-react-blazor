@@ -1,11 +1,11 @@
 # Phase 3 — Dashboard Feature Pages
-Last Update: 2026-Aug-04 19:15:00, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
+Last Update: 2026-Aug-04 19:45:00, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
 
 > **Target:** All tenant-facing dashboard pages built — Overview (SSE), Activity, Subscription, Wallet, Catalog, Invoices, Identity (profile/user/role), Tickets, Chat, Files, System. Feature parity with `clients/dashboard` React app.
 
 ## Status
 
-- Phase 3: **🟨 In progress** — 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅ · **3.9 Chat ✅** — dashboard suite **113/113** — next: 3.10 Files
+- Phase 3: **🟨 In progress** — 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅ · 3.9 Chat ✅ · **3.10 Files ✅** — dashboard suite **119/119** — next: 3.11 System
 - Prerequisites: Phase 1 ✅ (auth+login working, AppShell)
 - **Parity sprint deliverables already in place:** `SseService` (token flow `POST /api/v1/sse/token` → `GET /api/v1/sse/stream?token=`, backoff reconnect, `ConnectionChanged` event), SSE status dot in topbar, full sidebar (accordion, permission-gated) — no rebuilds needed, only page work.
 - Terminal pages `/tenant-deactivated` + `/impersonation-ended` do **not** exist yet (docs previously claimed they did) — tracked as 3.15 in `Phase-07-Parity-Completion/plan.md`.
@@ -133,9 +133,10 @@ Full React parity — 6 pages + 4 dialogs, full CRUD (the plan's original read-o
 - [x] **CreateChannelDialog.razor** — MudForm: name, description, private toggle
 
 ### 3.10 Files
-- [ ] **IFileService** — `ListAsync(folder)`, `UploadAsync`, `DownloadAsync`, `DeleteAsync`, `GetPresignedUrlAsync`
-- [ ] **FileManagerPage.razor** — MudTable with file name, size, type icon, modified date, download/delete actions
-- [ ] **UploadZone.razor** — MudFileUpload or drag-and-drop zone, progress, presigned URL generation
+- [x] **IFileService** — `ListAsync(folder)`, `UploadAsync`, `DownloadAsync`, `DeleteAsync`, `GetPresignedUrlAsync`
+- [x] **FileManagerPage.razor** — MudTable with file name, size, type icon, modified date, download/delete actions
+- [x] **UploadZone.razor** — MudFileUpload or drag-and-drop zone, progress, presigned URL generation
+- [x] **FilePreviewDialog.razor** — Image/PDF preview, metadata panel, download/delete
 - [ ] **Breadcrumb navigation** for folders
 
 ### 3.11 System Pages
