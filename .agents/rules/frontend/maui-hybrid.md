@@ -4,7 +4,7 @@ Read `blazor-shared.md` first — this file covers MAUI-only divergences.
 
 ## Stack
 
-.NET 10 MAUI · BlazorWebView · BlazorShared RCL · MudBlazor · SQLite (offline queue) · CommunityToolkit.Mvvm · CommunityToolkit.Maui.
+.NET 10 MAUI · BlazorWebView (`Main.razor` root component) · BlazorShared RCL · MudBlazor 9.7.0 · sqlite-net-pcl (offline queue) · CommunityToolkit.Maui 13.0.0 · CommunityToolkit.Mvvm 8.4.2 · Xamarin.AndroidX.Biometric (android-only).
 
 ## Project structure
 
@@ -12,117 +12,135 @@ Read `blazor-shared.md` first — this file covers MAUI-only divergences.
 clients/FSH.Hybrid/
 ├── FSH.Hybrid/
 │   ├── Platforms/
-│   │   ├── Android/                    # MainActivity, MainApplication, AndroidManifest
-│   │   ├── iOS/                        # AppDelegate, Info.plist
+│   │   ├── Android/                    # MainActivity (fsh:// intent filter), MainApplication, AndroidManifest (POST_NOTIFICATIONS + INTERNET)
+│   │   ├── iOS/                        # AppDelegate, Info.plist (fsh URL scheme)
 │   │   ├── MacCatalyst/                # AppDelegate, Info.plist
 │   │   └── Windows/                    # App.xaml, Package.appxmanifest
-│   ├── Services/                       # Native service implementations
-│   │   ├── MauiTokenStore.cs           # SecureStorage-based token store
-│   │   ├── PushNotificationService.cs  # Firebase (Android) / APNs (iOS)
-│   │   ├── BiometricService.cs         # Biometric auth via platform APIs
-│   │   ├── MediaPickerService.cs       # Camera/gallery via MAUI Essentials
-│   │   ├── ConnectivityService.cs      # Network connectivity monitoring
-│   │   ├── OfflineQueueService.cs      # SQLite-backed request queue
-│   │   └── DeepLinkService.cs          # URI scheme / universal link handling
-│   ├── Pages/                          # MAUI Shell pages (minimal)
-│   │   ├── MainPage.xaml               # Hosts BlazorWebView
-│   │   ├── SettingsPage.xaml
-│   │   └── AboutPage.xaml
-│   ├── App.xaml / App.xaml.cs
+│   ├── Auth/FshPolicies.cs             # authorization policy registration
+│   ├── Services/
+│   │   ├── MauiTokenStore.cs           # SecureStorage-based ITokenStore
+│   │   ├── MauiAuthStateProvider.cs    # biometric lock-on-sleep / unlock-on-resume
+│   │   ├── MauiAuthService.cs          # auth orchestration (login/logout/impersonation)
+│   │   ├── HybridRuntimeConfigService.cs  # IRuntimeConfigService (API base URL)
+│   │   ├── BiometricService.cs         # AndroidX Biometric / LAContext wrappers
+│   │   ├── ConnectivityService.cs      # network connectivity monitoring
+│   │   ├── OfflineQueueService.cs      # SQLite-backed request queue (IAsyncDisposable)
+│   │   ├── OfflineQueueProcessor.cs    # FIFO replay of queued requests
+│   │   ├── OfflineDelegatingHandler.cs # queues mutating calls when offline
+│   │   ├── MediaPickerService.cs       # camera/gallery + content-type mapping
+│   │   ├── HybridFileUploadService.cs  # presigned upload flow (BlazorShared)
+│   │   ├── DeepLinkService.cs          # fsh:// URI → shell route + Blazor path
+│   │   └── PushNotificationService.cs  # compile-gated behind FSH_FIREBASE (see push-setup.md)
+│   ├── Pages/                          # Blazor pages (rendered inside the webview)
+│   │   ├── OverviewPage.razor, FilesPage.razor (media-upload proof)
+│   │   └── Auth/LoginPage.razor
+│   ├── Shared/MainLayout.razor, RedirectToLogin.razor
+│   ├── Main.razor                      # Blazor root: navigates via HybridNavigationBridge.PendingPath
+│   ├── MainPage.xaml                   # hosts BlazorWebView (Selector #app → Main)
+│   ├── SettingsPage.xaml / AboutPage.xaml   # native Shell pages
+│   ├── App.xaml / App.xaml.cs          # queue flush + deep links + biometric lock
 │   ├── AppShell.xaml / AppShell.xaml.cs
 │   ├── MauiProgram.cs
-│   ├── Resources/
-│   │   ├── AppIcon/
-│   │   ├── Splash/
-│   │   ├── Fonts/
-│   │   └── Raw/
+│   ├── Resources/ (AppIcon, Splash, Fonts, Raw/SharedStyles.xaml)
 │   └── FSH.Hybrid.csproj
-└── FSH.Hybrid.Tests/
+└── FSH.Hybrid.Tests/                   # xunit, net10.0-windows10.0.19041.0
 ```
 
-## Auth difference — SecureStorage
+Blazor pages live under `Pages/` inside the app project (not the RCL) when they exercise native services.
 
-- `ITokenStore` implementation uses `Microsoft.Maui.Storage.SecureStorage` instead of localStorage (JS interop).
-- Biometric unlock: `BiometricService` wraps platform biometric APIs (Android `BiometricManager` / iOS `LAContext`).
-- If biometric is enabled, the access token is encrypted at rest and requires biometric verification to decrypt.
+## Auth difference — SecureStorage + biometric gate
+
+- `ITokenStore` → `MauiTokenStore` uses `Microsoft.Maui.Storage.SecureStorage` (no JS interop).
+- `AuthStateProvider` comes from BlazorShared; `MauiAuthStateProvider` adds a biometric gate:
+  `OnSleep()` → `Lock()`; `OnResume()` → if `IsBiometricLockEnabled` (Preferences flag) and a token exists, `BiometricService.AuthenticateAsync("Unlock FSH Hybrid", ...)`; failed unlock keeps the session locked. The token itself is NOT encrypted with a biometric key — biometrics gate session resume only.
 
 ## Native service registration in MauiProgram.cs
 
+Real registrations (abridged):
+
 ```csharp
-public static MauiApp CreateMauiApp()
-{
-    var builder = MauiApp.CreateBuilder();
-    builder.UseMauiApp<App>()
-           .UseMauiCommunityToolkit()
-           .ConfigureFonts(fonts => { fonts.AddFont("Geist-Regular.ttf", "Geist"); });
-
-    // Override WASM services with MAUI native implementations
-    builder.Services.AddSingleton<ITokenStore, MauiTokenStore>();
-    builder.Services.AddSingleton<IBiometricService, BiometricService>();
-    builder.Services.AddSingleton<IPushNotificationService, PushNotificationService>();
-    builder.Services.AddSingleton<IConnectivityService, ConnectivityService>();
-    builder.Services.AddSingleton<IOfflineQueueService, OfflineQueueService>();
-    builder.Services.AddTransient<MediaPickerService>();
-
-    // Shared services from BlazorShared
-    builder.Services.AddBlazorSharedServices();
-
-    // Blazor WebView
-    builder.Services.AddBlazorWebView();
-#if DEBUG
-    builder.Services.AddBlazorWebViewDeveloperTools();
-#endif
-
-    return builder.Build();
-}
+builder.Services.AddSingleton<ITokenStore, MauiTokenStore>();
+builder.Services.AddSingleton<IBiometricService, BiometricService>();
+builder.Services.AddSingleton<IRuntimeConfigService, HybridRuntimeConfigService>();
+builder.Services.AddSingleton<IConnectivityService, ConnectivityService>();
+builder.Services.AddSingleton<IOfflineQueueService>(_ => new OfflineQueueService());
+builder.Services.AddSingleton<IOfflineQueueProcessor, OfflineQueueProcessor>();
+builder.Services.AddSingleton<IDeepLinkService, DeepLinkService>();
+builder.Services.AddSingleton<IMediaPickerService, MediaPickerService>();
+builder.Services.AddSingleton<IPushNotificationService, PushNotificationService>();
+// auth: AuthStateProvider (BlazorShared) + MauiAuthStateProvider + AuthService + MauiAuthService
+builder.Services.AddAuthorizationCore(FshPolicies.Register);
+builder.Services.AddMudServices(...);
+builder.Services.AddSingleton(sp => new FshThemeService(sp.GetRequiredService<IJSRuntime>(), "fsh.theme", ThemeMode.System));
+// realtime: HubConnectionService + SseService (BlazorShared)
+builder.Services.AddBlazorWebView();
 ```
+
+Named HttpClients (order matters):
+
+```csharp
+builder.Services.AddHttpClient("FSH.Auth", ...);          // NO handlers
+builder.Services.AddHttpClient("FSH.Api", ...)
+    .AddHttpMessageHandler<OfflineDelegatingHandler>()     // outermost
+    .AddHttpMessageHandler<AuthDelegatingHandler>();
+builder.Services.AddHttpClient("FSH.Storage");             // presigned PUT client
+// default scoped client = FSH.Api (handlers included)
+```
+
+Tenant-scoped data services (`IBillingService`, `IFileService`, …) register `AddScoped` from BlazorShared — keep that pattern for new ones.
 
 ## Offline queue
 
-- `OfflineQueueService` intercepts failed HTTP calls (via a separate `OfflineDelegatingHandler`), serializes the request to SQLite, and replays when connectivity is restored.
-- Queue is processed FIFO on `ConnectivityChanged += (s, e) => { if (e.NetworkAccess == NetworkAccess.Internet) ProcessQueue(); }`.
+- `OfflineDelegatingHandler` (outermost on `FSH.Api`) queues `POST/PUT/PATCH/DELETE` when offline (`OfflineException`) and passes GETs and the auth client through.
+- `OfflineQueueService` (SQLite, sqlite-net-pcl, FIFO, `IAsyncDisposable` — the connection holds the DB file) + `OfflineQueueProcessor` replays FIFO with retry cap 3 (drop after max).
+- Replay triggers: `Window.Created` (App.xaml.cs) and `OnResume` — NOT `ConnectivityChanged`.
 
-## Push notifications
+## Push notifications (Phase 5.4 — blocked, compile-gated)
 
-- Android: Firebase Cloud Messaging (FCM) via `Plugin.Firebase.CloudMessaging`.
-- iOS: APNs via `UserNotifications` framework.
-- Notification tap opens a deep link to the relevant page (e.g., `fsh://tickets/{id}`).
+- `IPushNotificationService.RegisterAsync` — the real path exists only under `#if ANDROID && FSH_FIREBASE`. Without it: logs + returns null.
+- Enabling requires: Firebase project + `google-services.json` + `Plugin.Firebase.CloudMessaging` package + a backend FCM sender (none exists in FSH yet). Follow `opencode/addBlazorFrontends/Phase-05-MAUI-Hybrid/push-setup.md`.
+- `POST_NOTIFICATIONS` + `INTERNET` are already declared in AndroidManifest.xml.
 
 ## Deep linking
 
-- Android: Intent filter for `fsh://` scheme in `AndroidManifest.xml`.
-- iOS: `CFBundleURLSchemes` in `Info.plist` + `Universal Links` via `apple-app-site-association`.
-- `DeepLinkService` parses incoming URIs and navigates via `Shell.Current.GoToAsync()`.
+- Scheme `fsh://`; Android intent filter in `MainActivity`/manifest, iOS `CFBundleURLTypes` in Info.plist.
+- `App.OnAppLinkRequestReceived` → `IDeepLinkService.Parse` → `DeepLinkTarget(ShellRoute, BlazorPath)`: `fsh://home|settings|about` → native shell pages; any other path → shell home + `HybridNavigationBridge.PendingPath` → `Main.razor` navigates the Blazor router (e.g. `fsh://files`, `fsh://tickets/123`).
 
-## Build & deploy
+## Build, run & verify
 
 ```bash
-# Android
-dotnet build clients/FSH.Hybrid/FSH.Hybrid -t:Run -f net10.0-android
-
-# iOS (requires Mac build host)
-dotnet build clients/FSH.Hybrid/FSH.Hybrid -t:Run -f net10.0-ios
-
-# Windows
+# Windows (Windows host only — windows TFM is added conditionally on OS)
+dotnet build clients/FSH.Hybrid/FSH.Hybrid/FSH.Hybrid.csproj -f net10.0-windows10.0.19041.0
 dotnet build clients/FSH.Hybrid/FSH.Hybrid -t:Run -f net10.0-windows10.0.19041.0
 
-# Mac Catalyst
+# Android / iOS / Mac Catalyst
+dotnet build clients/FSH.Hybrid/FSH.Hybrid -t:Run -f net10.0-android
+dotnet build clients/FSH.Hybrid/FSH.Hybrid -t:Run -f net10.0-ios        # requires Mac
 dotnet build clients/FSH.Hybrid/FSH.Hybrid -t:Run -f net10.0-maccatalyst
+
+# Full gate: clean build (Windows + Android) + tests
+pwsh opencode/addBlazorFrontends/verify-hybrid.ps1
 ```
+
+Test project gotchas (FSH.Hybrid.Tests): must set `<PlatformTarget>x64</PlatformTarget>`, `EnableMaui*Processing=false` (transitive resizetizer would fail on the app's duplicate appicon), and `Microsoft.Extensions.Http` ≥ 10.0.10 (BlazorShared floor). Dispose `OfflineQueueService` (or call `CloseAsync`) before deleting temp DBs.
 
 ## Key MAUI NuGet packages
 
 ```xml
-<PackageVersion Include="CommunityToolkit.Maui" Version="10.0.0" />
-<PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-<PackageVersion Include="Plugin.Firebase.CloudMessaging" Version="3.1.0" />
-<PackageVersion Include="sqlite-net-pcl" Version="1.9.172" />
+<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
+<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+<PackageReference Include="MudBlazor" Version="9.7.0" />
+<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
+<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />   <!-- NU1903 pin: no patched version exists (CVE-2025-6965) -->
+<PackageReference Include="Xamarin.AndroidX.Biometric" Version="1.1.0.33" Condition="android TFM" />
+<!-- Plugin.Firebase.CloudMessaging: add ONLY when enabling push (see push-setup.md) -->
 ```
 
 ## Hybrid-specific patterns
 
-- **BlazorWebView hosting**: `MainPage.xaml` contains `<blazor:BlazorWebView HostPage="wwwroot/index.html" />` referencing the Blazor WASM app shell.
-- **JS interop bridge**: MAUI registers .NET methods callable from JS (e.g., `getDeviceToken`, `getBatteryLevel`).
-- **App lifecycle**: `OnSleep`/`OnResume` disconnect/reconnect SignalR, flush offline queue.
-- **Safe area**: MAUI `SafeArea` layout accounts for notches/status bars on mobile.
-- **Splash screen**: Configured in `.csproj` with `MauiSplashScreen` properties.
+- **BlazorWebView hosting**: `MainPage.xaml` hosts `<blazor:BlazorWebView HostPage="wwwroot/index.html">` with `RootComponent Selector="#app"` → `Main.razor`. `Main.razor` checks `HybridNavigationBridge.PendingPath` on init and navigates the Blazor router.
+- **Lifecycle**: MAUI events, not Blazor's — queue flush + deep links + biometric lock live in `App.xaml.cs` (`Window.Created`, `OnResume`, `OnSleep`). Blazor pages do NOT receive MAUI lifecycle events.
+- **Windows backdrop**: `App.xaml.cs` applies `MicaBackdrop` on `Window.HandlerChanged`.
+- **Safe area / splash / icon**: csproj `MauiSplashScreen` (splash.svg, `Color="#1B2A2C"`, `BaseSize="128,128"`) and `MauiIcon` (`Color="#1B2A2C"`); brand colors dark-teal `#1B2A2C` + accent `#0FB5AE`.
+- **Theme parity**: `FshThemeService` key `"fsh.theme"`, default `ThemeMode.System` — same as the dashboard app.
+- **Do not** use browser APIs via JS interop where a native service exists (`MediaPicker`, `SecureStorage`, connectivity). `#if` + platform-suffixed files for platform-specific code.

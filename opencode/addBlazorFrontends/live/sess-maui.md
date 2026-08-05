@@ -1,14 +1,15 @@
 # sess-maui
-identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-06 03:47
+identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-06 03:55
 
 scope: clients/FSH.Hybrid/** · clients/admin-blazor/** (per amended scope) · root README.md ·
 .agents/rules/frontend/maui-hybrid.md · opencode/addBlazorFrontends/live/sess-maui.md ·
 opencode/addBlazorFrontends/verify-hybrid.ps1 · 00_summary summaries
 
 ## Current task
-Phase C: admin command palette (Ctrl+K) — claimed 2026-08-06 03:50 (Phase-05 plan). Code complete: NavSpec.cs + CommandPalette + MainLayout wiring + 8 tests; admin 155/155, app 0 warnings. Next: gate + staging (awaiting user approval).
+Phase C committed (e4b3dcb7). Phase D done: maui-hybrid.md refreshed against delivered code (MauiProgram wiring, handler order, queue replay triggers, push gating, packages, build/verify, test gotchas). Next: summary + staging.
 
 ## Touched files (update as you go)
+- .agents/rules/frontend/maui-hybrid.md (Phase D refresh)
 - opencode/addBlazorFrontends/Phase-05-MAUI-Hybrid/plan.md (Phase C claim line)
 - clients/admin-blazor/FSH.Admin.Wasm/Shared/NavSpec.cs (new)
 - clients/admin-blazor/FSH.Admin.Wasm/Shared/CommandPalette.razor (new)
@@ -54,7 +55,7 @@ Phase C: admin command palette (Ctrl+K) — claimed 2026-08-06 03:50 (Phase-05 p
 - [x] MAUI 5.7 deep linking
 - [x] MAUI 5.9 splash/icon audit (splash F monogram)
 - [x] MAUI 5.4 push (blocked item — doc + compile-gated code)
-- [ ] verify-hybrid.ps1 run
-- [ ] Phase C admin palette (parked)
-- [ ] Phase D docs
-- [ ] implementation summary + explicit-path staging (awaiting user approval; never `git add -A`)
+- [x] verify-hybrid.ps1 run
+- [x] Phase C admin palette (committed e4b3dcb7, 155/155)
+- [x] Phase D docs (maui-hybrid.md refresh)
+- [ ] Phase D summary + explicit-path staging (awaiting user approval; never `git add -A`)
