@@ -1,17 +1,20 @@
 # sess-maui
-identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-06 03:55
+identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-06 04:25
 
 scope: clients/FSH.Hybrid/** · clients/admin-blazor/** (per amended scope) · root README.md ·
 .agents/rules/frontend/maui-hybrid.md · opencode/addBlazorFrontends/live/sess-maui.md ·
 opencode/addBlazorFrontends/verify-hybrid.ps1 · 00_summary summaries
 
 ## Current task
-Phase C committed (e4b3dcb7). Phase D done: maui-hybrid.md refreshed against delivered code (MauiProgram wiring, handler order, queue replay triggers, push gating, packages, build/verify, test gotchas). Next: summary + staging.
+Board row #2 done: admin appearance parity (Density placeholder + Active badge), verified 158/158 + 0 warnings. Next: summary + staging (awaiting approval).
 
 ## Touched files (update as you go)
+- clients/admin-blazor/FSH.Admin.Wasm/Pages/Settings/AppearancePage.razor (Density card + Active badge + Light→Dark order + aria-pressed)
+- clients/admin-blazor/FSH.Admin.Wasm.Tests/Pages/Settings/AppearancePageTests.cs (+3 tests)
+- opencode/addBlazorFrontends/Phase-07-Parity-Completion/plan.md (deferred item ✅)
+- opencode/addBlazorFrontends/Phase-05-MAUI-Hybrid/plan.md (Phase C line ✅)
+- opencode/addBlazorFrontends/live/board.md (row #2 resolution)
 - .agents/rules/frontend/maui-hybrid.md (Phase D refresh)
-- opencode/addBlazorFrontends/Phase-05-MAUI-Hybrid/plan.md (Phase C claim line)
-- clients/admin-blazor/FSH.Admin.Wasm/Shared/NavSpec.cs (new)
 - clients/admin-blazor/FSH.Admin.Wasm/Shared/CommandPalette.razor (new)
 - clients/admin-blazor/FSH.Admin.Wasm/Shared/CommandPalette.razor.cs (new)
 - clients/admin-blazor/FSH.Admin.Wasm/Shared/MainLayout.razor (NavSpec consumption + search button + palette host)
@@ -57,5 +60,6 @@ Phase C committed (e4b3dcb7). Phase D done: maui-hybrid.md refreshed against del
 - [x] MAUI 5.4 push (blocked item — doc + compile-gated code)
 - [x] verify-hybrid.ps1 run
 - [x] Phase C admin palette (committed e4b3dcb7, 155/155)
-- [x] Phase D docs (maui-hybrid.md refresh)
-- [ ] Phase D summary + explicit-path staging (awaiting user approval; never `git add -A`)
+- [x] Phase D docs (maui-hybrid.md refresh, committed 6a5d84e2; verify-hybrid 12/12 + admin 155/155 re-run green)
+- [x] Board row #2: admin accent/font/density settings (AppearancePage parity, 158/158)
+- [ ] row #2 summary + explicit-path staging (awaiting user approval; never `git add -A`)

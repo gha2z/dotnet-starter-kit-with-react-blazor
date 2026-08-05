@@ -1,5 +1,5 @@
 # Phase 7 — React Parity Completion & Hardening
-Last Update: 2026-Aug-04, by: opencode (auto/coding, model: big-pickle).
+Last Update: 2026-Aug-06, by: opencode (auto/coding, model: deepseek-v4-flash-free).
 
 > **Target:** Both Blazor WASM apps (admin + dashboard) are pixel- and behavior-identical to the
 > React 19 apps (`clients/admin`, `clients/dashboard`) — or better — and the MAUI Hybrid app matches
@@ -9,11 +9,11 @@ Last Update: 2026-Aug-04, by: opencode (auto/coding, model: big-pickle).
 ## Status
 
 - Phase 7: **🟨 In progress** — parity sprint 1 done (sidebar/theme/bell/SSE), hotfixes done **and
-  verified (admin 147/147 + dashboard 133/133, both build **0 warnings**; admin PW roles 7/7, dashboard PW roles 5/5;
+  verified (admin 147/147 + dashboard 178/178, both build **0 warnings**; admin PW roles 7/7, dashboard PW roles 5/5;
   17 role-permission integration tests green)**, MAUI Hybrid workload saga resolved (Hybrid builds
   4 TFMs, 0 warnings). Page build-out: **2.4 Billing ✅ · 2.5 Webhooks ✅ · 2.6 Audits ✅ · 2.7 Health ✅ ·
   2.8 Notifications inbox ✅ · 2.9 Settings ✅ · 2.10 Impersonation ✅ · styled 404 ✅ ·
-   dashboard 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅ · 3.9 Chat ✅ · 3.10 Files ✅ · 3.11 System ✅** (admin suite 147/147, dashboard 133/133) — next up dashboard 3.12 Settings.
+   dashboard 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅ · 3.9 Chat ✅ · 3.10 Files ✅ · 3.11 System ✅** (admin suite 147/147, dashboard 178/178) — next up dashboard 3.12 Settings.
 - **Runtime hardening (this session):** admin app crashed on every authenticated render at `/` with
   "Cannot provide a value for property 'TenantService'" → the **9 missing `AddScoped` API service
   registrations** in `FSH.Admin.Wasm/Program.cs` were added (Audit/Billing/Impersonation/Role/Session/
@@ -74,7 +74,7 @@ Last Update: 2026-Aug-04, by: opencode (auto/coding, model: big-pickle).
 | `/settings/*` (profile, security, sessions, appearance) | `Pages/Settings/{ProfilePage, SecurityPage, SessionsPage, AppearancePage}.razor` (+ `SettingsScaffold`), 2FA enroll/verify/disable, session revoke, theme cards | ✅ |
 | `/auth/*` (login, forgot, reset, confirm) | `Pages/Auth/*` | ✅ |
 | `not-found.tsx` | `FshNotFound.razor` (shared) | ✅ |
-| — | **deferred parity items** | 🔲 command palette, accent/font/density settings |
+| — | **deferred parity items** | 🔲 command palette → ✅ (Phase C, e4b3dcb7, 155/155) · accent/font/density settings → ✅ (sess-maui @ 2026-08-06 — React admin `settings/appearance.tsx` parity: Density placeholder section + Active badge on theme cards; admin 158/158, 0 warnings) |
 
 ### Dashboard app — `clients/dashboard/src/pages` ↔ `clients/dashboard-blazor`
 

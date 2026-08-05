@@ -61,4 +61,46 @@ public class AppearancePageTests : TestSetup
         cut.WaitForAssertion(() => _theme.Mode.ShouldBe(ThemeMode.Dark));
         cut.WaitForAssertion(() => _theme.IsDarkMode.ShouldBeTrue());
     }
+
+    [Fact]
+    public void Active_badge_marks_the_active_theme_card()
+    {
+        var cut = Render<AppearancePage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var activeCard = cut.FindAll(".fsh-theme-card").Single(c => c.TextContent.Contains("Active"));
+            activeCard.TextContent.ShouldContain("Dark");
+        });
+    }
+
+    [Fact]
+    public void Active_badge_follows_theme_switch()
+    {
+        var cut = Render<AppearancePage>();
+        cut.WaitForAssertion(() => cut.FindAll(".fsh-theme-card").Count.ShouldBe(2));
+
+        cut.FindAll(".fsh-theme-card").First(c => c.TextContent.Contains("Light")).Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var activeCard = cut.FindAll(".fsh-theme-card").Single(c => c.TextContent.Contains("Active"));
+            activeCard.TextContent.ShouldContain("Light");
+        });
+    }
+
+    [Fact]
+    public void Density_section_shows_disabled_compact_placeholder()
+    {
+        var cut = Render<AppearancePage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Markup.ShouldContain("Density");
+            cut.Markup.ShouldContain("Compact mode will reduce card padding and row height for data-dense screens");
+            var button = cut.FindAll("button").Single(b => b.TextContent.Contains("Compact rows"));
+            button.TextContent.ShouldContain("coming soon");
+            button.HasAttribute("disabled").ShouldBeTrue();
+        });
+    }
 }
