@@ -75,6 +75,14 @@ public sealed class UserService(HttpClient http) : IUserService
             ?? throw new InvalidOperationException("Null profile response");
     }
 
+    public async Task<UserDto> UpdateMyProfileAsync(UpdateProfileRequest request, CancellationToken ct = default)
+    {
+        var response = await http.PutAsJsonAsync($"{IdentityBase}/profile", request, ct);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<UserDto>(ct)
+            ?? throw new InvalidOperationException("Null profile response");
+    }
+
     public async Task SetProfileImageAsync(string? imageUrl, CancellationToken ct = default)
     {
         var response = await http.PutAsJsonAsync($"{IdentityBase}/profile/image", new SetProfileImageRequest(imageUrl), ct);

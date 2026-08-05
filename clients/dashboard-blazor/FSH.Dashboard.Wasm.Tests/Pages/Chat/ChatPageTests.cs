@@ -151,7 +151,7 @@ public sealed class ChatPageTests : TestSetup
 
         var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
 
-        cut.Find("button[title='Create channel']").ShouldNotBeNull();
+        cut.Find("button[aria-label='Create channel']").ShouldNotBeNull();
     }
 
     private sealed class DisposableStub : IDisposable

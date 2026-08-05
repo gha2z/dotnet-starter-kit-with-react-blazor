@@ -4,7 +4,7 @@
 
 <FshPageHeader Icon="@Icons.Material.Outlined.FolderOpen" Title="Files" Description="Manage your uploaded files and shared assets" />
 
-<MudTabs @bind-ActiveIndex="_activeTab" Class="mt-n2">
+<MudTabs @bind-ActivePanelIndex="_activeTab" Class="mt-n2">
     <MudTabPanel Text="My Files" Icon="@Icons.Material.Outlined.Folder" />
     <MudTabPanel Text="Shared in Tenant" Icon="@Icons.Material.Outlined.People" />
 </MudTabs>
@@ -12,20 +12,21 @@
 @if (_activeTab == 0)
 {
     @* Upload Zone *@
-    <MudPaper Class="fsh-file-dropzone pa-6 mb-4 text-center" Elevation="0"
-              ondragover="event.preventDefault();" ondrop="@HandleDrop">
-        <InputFile id="fileInput" OnChange="HandleFileSelect" multiple accept="@_acceptTypes" style="display:none;" />
-        <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Size="Size.Large" Color="Color.Secondary" Style="font-size: 48px;" />
-        <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mt-2">Drag & drop files here</MudText>
-        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">or</MudText>
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="mt-2" OnClick="OpenFilePicker">
-            Browse files
-        </MudButton>
-        @if (_uploading)
-        {
-            <MudProgressLinear Value="_uploadProgress" Color="Color.Primary" Class="mt-3" Striped />
-            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">@_uploadStatus</MudText>
-        }
+    <MudPaper Class="fsh-file-dropzone pa-6 mb-4 text-center" Elevation="0">
+        <div ondragover="event.preventDefault();" ondrop="@HandleDrop">
+            <InputFile id="fileInput" OnChange="HandleFileSelect" multiple accept="@_acceptTypes" style="display:none;" />
+            <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Size="Size.Large" Color="Color.Secondary" Style="font-size: 48px;" />
+            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mt-2">Drag & drop files here</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">or</MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="mt-2" OnClick="OpenFilePicker">
+                Browse files
+            </MudButton>
+            @if (_uploading)
+            {
+                <MudProgressLinear Value="_uploadProgress" Color="Color.Primary" Class="mt-3" Striped />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">@_uploadStatus</MudText>
+            }
+        </div>
     </MudPaper>
 }
 
@@ -59,7 +60,7 @@ else if (FilteredFiles.Count == 0)
 }
 else
 {
-    <MudTable Items="@FilteredFiles" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true">
+    <MudTable Items="@FilteredFiles" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true" RowsPerPage="20">
         <HeaderContent>
             <MudTh>Name</MudTh>
             <MudTh>Visibility</MudTh>
@@ -86,18 +87,18 @@ else
             <MudTd DataLabel="Uploaded">@FshFormat.DateRelative(context.CreatedAtUtc)</MudTd>
             <MudTd Class="text-right">
                 <MudIconButton Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small"
-                               Title="Preview" OnClick="() => PreviewFile(context)" />
+                               aria-label="Preview" OnClick="() => PreviewFile(context)" />
                 <MudIconButton Icon="@Icons.Material.Outlined.Download" Size="Size.Small"
-                               Title="Download" OnClick="() => DownloadFile(context)" />
+                               aria-label="Download" OnClick="() => DownloadFile(context)" />
                 @if (_activeTab == 0)
                 {
                     <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small"
-                                   Title="Delete" OnClick="() => DeleteFile(context)" />
+                                   aria-label="Delete" OnClick="() => DeleteFile(context)" />
                 }
             </MudTd>
         </RowTemplate>
         <PagerContent>
-            <MudTablePager PageSize="20" />
+            <MudTablePager />
         </PagerContent>
     </MudTable>
 }

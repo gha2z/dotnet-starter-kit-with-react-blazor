@@ -1,11 +1,11 @@
 # Phase 3 — Dashboard Feature Pages
-Last Update: 2026-Aug-04, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
+Last Update: 2026-Aug-04, by: opencode (auto/coding, model: big-pickle).
 
 > **Target:** All tenant-facing dashboard pages built — Overview (SSE), Activity, Subscription, Wallet, Catalog, Invoices, Identity (profile/user/role), Tickets, Chat, Files, System. Feature parity with `clients/dashboard` React app.
 
 ## Status
 
-- Phase 3: **🟨 In progress** — 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅ · 3.9 Chat ✅ · 3.10 Files ✅ · **3.11 System ✅** — dashboard suite **133/133** — next: 3.12 Settings
+- Phase 3: **🟨 In progress** — 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅ · 3.9 Chat ✅ · 3.10 Files ✅ · **3.11 System ✅** · **3.12 Settings ✅** — dashboard suite **146/146** — next: 3.13 Impersonation
 - Prerequisites: Phase 1 ✅ (auth+login working, AppShell)
 - **Parity sprint deliverables already in place:** `SseService` (token flow `POST /api/v1/sse/token` → `GET /api/v1/sse/stream?token=`, backoff reconnect, `ConnectionChanged` event), SSE status dot in topbar, full sidebar (accordion, permission-gated) — no rebuilds needed, only page work.
 - Terminal pages `/tenant-deactivated` + `/impersonation-ended` do **not** exist yet (docs previously claimed they did) — tracked as 3.15 in `Phase-07-Parity-Completion/plan.md`.
@@ -148,10 +148,15 @@ Full React parity — 6 pages + 4 dialogs, full CRUD (the plan's original read-o
 - [x] **AuditDetailDialog.razor** — full audit record detail view (identity, trace, payload)
 
 ### 3.12 Settings (Dashboard)
-- [ ] **ProfilePage.razor** — Edit name, email, timezone, avatar (React parity: `settings/profile.tsx`)
-- [ ] **SecurityPage.razor** — Password change, 2FA enroll/verify/disable (React parity: `settings/security.tsx`)
-- [ ] **AppearancePage.razor** — Dark/light/System mode, accent color (React parity: `settings/appearance.tsx`)
-- [ ] **ApiKeysPage.razor** — API key management (React parity: `settings/api-keys.tsx`)
+- [x] **SettingsLayout.razor** — nav rail with profile/security/appearance/branding/notifications/api-keys links + `@Body`
+- [x] **SettingsIndexPage.razor** — `/settings` redirect → `/settings/profile`
+- [x] **ProfilePage.razor** — edit name, phone (React parity: `settings/profile.tsx`)
+- [x] **SecurityPage.razor** — password change dialog + active sessions (React parity: `settings/security.tsx`)
+- [x] **AppearancePage.razor** — Dark/light/System mode (React parity: `settings/appearance.tsx`)
+- [x] **ApiKeysPage.razor** — placeholder (React parity: `settings/api-keys.tsx`)
+- [x] **BrandingPage.razor** — placeholder (React parity: `settings/branding.tsx`)
+- [x] **NotificationsPage.razor** — placeholder (React parity: `settings/notifications.tsx`)
+- [x] Added `UpdateMyProfileAsync` to `IUserService`/`UserService` + `UpdateProfileRequest` DTO (endpoint exists server-side)
 
 ### 3.13 Impersonation (Dashboard)
 - [ ] **ImpersonationBanner.razor** — MudAlert banner: "Impersonating {user}" + end button

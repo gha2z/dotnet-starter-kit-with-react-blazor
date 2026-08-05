@@ -29,7 +29,6 @@ public sealed partial class ChatPage : IAsyncDisposable
     private ElementReference _messagesContainer;
 
     private readonly List<IDisposable> _signalrSubscriptions = [];
-    private Timer? _typingThrottle;
 
     protected override async Task OnInitializedAsync()
     {
@@ -308,7 +307,6 @@ public sealed partial class ChatPage : IAsyncDisposable
         {
             sub.Dispose();
         }
-        _typingThrottle?.Dispose();
     }
 
     private sealed record TypingEvent(Guid ChannelId, string UserId);

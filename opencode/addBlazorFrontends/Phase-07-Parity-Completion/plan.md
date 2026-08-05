@@ -1,5 +1,5 @@
 # Phase 7 — React Parity Completion & Hardening
-Last Update: 2026-Aug-04, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
+Last Update: 2026-Aug-04, by: opencode (auto/coding, model: big-pickle).
 
 > **Target:** Both Blazor WASM apps (admin + dashboard) are pixel- and behavior-identical to the
 > React 19 apps (`clients/admin`, `clients/dashboard`) — or better — and the MAUI Hybrid app matches

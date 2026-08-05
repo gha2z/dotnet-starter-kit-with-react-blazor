@@ -1,6 +1,6 @@
 # Current Status
 
-Last Update: 2026-Aug-04, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
+Last Update: 2026-Aug-05, by: opencode (auto/coding, model: big-pickle).
 
 ## Progress
 
@@ -9,7 +9,7 @@ Last Update: 2026-Aug-04, by: opencode (auto/coding, model: opencode/mimo-v2-pro
 | Phase 0 | ✅ | — |
 | Phase 1 | ✅ | — |
 | Phase 2 | ✅ (2.1–2.10) | admin 147/147 |
-| Phase 3 | 🟨 (3.1–3.11 ✅, next: 3.12) | dashboard 133/133 |
+| Phase 3 | 🟨 (3.1–3.12 ✅, next: 3.13) | dashboard 146/146 |
 | Phase 4 | 🔲 | — |
 | Phase 5 | 🔲 | — |
 | Phase 6 | 🔲 | — |
@@ -17,7 +17,7 @@ Last Update: 2026-Aug-04, by: opencode (auto/coding, model: opencode/mimo-v2-pro
 
 ## Next Task
 
-**3.12 Settings** — Profile, Security, Appearance, API Keys
+**3.13 Impersonation** — ImpersonationBanner, `act_sub`/`act_tenant` claim detection in AuthStateProvider, terminal pages
 
 ## Files to Read
 

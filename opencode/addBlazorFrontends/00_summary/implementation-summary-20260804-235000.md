@@ -2,7 +2,7 @@
 
 ---
 **Description:** 3.11 System Pages — Health, Audits, Sessions, Trash + workflow improvements
-**Creator:** opencode (auto/coding, model: opencode/mimo-v2-pro-max)
+**Creator:** opencode (auto/coding, model: big-pickle)
 **Duration:** 25m
 ---
 

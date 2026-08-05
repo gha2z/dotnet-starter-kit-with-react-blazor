@@ -2,7 +2,7 @@
 
 ---
 **Description:** Implemented 3.10 Files for dashboard-blazor — file manager page with My Files + Shared tabs, drag-and-drop upload zone (3-step presigned protocol), file list with search/filter, preview dialog (image/PDF), download, delete, and 6 bUnit tests. Also improved the readme.md with session start ritual, clarified model identity discovery, and fixed timestamp format.
-**Creator:** opencode (auto/coding, model: opencode/mimo-v2-pro-max)
+**Creator:** opencode (auto/coding, model: big-pickle)
 **Duration:** 30m
 ---
 

@@ -1,0 +1,31 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Routing
+@using MudBlazor
+
+<div class="space-y-6">
+    <FshPageHeader Title="Settings" Icon="@Icons.Material.Filled.Settings" Tone="Color.Primary"
+                   Description="Manage your personal settings." />
+
+    <div class="d-flex flex-column flex-xl-row gap-6">
+        <nav class="d-none d-xl-block" style="min-width: 240px;">
+            <MudNavMenu>
+                <MudNavLink Href="/settings/profile" Icon="@Icons.Material.Filled.AccountCircle"
+                            Match="NavLinkMatch.Prefix">Profile</MudNavLink>
+                <MudNavLink Href="/settings/security" Icon="@Icons.Material.Filled.Shield"
+                            Match="NavLinkMatch.Prefix">Security</MudNavLink>
+                <MudNavLink Href="/settings/appearance" Icon="@Icons.Material.Filled.Palette"
+                            Match="NavLinkMatch.Prefix">Appearance</MudNavLink>
+                <MudNavLink Href="/settings/branding" Icon="@Icons.Material.Filled.Brush"
+                            Match="NavLinkMatch.Prefix">Branding</MudNavLink>
+                <MudNavLink Href="/settings/notifications" Icon="@Icons.Material.Filled.Notifications"
+                            Match="NavLinkMatch.Prefix">Notifications</MudNavLink>
+                <MudNavLink Href="/settings/api-keys" Icon="@Icons.Material.Filled.Key"
+                            Match="NavLinkMatch.Prefix">API keys</MudNavLink>
+            </MudNavMenu>
+        </nav>
+
+        <div class="flex-grow-1">
+            @Body
+        </div>
+    </div>
+</div>

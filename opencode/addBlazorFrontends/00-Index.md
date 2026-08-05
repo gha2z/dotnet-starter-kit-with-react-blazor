@@ -1,9 +1,9 @@
 # Blazor WASM + MAUI — Implementation Roadmap
-Last Update: 2026-Aug-04, by: opencode (auto/coding, model: opencode/mimo-v2-pro-max).
+Last Update: 2026-Aug-05, by: opencode (auto/coding, model: big-pickle).
 
-> Status: **Phase 0 ✅ | Phase 1 ✅ | Phase 2 ✅ (2.1–2.10 done — Tenants, Users, Roles, Billing, Webhooks, Audits, Health, Notifications inbox, Settings, Impersonation — admin blazor 147/147) | Phase 3 🟨 (3.1 Overview ✅ + 3.2 Activity ✅ + 3.3 Subscription ✅ + 3.4 Wallet ✅ + 3.5 Invoices ✅ + 3.6 Catalog ✅ + 3.7 Identity ✅ + 3.8 Tickets ✅ + 3.9 Chat ✅ + 3.10 Files ✅ + 3.11 System ✅ — dashboard suite 133/133 — next: 3.12 Settings) | Phase 4 🔲 | Phase 5 🔲 | Phase 6 🔲 | Phase 7 🟨 (parity completion — admin pages complete + runtime DI hardened, styled 404 done)**
+> Status: **Phase 0 ✅ | Phase 1 ✅ | Phase 2 ✅ (2.1–2.10 done — Tenants, Users, Roles, Billing, Webhooks, Audits, Health, Notifications inbox, Settings, Impersonation — admin blazor 147/147) | Phase 3 🟨 (3.1 Overview ✅ + 3.2 Activity ✅ + 3.3 Subscription ✅ + 3.4 Wallet ✅ + 3.5 Invoices ✅ + 3.6 Catalog ✅ + 3.7 Identity ✅ + 3.8 Tickets ✅ + 3.9 Chat ✅ + 3.10 Files ✅ + 3.11 System ✅ + 3.12 Settings ✅ — dashboard suite 146/146 — next: 3.13 Impersonation) | Phase 4 🔲 | Phase 5 🔲 | Phase 6 🔲 | Phase 7 🟨 (parity completion — admin pages complete + runtime DI hardened, styled 404 done)**
 >
-> **Blazor WASM apps: admin 147/147 tests passing, dashboard 133/133 tests passing.**
+> **Blazor WASM apps: admin 147/147 tests passing, dashboard 146/146 tests passing.**
 >
 > **Parity sprint 1 (React ↔ Blazor, done):** both sidebars rebuilt 1:1 from `nav-items.ts` / `nav-data.ts`
 > (accordion sections, permission-gated, collapse `"true"/"false"`) · dashboard theme = `fsh.theme` +

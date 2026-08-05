@@ -2,7 +2,7 @@
 
 ---
 **Description:** Implemented 3.9 Chat for dashboard-blazor — real-time channel-based messaging with SignalR integration, channel rail, message list, composer, create channel dialog, and 8 bUnit tests. Also fixed model identity in docs (opencode/big-pickle → opencode/mimo-v2-pro-max).
-**Creator:** opencode (auto/coding, model: opencode/mimo-v2-pro-max)
+**Creator:** opencode (auto/coding, model: big-pickle)
 **Duration:** 45m
 ---
 

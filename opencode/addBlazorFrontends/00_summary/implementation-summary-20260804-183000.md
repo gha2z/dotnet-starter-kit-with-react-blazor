@@ -2,7 +2,7 @@
 
 ---
 **Description:** Fixed two bugs in dashboard-blazor (stock adjustment deserialization + identity pages crash from missing authorization policies), then implemented 3.8 Tickets (list page, detail page, create/resolve/assign dialogs, service, DTOs, bUnit tests, CSS) for full React parity.
-**Creator:** opencode (auto/coding, model: opencode/mimo-v2-pro-max)
+**Creator:** opencode (auto/coding, model: big-pickle)
 **Duration:** 1h 45m
 ---
 

@@ -1,0 +1,56 @@
+@page "/settings/appearance"
+@attribute [Authorize]
+@layout SettingsLayout
+@implements IDisposable
+@using FSH.BlazorShared.Theming
+@inject FshThemeService ThemeService
+
+<FshPageHeader Title="Appearance" Icon="@Icons.Material.Filled.Palette"
+               Description="Theme and visual preferences." />
+
+<MudPaper Class="pa-6" Elevation="0" Outlined="true">
+    <MudText Typo="Typo.h6" Class="mb-2">Theme</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+        Pick a colour mode for the dashboard. System follows your OS preference.
+    </MudText>
+    <MudRadioGroup T="ThemeMode" @bind-Value="_currentMode">
+        <MudRadio Value="ThemeMode.Light" Color="Color.Primary">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.LightMode" Size="Size.Small" />
+                Light — bright canvas
+            </div>
+        </MudRadio>
+        <MudRadio Value="ThemeMode.System" Color="Color.Primary">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.SettingsBrightness" Size="Size.Small" />
+                System — follow OS
+            </div>
+        </MudRadio>
+        <MudRadio Value="ThemeMode.Dark" Color="Color.Primary">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.DarkMode" Size="Size.Small" />
+                Dark — reduced glare
+            </div>
+        </MudRadio>
+    </MudRadioGroup>
+</MudPaper>
+
+@code {
+    private ThemeMode _currentMode
+    {
+        get => ThemeService.Mode;
+        set => _ = ThemeService.SetModeAsync(value);
+    }
+
+    protected override void OnInitialized()
+    {
+        ThemeService.Changed += OnThemeChanged;
+    }
+
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        ThemeService.Changed -= OnThemeChanged;
+    }
+}

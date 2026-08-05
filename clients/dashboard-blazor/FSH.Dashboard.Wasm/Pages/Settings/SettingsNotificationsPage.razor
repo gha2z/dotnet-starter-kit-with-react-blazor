@@ -1,0 +1,19 @@
+@page "/settings/notifications"
+@attribute [Authorize]
+@layout SettingsLayout
+
+<FshPageHeader Title="Notification preferences" Icon="@Icons.Material.Filled.Notifications"
+               Description="Choose which events you want delivered as email or in-app notifications." />
+
+<MudPaper Class="pa-6" Elevation="0" Outlined="true">
+    <MudStack AlignItems="AlignItems.Center" Class="py-10">
+        <MudIcon Icon="@Icons.Material.Filled.Notifications" Size="Size.Large" Color="Color.Default" />
+        <MudText Typo="Typo.h6">Per-event preferences aren&apos;t tunable yet.</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary text-center" Style="max-width: 380px;">
+            In-app notifications are already delivered to your bell — open it from
+            the top bar to see them. Granular per-event email opt-ins are on the
+            v1.1 roadmap. In the meantime, your tenant admin can disable email
+            delivery globally.
+        </MudText>
+    </MudStack>
+</MudPaper>

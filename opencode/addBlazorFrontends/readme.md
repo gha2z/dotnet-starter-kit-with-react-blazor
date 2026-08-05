@@ -16,14 +16,48 @@ After completing a feature:
 
 On session start:
 1. `git status` — confirm the tree is clean or matches the expected in-progress work
-2. Read `STATUS.md` — current state, next task
-3. Read the latest `00_summary/implementation-summary-*.md` — what was last done
-4. Read `.agents/rules/frontend/blazor-shared.md` — Blazor conventions (plus `blazor-admin.md`,
+2. Determine your actual model identity (see "Model Identity Convention" below) and record it
+   for today's docs
+3. Read `./opencode/addBlazorFrontends/STATUS.md` — current state, next task
+4. Read the latest `./opencode/addBlazorFrontends/00_summary/implementation-summary-*.md` — what was last done
+5. Read `.agents/rules/frontend/blazor-shared.md` — Blazor conventions (plus `blazor-admin.md`,
    `blazor-dashboard.md`, or `maui-hybrid.md` for the target app)
-5. Load any relevant skills from `.agents/skills/` (e.g. `add-blazor-page`, `add-feature`,
+6. Load any relevant skills from `.agents/skills/` (e.g. `add-blazor-page`, `add-feature`,
    `setup-blazor-auth`, `setup-blazor-realtime`, `implement-blazor-list`, `implement-blazor-form`,
    `add-permission`) before you start
-6. Verify builds + tests pass before starting work
+7. Verify builds + tests pass before starting work
+
+---
+
+## Model Identity Convention
+
+**Never guess or copy a model identity from memory or older docs.** Identity drift happened before —
+a session "fixed" the docs to a wrong model name without verification, and it propagated for two
+sessions. Determine it fresh every session.
+
+**`auto/*` is a combo name, NOT a model.** A combo routes through a gateway (e.g. `omniroute`) to an
+actual model (e.g. `big-pickle`). Writing the combo as the model is wrong.
+
+### How to determine your actual model identity
+
+1. **Inspect the opencode raw-message JSON** (system prompt / context window / raw messages) for the
+   `modelID` + `providerID` of your current session.
+2. **If `modelID` is a concrete model** (not `auto`/`auto/*`, e.g. `mimo-v2.5-free` via provider
+   `opencode`) → use it directly. **No gateway log query needed.**
+3. **If `modelID` is an `auto` combo** (e.g. `auto/coding`, provider `omniroute`) → resolve the real
+   routed model through the omniroute log:
+   - Open `http://localhost:20128/login`, enter the password (see dev machine secrets)
+   - Open `http://localhost:20128/api/usage/call-logs?status=ok&limit=1`
+   - Read the `model` field of the most recent `ok` entry (e.g. `big-pickle`)
+
+### Identity format in docs
+
+Use the resolved model everywhere identity appears:
+
+- Headers: `Last Update: <yyyy-MM-dd HH:mm:ss>, by: opencode (auto/coding, model: <routed-model>).`
+- Summaries: `**Creator:** opencode (auto/coding, model: <routed-model>)`
+
+Use the actual session timestamp (24-hour clock), not a value copied from a prior file.
 
 ---
 
@@ -41,6 +75,8 @@ Before writing any `.razor` file, read an existing working page in the same proj
 - [ ] Target project builds 0 warnings; that app's suite is green
 - [ ] If behavior is not bUnit-testable (menu opens on click, real navigation), list the exact
       manual-verification steps and flag them in the summary
+- [ ] Docs written this session use the **freshly-verified** model identity (see Model Identity
+      Convention) + actual session timestamp — never a value copied from prior files
 - [ ] Fix any warning you introduce
 
 ---
@@ -49,7 +85,18 @@ Before writing any `.razor` file, read an existing working page in the same proj
 
 - After each unit of work: `dotnet build <target.csproj>` then `dotnet test <app>.Tests`
   (fast feedback, small output)
+- **Never trust an incremental build for handoff.** The Razor source generator caches in `obj/` —
+  `--no-incremental` alone does NOT flush it, so a stale `obj/` can report "0 errors" for code that
+  fails to compile (real incident: `Icons.Material.Filled.Bell` shipped "green"). Before any handoff:
+  1. Delete `obj/` + `bin/` for every changed project (and its `.Tests`)
+  2. `dotnet build <target.csproj>` — must be 0 warnings, 0 errors
+  3. `dotnet test <app>.Tests` — suite must be green
+  4. Run `dotnet build` on the sibling Blazor app too (BlazorShared is shared — cross-app breakage)
 - Full solution build + both app suites at phase end (catches cross-project breakage)
+- **Icon smoke check (MudBlazor):** before handoff, grep all `Icons.Material.*` references in the
+  pages you touched and verify each constant exists in the referenced MudBlazor assembly
+  (`Icons.Material.Filled.*` etc.). Icon names drift between MudBlazor versions (`Bell` → use
+  `Notifications`).
 
 ---
 

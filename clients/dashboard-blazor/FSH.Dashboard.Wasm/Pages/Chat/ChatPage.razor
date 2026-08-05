@@ -14,7 +14,7 @@
                               DebounceInterval="300" OnDebounceIntervalElapsed="LoadChannels"
                               Margin="Margin.Dense" Variant="Variant.Outlined" Class="flex-grow-1" />
                 <MudIconButton Icon="@Icons.Material.Outlined.Add" Size="Size.Small" OnClick="OpenCreateChannelDialog"
-                               Class="ml-2" Title="Create channel" />
+                               Class="ml-2" aria-label="Create channel" />
             </div>
 
             <MudDivider />
@@ -121,7 +121,7 @@
                                 }
                                 @if (msg.DeletedAtUtc.HasValue)
                                 {
-                                    <MudText Typo="Typo.body2" Italic="true" Color="Color.Secondary">Message deleted</MudText>
+                                    <MudText Typo="Typo.body2" Style="font-style: italic;" Color="Color.Secondary">Message deleted</MudText>
                                 }
                                 else
                                 {

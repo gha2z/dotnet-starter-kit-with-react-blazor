@@ -1,19 +1,10 @@
 @page "/settings"
-@page "/settings/profile"
-@page "/settings/api-keys"
 @attribute [Authorize]
 @inject NavigationManager Nav
 
-<MudContainer Class="d-flex align-center justify-center" Style="min-height: 50vh">
-    <MudProgressCircular Indeterminate="true" />
-</MudContainer>
-
 @code {
-    // Placeholder: the dashboard Settings area (profile/security/appearance/api-keys) is built in
-    // Phase 3.12. Until then, redirect to the overview so user-menu items never 404.
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        await Task.Yield();
-        Nav.NavigateTo("/", replace: true);
+        Nav.NavigateTo("/settings/profile", replace: true);
     }
 }
