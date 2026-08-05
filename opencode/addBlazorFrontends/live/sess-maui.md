@@ -1,15 +1,20 @@
 # sess-maui
-identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-06 04:10
+identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-06 03:47
 
 scope: clients/FSH.Hybrid/** · clients/admin-blazor/** (per amended scope) · root README.md ·
 .agents/rules/frontend/maui-hybrid.md · opencode/addBlazorFrontends/live/sess-maui.md ·
 opencode/addBlazorFrontends/verify-hybrid.ps1 · 00_summary summaries
 
 ## Current task
-Phase B complete — 5.5/5.5b/5.6/5.7/5.9/5.4(gated) written, Windows + Android builds green, tests 12/12.
-Remaining: verify-hybrid.ps1 run, Phase C (admin palette — parked), Phase D docs, summary + staging.
+Phase C: admin command palette (Ctrl+K) — claimed 2026-08-06 03:50 (Phase-05 plan). Code complete: NavSpec.cs + CommandPalette + MainLayout wiring + 8 tests; admin 155/155, app 0 warnings. Next: gate + staging (awaiting user approval).
 
 ## Touched files (update as you go)
+- opencode/addBlazorFrontends/Phase-05-MAUI-Hybrid/plan.md (Phase C claim line)
+- clients/admin-blazor/FSH.Admin.Wasm/Shared/NavSpec.cs (new)
+- clients/admin-blazor/FSH.Admin.Wasm/Shared/CommandPalette.razor (new)
+- clients/admin-blazor/FSH.Admin.Wasm/Shared/CommandPalette.razor.cs (new)
+- clients/admin-blazor/FSH.Admin.Wasm/Shared/MainLayout.razor (NavSpec consumption + search button + palette host)
+- clients/admin-blazor/FSH.Admin.Wasm.Tests/Components/CommandPaletteTests.cs (new, 8 tests)
 - opencode/addBlazorFrontends/readme.md
 - opencode/addBlazorFrontends/live/README.md (new)
 - opencode/addBlazorFrontends/live/board.md (new)

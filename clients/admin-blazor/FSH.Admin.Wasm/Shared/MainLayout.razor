@@ -9,6 +9,7 @@
 @using FSH.BlazorShared.Components
 @using FSH.BlazorShared.Permissions
 @using FSH.BlazorShared.Realtime
+@using FSH.Admin.Wasm.Shared
 @using Microsoft.AspNetCore.SignalR.Client
 
 <AuthorizeView>
@@ -90,6 +91,8 @@
             <div class="d-flex flex-column" style="flex: 1; min-width: 0;">
                 <header class="fsh-topbar">
                     <MudIconButton Icon="@Icons.Material.Filled.Menu" Size="Size.Medium" Class="fsh-topbar-menu" OnClick="ToggleDrawer" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Search" Size="Size.Medium" Class="fsh-topbar-command"
+                                   aria-label="Search (Ctrl+K)" OnClick="OpenPaletteAsync" />
                     <MudSpacer />
                     <FshNotificationBell />
                     <MudIconButton Icon="@(Theme.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
@@ -145,6 +148,7 @@
                 </main>
             </div>
         </div>
+        <CommandPalette @ref="_palette" />
     </Authorized>
     <NotAuthorized>
         <div class="d-flex align-center justify-center" style="min-height: 100vh;">
@@ -164,49 +168,16 @@
     private string _userEmail = string.Empty;
     private string _tenantName = string.Empty;
     private string _currentUri = "/";
+    private CommandPalette? _palette;
 
-    private sealed record NavItem(string Href, string Icon, string Label, string? Permission);
+    private IEnumerable<NavSpec.NavItem> VisibleTopItems => NavSpec.TopItems.Where(CanSee);
+    private IEnumerable<NavSpec.NavItem> VisibleBottomItems => NavSpec.BottomItems.Where(CanSee);
+    private IEnumerable<NavSpec.NavSection> VisibleSections => NavSpec.Sections.Where(s => s.Items.Any(CanSee));
 
-    private sealed record NavSection(string Id, string Caption, string Icon, IReadOnlyList<NavItem> Items);
-
-    // Nav spec mirrors the React admin app (clients/admin/src/components/layout/nav-items.ts).
-    private static readonly NavItem[] TopItems =
-    [
-        new("/", Icons.Material.Filled.SpaceDashboard, "Overview", null),
-    ];
-
-    private static readonly NavItem[] BottomItems =
-    [
-        new("/settings", Icons.Material.Filled.Settings, "Settings", null),
-    ];
-
-    private static readonly NavSection[] Sections =
-    [
-        new("multitenancy", "Tenants", Icons.Material.Filled.Business,
-        [
-            new("/tenants", Icons.Material.Filled.Business, "Tenants", MultitenancyPermissions.Tenants.View),
-        ]),
-        new("identity", "Identity", Icons.Material.Filled.People,
-        [
-            new("/users", Icons.Material.Filled.People, "Users", IdentityPermissions.Users.View),
-            new("/roles", Icons.Material.Filled.AdminPanelSettings, "Roles", IdentityPermissions.Roles.View),
-            new("/impersonation", Icons.Material.Filled.ManageAccounts, "Impersonation", IdentityPermissions.Impersonation.View),
-        ]),
-        new("operations", "Operations", Icons.Material.Filled.Insights,
-        [
-            new("/billing", Icons.Material.Filled.Receipt, "Billing", BillingPermissions.View),
-            new("/webhooks", Icons.Material.Filled.DeviceHub, "Webhooks", WebhooksPermissions.Subscriptions.View),
-            new("/audits", Icons.Material.Filled.Article, "Audits", AuditingPermissions.AuditTrails.View),
-            new("/health", Icons.Material.Filled.MonitorHeart, "Health", null),
-        ]),
-    ];
-
-    private IEnumerable<NavItem> VisibleTopItems => TopItems.Where(CanSee);
-    private IEnumerable<NavItem> VisibleBottomItems => BottomItems.Where(CanSee);
-    private IEnumerable<NavSection> VisibleSections => Sections.Where(s => s.Items.Any(CanSee));
-
-    private bool CanSee(NavItem item)
-        => item.Permission is null || _permissions.Contains(item.Permission);
+    // React parity: the single `Permission` (if any) AND at least one of `AnyPermissions` (if any).
+    private bool CanSee(NavSpec.NavItem item)
+        => (item.Permission is null || _permissions.Contains(item.Permission))
+           && (item.AnyPermissions is null || item.AnyPermissions.Any(_permissions.Contains));
 
     protected override void OnInitialized()
     {
@@ -258,7 +229,7 @@
             ? (Nav.Uri.TrimEnd('/').Length <= 0 ? "active" : string.Empty)
             : (_currentUri.StartsWith(path, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty);
 
-    private string NavLinkClass(NavItem item)
+    private string NavLinkClass(NavSpec.NavItem item)
         => $"fsh-nav-link {(_collapsed ? "collapsed" : null)} {IsActive(item.Href)}";
 
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
@@ -348,6 +319,8 @@
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
 
     private void CloseDrawer() => _drawerOpen = false;
+
+    private void OpenPaletteAsync() => _palette?.OpenAsync();
 
     private void GoHome() => Nav.NavigateTo("/");
 

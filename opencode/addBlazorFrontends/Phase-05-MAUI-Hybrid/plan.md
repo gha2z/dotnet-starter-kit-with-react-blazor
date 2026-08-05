@@ -121,6 +121,10 @@ Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-f
   - Android: `dotnet publish -f net10.0-android -c Release`
   - iOS: requires Mac runner + Apple Developer account
 
+## Phase C — Admin Command Palette (board row #1 sign-off, admin-blazor app code)
+
+- [ ] **Admin command palette (Ctrl+K)** — NavSpec single source + overlay + topbar search button + 8 bUnit tests — claimed by sess-maui @ 2026-08-06 03:50
+
 ## Next Up
 
 **Task 5.1**: Scaffold MAUI Hybrid project.
