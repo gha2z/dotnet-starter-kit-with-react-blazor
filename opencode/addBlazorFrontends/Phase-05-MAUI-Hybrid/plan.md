@@ -5,121 +5,82 @@ Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-f
 
 ## Status
 
-- Phase 5: **🟨 In progress (sess-maui)** — 5.5 offline queue ✅ (SQLite, tested 12/12), 5.6 media/camera upload ✅ (FilesPage at `/files`), 5.7 deep links ✅ (`fsh://`), 5.9 splash branding ✅; 5.4 push compile-gated (needs Firebase — see `push-setup.md`); remaining: 5.10 final verification (`verify-hybrid.ps1`), docs
-- Prerequisites: Phase 2 ✅ + Phase 3 ✅ (BlazorShared RCL stable, all pages known) — Phases 2/3 are **not** complete; Hybrid build-out starts once pages land
+- Phase 5: **🟨 In progress (sess-maui)** — 5.1–5.3 shell scaffold ✅ (`c77c9939`), 5.5 offline queue ✅ (SQLite, tested 12/12), 5.6 media/camera upload ✅ (FilesPage at `/files`), 5.7 deep links ✅ (`fsh://`), 5.9 splash branding ✅ (all `bc00bea5`); 5.4 push compile-gated (needs Firebase — see `push-setup.md`); **blocked/external:** 5.4 iOS APNs, 5.7 universal/app links, 5.8 IAP, 5.10 signing + CI (`.github/**` frozen); docs refresh 2026-08-06 (maui-hybrid.md, `6a5d84e2`)
+- Prerequisites: Phase 2 ✅ + Phase 3 ✅ (BlazorShared RCL stable, all pages known)
 - **MAUI workload (resolved Aug 2026):** `dotnet workload install maui` must run **elevated** (UAC). A non-elevated attempt corrupted the workload store (deleted manifest packs under `sdk-manifests\10.0.300\`, breaking every build with `MSB4242`). Recovery recipe: elevated → delete stale `workloadsets\10.0.302` → **recreate the empty folder** (installer requires it) → elevated `dotnet workload install maui`. Full story in `Phase-07-Parity-Completion/hands-on-phase-7.md` §7.6.
-- **Parity note:** Hybrid reuses `BlazorShared` (shell CSS, `FshThemeService`, components). `FshThemeService`/`ThemeMode` are not yet referenced by Hybrid — wire `("fsh.theme", ThemeMode.System)`-style registration when the shell is built (same storage contract; MAUI should use SecureStorage-backed token store but localStorage-backed theme is acceptable).
+- **Parity note:** Hybrid registers `FshThemeService` as `("fsh.theme", ThemeMode.System)` — same storage contract as the dashboard app (see `MauiProgram.cs`).
 
 ## Task Checklist
 
 ### 5.1 Project Scaffold & Setup
-- [ ] Create `clients/FSH.Hybrid/FSH.Hybrid/` directory structure
-- [ ] Create `FSH.Hybrid.csproj` — MAUI project targeting net10.0-android, net10.0-ios, net10.0-maccatalyst, net10.0-windows
+- [x] Create `clients/FSH.Hybrid/FSH.Hybrid/` directory structure — `c77c9939`
+- [x] Create `FSH.Hybrid.csproj` — MAUI project targeting net10.0-android, net10.0-ios, net10.0-maccatalyst, net10.0-windows10.0.19041.0 (windows TFM added conditionally on Windows hosts)
   - Reference `FSH.BlazorShared` RCL
-  - Add NuGet: `CommunityToolkit.Mvvm`, `CommunityToolkit.Maui`
-- [ ] Create `MauiProgram.cs` — DI registration matching WASM bootstrap pattern
-  - Custom `ITokenStore` → `MauiTokenStore` (SecureStorage)
-  - Custom `IAuthService` → `MauiAuthService` (biometric unlock)
-  - Register all BlazorShared services, HttpClient pipelines
-- [ ] Create `App.xaml` / `App.xaml.cs` — MAUI Application, Shell navigation
-- [ ] Create `MainPage.xaml` — BlazorWebView host
+  - NuGet: `CommunityToolkit.Mvvm`, `CommunityToolkit.Maui` (13.0.0/8.4.2, also MudBlazor 9.7.0 + sqlite-net-pcl 1.9.172)
+- [x] Create `MauiProgram.cs` — DI registration matching WASM bootstrap pattern
+  - `ITokenStore` → `MauiTokenStore` (SecureStorage)
+  - `IAuthService` → `AuthService` + `MauiAuthService`; `MauiAuthStateProvider` (biometric lock on resume)
+  - All BlazorShared services, named HttpClient pipelines (`FSH.Auth` / `FSH.Api` w/ Offline+Auth handlers / `FSH.Storage`)
+- [x] Create `App.xaml` / `App.xaml.cs` — MAUI Application, Shell navigation
+- [x] Create `MainPage.xaml` — BlazorWebView host
   - `<BlazorWebView HostPage="wwwroot/index.html">`
   - `<RootComponent Selector="#app" ComponentType="{x:Type local:Main}" />`
-- [ ] Create `wwwroot/index.html` — Minimal host page, load MudBlazor CSS/JS, app CSS
-- [ ] Create `Platforms/` folder structure (Android, iOS, MacCatalyst, Windows)
-- [ ] Configure `Properties/launchSettings.json` for each platform
+- [x] Create `wwwroot/index.html` — Minimal host page, load MudBlazor CSS/JS, app CSS
+- [x] Create `Platforms/` folder structure (Android, iOS, MacCatalyst, Windows)
+- [x] Configure `Properties/launchSettings.json` — **N/A**: MAUI templates ship no launchSettings.json; launch via `dotnet build -t:Run` / VS MAUI tooling (see Build & verify in `maui-hybrid.md`)
 
 ### 5.2 Auth — Native Token Storage
-- [ ] **MauiTokenStore** — `ITokenStore` using `SecureStorage`
-  - `GetAsync()` / `SetAsync()` / `ClearAsync()`
-  - Platform-specific keychain (KeyChain on Android, Keychain on iOS)
-- [ ] **Biometric service** — Interface + platform implementations
-  - Android: `BiometricPrompt` API
-  - iOS: `LAContext` LocalAuthentication
-  - Windows: Windows Hello
-- [ ] **MauiAuthStateProvider** — Extends shared AuthStateProvider
-  - Optionally require biometric unlock on app resume
-- [ ] **MauiAuthService** — Wraps IAuthService + biometric unlock
+- [x] **MauiTokenStore** — `ITokenStore` using `SecureStorage` (`GetAccessTokenAsync`/`SetAsync`/`ClearAsync` + refresh/impersonation token stashes) — `c77c9939`
+- [x] **Biometric service** — `IBiometricService` + platform impls (`Xamarin.AndroidX.Biometric` on Android; iOS via `LAContext` in `BiometricService`) — `c77c9939`
+- [x] **MauiAuthStateProvider** — Extends shared AuthStateProvider; biometric unlock required on resume when `fsh.hybrid.biometricLock` set — `c77c9939`
+- [x] **MauiAuthService** — Wraps `IAuthService` + biometric unlock — `c77c9939`
 
 ### 5.3 Native Navigation Shell
-- [ ] **AppShell.xaml** — MAUI Shell with:
-  - FlyoutItem entries for each major section
-  - TabBar for top-level navigation (phone) / Flyout (tablet)
-  - Register routes for all pages
-- [ ] **Shell navigation wiring** — Map Blazor routes to MAUI Shell routes
-  - Blazor pages render in BlazorWebView content area
-  - Shell items do NOT wrap every page (Hybrid: Shell handles global nav, Blazor handles inner nav)
-- [ ] **Platform-specific styling**
-  - Android: Material 3 colors, status bar
-  - iOS: Safe area insets, navigation bar appearance
-  - Windows: Mica backdrop, title bar customization
+- [x] **AppShell.xaml** — MAUI Shell with flyout entries (Home / Settings / About) — `c77c9939`
+- [x] **Shell navigation wiring** — Shell handles global nav (Home/Settings/About), Blazor handles inner nav (`Main.razor` + `HybridNavigationBridge.PendingPath` for deep links) — `c77c9939`/`bc00bea5`
+- [x] **Platform-specific styling**
+  - Windows: Mica backdrop (`App.xaml.cs` `OnWindowHandlerChanged`); Android/iOS use MAUI defaults (status bar/safe area) — `c77c9939`
 
 ### 5.4 Push Notifications
-- [ ] **IPushNotificationService** — Interface
-- [ ] **Android implementation** — Firebase Cloud Messaging
-  - `FirebaseMessagingService` subclass
-  - Handle `OnNewToken`, `OnMessageReceived`
-  - Display notification channel
-- [ ] **iOS implementation** — APNs
-  - Register for remote notifications
-  - `DidReceiveRemoteNotification`
-- [ ] **Permission handling** — Request notification permission on first launch
-- [ ] **Deep link from notification** — Navigate to relevant page on tap
+- [x] **IPushNotificationService** — Interface (`RegisterAsync`) — `bc00bea5`
+- [x] **Android implementation** — Firebase Cloud Messaging; compile-gated behind `#if ANDROID && FSH_FIREBASE` (needs Firebase project + `google-services.json` + package; see `push-setup.md`) — `bc00bea5`
+- [ ] **iOS implementation** — APNs — **blocked/external**: needs Apple Developer + Mac build host; wire a `#if IOS && FSH_APNS` path when available (mirror the Android gate)
+- [x] **Permission handling** — `POST_NOTIFICATIONS` + `INTERNET` declared in AndroidManifest; permission requested inside the gated Android path — `bc00bea5`
+- [ ] **Deep link from notification** — **blocked/external**: depends on the FCM/APNs path above; hook `HybridNavigationBridge.PendingPath` on tap when enabled
 
 ### 5.5 Offline Queue
-- [ ] **IQueueService** — Interface (enqueue, dequeue, peek, retry)
-- [ ] **SQLite implementation** — Store failed HTTP calls
-  - Table: queue items (method, url, headers, body, createdAt, retryCount)
-  - Max retries: 3
-- [ ] **ConnectivityService** — Monitor `Connectivity.Current.NetworkAccess`
-  - Fires `OnConnectivityChanged` event
-  - On reconnect: process queue items sequentially
-- [ ] **QueueProcessor** — Dequeue → retry → success: remove, fail: increment retry
-- [ ] **DelegatingHandler integration** — On HTTP failure, check connectivity → queue instead of throw
+- [x] **IOfflineQueueService** — interface (enqueue, remove, mark-failed, snapshot) — `bc00bea5`
+- [x] **SQLite implementation** — sqlite-net-pcl table (method, url, headers, body, createdAt, retryCount); max retries 3 then drop; `IAsyncDisposable` — `bc00bea5`
+- [x] **ConnectivityService** — `IConnectivityService` monitors `Connectivity.Current.NetworkAccess` — `c77c9939`
+- [x] **QueueProcessor** — `OfflineQueueProcessor`: dequeue → retry (FIFO via "FSH.Api" pipeline) → success remove / fail increment — `bc00bea5`
+- [x] **DelegatingHandler integration** — `OfflineDelegatingHandler` (outermost on `FSH.Api`): offline + POST/PUT/PATCH/DELETE → queue + `OfflineException`; GETs pass through — `bc00bea5`
+- **Deviation from plan:** replay is triggered on `Window.Created` + `OnResume` (App.xaml.cs), NOT on `ConnectivityChanged` — deliberate (documented in `maui-hybrid.md`)
 
 ### 5.6 Camera & File Access
-- [ ] **ICameraService** — Interface
-- [ ] **Implementation** — `MediaPicker.Default.CapturePhotoAsync()`, `CaptureVideoAsync()`
-- [ ] **IFilePickerService** — Interface
-- [ ] **Implementation** — `FilePicker.Default.PickAsync()` with file type filters
-- [ ] **Integration** — Pass picked file to the upload flow (presigned URL upload)
-  - In WASM: file picked via browser `<input>`
-  - In MAUI: picked via native picker → Stream → HttpClient upload
+- [x] **IMediaPickerService** — capture photo/video via `MediaPicker` with `MediaPickerOptions` — `bc00bea5`
+- [x] **File picker** — `FilePicker.Default.PickAsync` + content-type map — `bc00bea5`
+- [x] **Integration** — `IHybridFileUploadService` presigned flow (`OwnerType: "MyFiles"` → PUT via `FSH.Storage` → `FinalizeUploadAsync`); proof page **FilesPage** `/files` — `bc00bea5`
 
 ### 5.7 Deep Linking
-- [ ] **URL scheme registration** — `fsh://` custom scheme
-  - Android: Intent filter in `AndroidManifest.xml`
-  - iOS: `CFBundleURLTypes` in `Info.plist`
-  - Windows: Protocol handler registration
-- [ ] **Universal Links** (iOS) / **App Links** (Android)
-  - Associate website (`/.well-known/assetlinks.json`, `apple-app-site-association`)
-- [ ] **Deep link handler** — Parse URL → navigate to Blazor page
-  - `fsh://login?token=...` → autologin
-  - `fsh://ticket/123` → navigate to ticket detail
-  - Link from notification → navigate to relevant page
+- [x] **URL scheme registration** — `fsh://` custom scheme
+  - Android: Intent filter in `MainActivity`/manifest — `bc00bea5`
+  - iOS: `CFBundleURLTypes` in `Info.plist` — `bc00bea5`
+  - Windows: not registered — optional future
+- [ ] **Universal Links** (iOS) / **App Links** (Android) — **blocked/external**: needs a hosted domain with `.well-known/assetlinks.json` + `apple-app-site-association`
+- [x] **Deep link handler** — `IDeepLinkService.Parse` (fsh://home|settings|about → shell; other paths → `HybridNavigationBridge.PendingPath` → Blazor router) — `bc00bea5`
+  - `fsh://login?token=...` autologin / `fsh://ticket/123` → covered generically (any non-shell path lands in the Blazor router; explicit param parsing is future work)
 
 ### 5.8 In-App Purchases
-- [ ] **ISubscriptionService (MAUI)** — Wraps platform billing
-  - Android: `Google.BillingClient` (via CommunityToolkit.Maui.InAppPurchases or manual)
-  - iOS: `StoreKit` (via `SKProductsRequest`, `SKPaymentQueue`)
-  - Windows: `Microsoft.Windows.ApplicationModel.Store`
-- [ ] **Sync with server** — Verify purchase server-side (Google Play Billing receipt validation, iOS receipt)
-  - MAUI calls platform → gets purchase token → sends to API → API verifies → upgrades subscription
-- [ ] **Restore purchases** — Button to restore previously purchased items
+- [ ] **Blocked/external** — platform billing (Google Billing / StoreKit / Store) + server-side receipt validation: no backend IAP endpoints exist in FSH, no Apple/Google billing accounts on this machine. Revisit after backend IAP support lands; then wrap as a compile-gated skeleton like 5.4 push.
 
 ### 5.9 Splash Screen & App Icon
-- [ ] **Splash screen** — FSH brand logo, centered on brand background
-  - Android: `mipmap-*` resources
-  - iOS: `LaunchScreen.storyboard` or `UILaunchStoryboardName`
-- [ ] **App icon** — Generated icons for all platforms/resolutions
-  - `Icon/` in MAUI project with `AppIcon` in `.csproj`
+- [x] **Splash screen** — `Resources/Splash/splash.svg` branded (dark-teal `#1B2A2C`, accent `#0FB5AE`, F monogram) via `MauiSplashScreen` — `bc00bea5`
+- [x] **App icon** — `Resources/AppIcon/appicon.svg` + foreground with `Color="#1B2A2C"` via `MauiIcon`; all platform/resolution variants are generated by MAUI resizetizer from the svg
 
 ### 5.10 Build & Sign Configuration
-- [ ] **Android signing** — Keystore config in csproj for release builds
-- [ ] **iOS provisioning** — Entitlements.plist, code signing
-- [ ] **CI/CD** — GitHub Actions workflow for MAUI builds
-  - Android: `dotnet publish -f net10.0-android -c Release`
-  - iOS: requires Mac runner + Apple Developer account
+- [ ] **Android signing** — release keystore config — **blocked/external**: needs user's keystore + secrets; add `<AndroidKeyStore>`/`<AndroidSigningKeyStore>` props when provided
+- [ ] **iOS provisioning** — Entitlements.plist, code signing — **blocked/external**: needs Apple Developer account + Mac
+- [ ] **CI/CD** — GitHub Actions workflow for MAUI builds — **blocked: `.github/**` is frozen** by coordination protocol; un-freeze via board sign-off when the other apps' CI is stable
 
 ## Phase C — Admin Command Palette (board row #1 sign-off, admin-blazor app code)
 
@@ -127,16 +88,11 @@ Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-f
 
 ## Next Up
 
-**Task 5.1**: Scaffold MAUI Hybrid project.
+All in-zone MAUI work is delivered (5.1–5.3 `c77c9939`, 5.4–5.7 + 5.9 `bc00bea5`). Remaining Phase 5 items are **blocked/external** (5.4 iOS APNs, 5.7 universal links, 5.8 IAP, 5.10 signing + CI — see checklists). Follow-up when unblocked:
 
-1. `dotnet workload install maui` (one-time)
-2. Create `clients/FSH.Hybrid/FSH.Hybrid/` directory tree
-3. Create `.csproj` targeting net10.0-android/ios/maccatalyst/windows
-4. Add reference to `clients/BlazorShared/FSH.BlazorShared.csproj`
-5. Create `MauiProgram.cs` with DI registration
-6. Create `App.xaml` + `MainPage.xaml` with BlazorWebView
-7. Verify `dotnet build` succeeds for at least net10.0-windows
-8. Run: `dotnet build -t:Run -f net10.0-windows`
+1. 5.4 iOS: wire `#if IOS && FSH_APNS` path (mirror Android gate) + `push-setup.md` update.
+2. 5.8 IAP: compile-gated skeleton once backend receipt endpoints exist.
+3. 5.10: signing props (user secrets) + `.github` MAUI CI (needs board sign-off to un-freeze).
 
 ## Architecture Decisions
 
@@ -145,7 +101,7 @@ Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-f
 | MAUI version | .NET 10 MAUI | Matches project target; latest stable |
 | Token storage | SecureStorage (not localStorage) | Native encrypted storage; no JS interop needed |
 | Auth method | Biometric + SecureStorage | Face ID / Fingerprint unlock before showing token |
-| Offline DB | SQLite (via Microsoft.Data.Sqlite) | Lightweight, works on all platforms, no EF needed for simple queue |
+| Offline DB | SQLite (sqlite-net-pcl 1.9.172 + SQLitePCLRaw.bundle_green 2.1.11) | Lightweight, works on all platforms, no EF needed for simple queue |
 | Push notifications | Firebase (Android) + APNs (iOS) | Standard; CommunityToolkit.Maui has helpers for both |
 | IAP | Platform-specific APIs | No cross-platform IAP library is mature for .NET 10 MAUI |
 | Shell navigation | MAUI Shell + Blazor inner nav | Hybrid approach: Shell for top-level, Blazor for page-level |
