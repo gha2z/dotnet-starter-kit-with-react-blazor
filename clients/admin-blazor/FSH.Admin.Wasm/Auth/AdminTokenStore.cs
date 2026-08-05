@@ -60,6 +60,8 @@ public sealed class AdminTokenStore(IJSRuntime js) : ITokenStore
     public Task SetFreshTokensAsync(string accessToken, string? refreshToken)
         => SetTokensAsync(accessToken, refreshToken);
 
+    public Task StashTokensAsync() => Task.CompletedTask;
+
     public Task RestoreTokensAsync() => Task.CompletedTask;
 
     private async Task<string?> GetItemAsync(string key)

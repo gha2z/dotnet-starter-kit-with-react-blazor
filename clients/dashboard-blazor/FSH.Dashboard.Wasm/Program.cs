@@ -41,6 +41,7 @@ builder.Services.AddScoped<AuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
     sp.GetRequiredService<AuthStateProvider>());
 builder.Services.AddScoped<IPermissionsProvider, PermissionsProvider>();
+builder.Services.AddScoped<ImpersonationHandoff>();
 
 // Auth HTTP client (no auth handler — used for login/refresh only)
 builder.Services.AddHttpClient("FSH.Auth", (sp, client) =>

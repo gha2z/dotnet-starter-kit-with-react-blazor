@@ -68,5 +68,7 @@ public sealed class MauiTokenStore : ITokenStore
     public Task SetFreshTokensAsync(string accessToken, string? refreshToken)
         => SetTokensAsync(accessToken, refreshToken);
 
+    public Task StashTokensAsync() => Task.CompletedTask;
+
     public Task RestoreTokensAsync() => Task.CompletedTask;
 }

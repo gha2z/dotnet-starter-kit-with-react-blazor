@@ -1,5 +1,6 @@
 using FSH.BlazorShared.Auth;
 using FSH.BlazorShared.Sse;
+using FSH.Dashboard.Wasm.Auth;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
@@ -12,6 +13,7 @@ public sealed partial class App : IDisposable
     [Inject] private ISseService Sse { get; set; } = default!;
     [Inject] private NavigationManager Nav { get; set; } = default!;
     [Inject] private IJSRuntime Js { get; set; } = default!;
+    [Inject] private ImpersonationHandoff ImpersonationHandoff { get; set; } = default!;
     [Inject] private ILogger<App> Logger { get; set; } = default!;
 
     private IDisposable? _sseSub;
@@ -58,11 +60,18 @@ public sealed partial class App : IDisposable
     private async Task CheckImpersonationHashAsync()
     {
         var hash = await Js.InvokeAsync<string>("eval", "window.location.hash");
-        if (hash?.StartsWith("#impersonation:") == true)
+        if (string.IsNullOrEmpty(hash) || !hash.StartsWith("#impersonate", StringComparison.Ordinal))
         {
-            var token = hash["#impersonation:".Length..];
-            await Js.InvokeVoidAsync("eval", "window.location.hash = ''");
+            return;
         }
+
+        // Runs during App bootstrap (before the Router's first render) so the
+        // impersonation session exists before any protected route asks for auth state.
+        await ImpersonationHandoff.InstallFromHashAsync(hash);
+
+        // Scrub the fragment (React parity: stripHash via history.replaceState) so the
+        // token can't linger in the URL bar or browser history.
+        await Js.InvokeVoidAsync("eval", ImpersonationHashStripScript);
     }
 
     private void OnTokensChanged()
@@ -123,6 +132,10 @@ public sealed partial class App : IDisposable
         public void OnError(Exception error) { }
         public void OnNext(SseEvent value) => onNext(value);
     }
+
+    private const string ImpersonationHashStripScript = @"
+        history.replaceState(null, '', location.pathname + location.search);
+    ";
 
     private const string CrossTabLogoutScript = @"
         window.addEventListener('storage', function(e) {

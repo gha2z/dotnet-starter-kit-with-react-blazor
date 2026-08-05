@@ -15,6 +15,7 @@ public interface ITokenStore
     // Impersonation helpers (no-op stores simply report "no stash" and forward fresh tokens).
     Task<bool> HasImpersonationStashAsync();
     Task SetFreshTokensAsync(string accessToken, string? refreshToken);
+    Task StashTokensAsync();
     Task RestoreTokensAsync();
 
     event Action? TokensChanged;
