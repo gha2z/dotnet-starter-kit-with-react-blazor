@@ -1,4 +1,5 @@
 # AddBlazorFrontends — Session Instructions
+** Last updated: 2026-Aug-05, by: Project Owner a.k.a user: FIKRUL IRSYAD.**
 
 ## Commit Policy
 
@@ -26,6 +27,67 @@ On session start:
    `setup-blazor-auth`, `setup-blazor-realtime`, `implement-blazor-list`, `implement-blazor-form`,
    `add-permission`) before you start
 7. Verify builds + tests pass before starting work
+
+---
+
+## Parallel Streams & Worktrees
+
+This repo runs **one Main stream plus parallel streams** when independent work can proceed
+simultaneously (MAUI Hybrid, Playwright E2E). The Main stream owns the repo root on `develop`;
+each parallel stream gets its own branch + worktree, executed by a subagent.
+
+| Stream | Branch | Location | Who |
+|--------|--------|----------|-----|
+| Main | `develop` | repo root | main session |
+| Parallel N | `feature/<name>` | `.worktrees/<name>` | subagent |
+
+Create a stream:
+
+```bash
+git worktree add -b feature/<name> .worktrees/<name> develop
+```
+
+- `.worktrees/` is gitignored — never commit it
+- Register every stream as a row in `STATUS.md` → "Active Streams" (branch · worktree · scope ·
+  owner · state); remove the row once merged
+- **`BlazorShared` is owned by the Main stream only** — parallel streams treat it read-only and
+  route requested changes through Main
+- Subagents never commit; each stream's work is committed by the user after approval (Commit Policy)
+
+## Subagent Dispatch Protocol
+
+Dispatch a subagent into a worktree only for work confined to **one independent project**.
+**Dispatch when:** `clients/FSH.Hybrid`, standalone test projects (E2E), read-only audits.
+**Never dispatch:** `BlazorShared` edits, both apps' `Program.cs`, shared csproj/solution files,
+`.gitignore`, root build files — Main-stream work only.
+
+Dispatch prompt template (fill in `<…>`; **one sub-feature per dispatch** — 5.1, not "Phase 5"):
+
+```
+You are a parallel-stream subagent working in git worktree <path> on branch <branch>.
+Goal: <one sub-feature>
+Read first: <STATUS.md stream row · phase plan · .agents/rules/... file · skill>
+Scope:
+- MAY modify: <files inside this project only>
+- READ-ONLY: clients/BlazorShared, clients/admin, clients/dashboard, src/**, AGENTS.md,
+  .agents/**, .gitignore, root build files, anything outside your project
+- Do NOT touch other clients' projects or shared solution files
+Build & test: only your own project + its tests — NEVER the solution (slnx). Work inside your own
+worktree: `dotnet build <your.csproj>` (add `-f <tfm>` when applicable), `dotnet test <your.Tests>`.
+Report contract (final message only):
+- Files changed: <git status --short output>
+- Verification: <N errors / N warnings / N tests passed / N skipped>
+- Blockers / notes: <anything the Main stream must know>
+No git commands, no commits, no touching other streams' files.
+```
+
+## Merge & Integration Protocol
+
+- Merge leaf streams → `develop` **after** Main's commits land; smallest diff first
+- Each merge needs user approval (show `git diff --cached --stat` per stream)
+- Post-merge gate: run full `verify.ps1`; if `BlazorShared` was touched, build **all three**
+  consumers (admin-blazor + dashboard-blazor + FSH.Hybrid)
+- Shared-file conflicts are resolved by the Main stream
 
 ---
 
@@ -85,17 +147,15 @@ Before writing any `.razor` file, read an existing working page in the same proj
 
 - After each unit of work: `dotnet build <target.csproj>` then `dotnet test <app>.Tests`
   (fast feedback, small output)
-- **Never trust an incremental build for handoff.** The Razor source generator caches in `obj/` —
-  `--no-incremental` alone does NOT flush it, so a stale `obj/` can report "0 errors" for code that
-  fails to compile (real incident: `Icons.Material.Filled.Bell` shipped "green"). Before any handoff:
-  1. Delete `obj/` + `bin/` for every changed project (and its `.Tests`)
-  2. `dotnet build <target.csproj>` — must be 0 warnings, 0 errors
-  3. `dotnet test <app>.Tests` — suite must be green
-  4. Run `dotnet build` on the sibling Blazor app too (BlazorShared is shared — cross-app breakage)
+- **Handoff verification: run `pwsh opencode/addBlazorFrontends/verify.ps1`.** It deletes `obj/` +
+  `bin/` for both apps and their test projects (the Razor source-gen cache in `obj/` is NOT flushed
+  by `--no-incremental` — real incident: `Icons.Material.Filled.Bell` shipped "green"), builds both
+  apps counting warnings/errors, runs both test suites, performs the MudBlazor icon audit, and
+  prints a paste-ready verification block for the summary. Variants: `-SkipClean`, `-SkipTests`.
+- Run verify.ps1 **inside the stream's own worktree** — the main checkout cannot verify worktree state.
 - Full solution build + both app suites at phase end (catches cross-project breakage)
-- **Icon smoke check (MudBlazor):** before handoff, grep all `Icons.Material.*` references in the
-  pages you touched and verify each constant exists in the referenced MudBlazor assembly
-  (`Icons.Material.Filled.*` etc.). Icon names drift between MudBlazor versions (`Bell` → use
+- **Icon smoke check (MudBlazor):** verify.ps1 audits `Icons.Material.*` references by reflection;
+  still spot-check new icons manually — names drift between MudBlazor versions (`Bell` → use
   `Notifications`).
 
 ---
@@ -104,7 +164,10 @@ Before writing any `.razor` file, read an existing working page in the same proj
 
 Modify ONLY:
 
-- `./clients/BlazorShared` · `./clients/admin-blazor` · `./clients/dashboard-blazor` · `./clients/FSH.Hybrid`
+- `./clients/BlazorShared` — **Main stream only**; parallel streams treat it read-only
+- `./clients/admin-blazor` · `./clients/dashboard-blazor` — Main stream (parallel-safe only for
+  standalone test projects, e.g. `clients/admin-blazor/FSH.Admin.Wasm.E2E.Tests`)
+- `./clients/FSH.Hybrid` — parallel-safe (MAUI stream)
 - `./opencode/addBlazorFrontends`
 - `./.agents/rules/frontend/{blazor-shared,blazor-admin,blazor-dashboard,maui-hybrid}.md` — OUR docs
 - `./.agents/skills/{add-blazor-page,add-maui-hybrid-feature,add-permission-csharp,implement-blazor-form,implement-blazor-list,setup-blazor-auth,setup-blazor-realtime,setup-blazor-sse}/SKILL.md` — OUR skills
@@ -128,22 +191,10 @@ full findings to a temp file while returning only a compact severity-ranked list
 ## Implementation Summary
 
 Write an MD file named `implementation-summary-<yyyy-MM-dd-HH-mm-ss>.md` (24-hour clock) in
-`./opencode/addBlazorFrontends/00_summary/` containing the summary of implementation steps:
-
-```
-# Implementation Summary <yyyy-MM-dd-HH-mm-ss>
-
----
-**Description:** <The description summary>
-**Creator:** <You>
-**Duration:** <How long the implementation took place>
----
-
-## <Phase N> - <Phase Name>: <Sub Feature N> - <Sub Feature Name>
----
-- Step 1: <Description summary of the step 1>
-...
-```
+`./opencode/addBlazorFrontends/00_summary/`. **Use `00_summary/_template.md` as the canonical
+schema** (header, description/creator/duration front-matter, verification block) — it supersedes
+inline templates; fill the verification block from `verify.ps1` output. Parallel streams write
+their own summary inside their worktree's `opencode/addBlazorFrontends/00_summary/`.
 
 ---
 
@@ -168,3 +219,24 @@ dotnet run --project src/Host/FSH.Starter.AppHost   # starts everything
 | dashboard (React) | http://localhost:5174 | acme | admin@acme.com | Password123! |
 | admin-blazor | http://localhost:5175 | root | admin@root.com | Password123! |
 | dashboard-blazor | http://localhost:5176 | acme | admin@acme.com | Password123! |
+| MAUI Hybrid | — (native, Windows) | — | — | — |
+
+MAUI Windows build: `dotnet build clients/FSH.Hybrid/FSH.Hybrid/FSH.Hybrid.csproj -f net10.0-windows10.0.19041.0`
+
+## Running MAUI from Visual Studio (two-instance setup)
+
+The MAUI app is a Blazor WebView client of the API — the backend must be up before login.
+
+1. **Instance 1 — backend:** open `src\FSH.Starter.slnx`, startup project `FSH.Starter.AppHost`, F5
+   (Docker infra + migrator + API; also starts the React apps — ignore them). Alternative: run
+   `dotnet run --project src/Host/FSH.Starter.AppHost` from a terminal (no API breakpoints).
+2. **Instance 2 — MAUI:** File → Open → Project/Solution → `clients\FSH.Hybrid\FSH.Hybrid\FSH.Hybrid.csproj`
+   (loads as a real MAUI project) → run target **`Windows Machine`** → F5. Unpackaged exe
+   (`WindowsPackageType=None`), no MSIX signing. Android works via emulator; iOS/MacCatalyst need a
+   paired Mac.
+3. **Prereqs:** API dev cert trusted (`dotnet dev-certs https --trust` — app defaults to
+   `https://localhost:7030` via `HybridRuntimeConfigService`); Windows App Runtime if F5 complains
+   (VS MAUI workload usually provisions it).
+
+The two instances share the checkout safely: the backend slnx covers `src/**` only, and the MAUI
+project's only shared dependency is `clients\BlazorShared` (read-only reference).

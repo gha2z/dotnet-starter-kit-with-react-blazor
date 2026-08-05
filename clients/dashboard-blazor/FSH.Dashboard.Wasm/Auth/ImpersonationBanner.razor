@@ -1,0 +1,28 @@
+@using FSH.BlazorShared.Models.Identity
+@implements IDisposable
+
+@if (_info is not null)
+{
+    <MudAlert Severity="@(_crossTenant ? Severity.Error : Severity.Warning)"
+              Elevation="0"
+              Dense="true"
+              Style="border-radius: 0; padding: 8px 24px;">
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" />
+            <MudText Typo="Typo.body2" Class="flex-grow-1">
+                <b>Impersonating @_info.SubjectName</b>
+                @if (_info.ActorName.Length > 0 || _info.ActorTenantId.Length > 0)
+                {
+                    <span style="opacity: 0.75;"> · by @_info.ActorName (@_info.ActorTenantId)</span>
+                }
+            </MudText>
+            <MudButton Size="Size.Small"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Disabled="@_ending"
+                       OnClick="StopImpersonationAsync">
+                @(_ending ? "Ending…" : "End impersonation")
+            </MudButton>
+        </div>
+    </MudAlert>
+}

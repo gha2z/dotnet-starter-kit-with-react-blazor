@@ -159,12 +159,13 @@ Full React parity — 6 pages + 4 dialogs, full CRUD (the plan's original read-o
 - [x] Added `UpdateMyProfileAsync` to `IUserService`/`UserService` + `UpdateProfileRequest` DTO (endpoint exists server-side)
 
 ### 3.13 Impersonation (Dashboard)
-- [ ] **ImpersonationBanner.razor** — MudAlert banner: "Impersonating {user}" + end button
-- [ ] **Impersonation detection** in AuthStateProvider: read `act_sub`, `act_tenant` claims
-- [ ] **Terminal pages:**
-  - [ ] `TenantDeactivatedPage.razor` — Redirect on 403 with deactivation reason
-  - [ ] `ImpersonationEndedPage.razor` — Redirect when impersonation revoked
-  - [ ] Both rendered outside AppShell (no sidebar)
+- [x] **ImpersonationBanner.razor** — MudAlert banner: "Impersonating {user}" + end button (warning amber same-tenant / error red cross-tenant; stop-flow with stash/no-stash branches + root-operator guard; React parity: `impersonation-banner.tsx`)
+- [x] **Impersonation detection** in AuthStateProvider: `GetImpersonation(ClaimsPrincipal)` / `GetImpersonationAsync()` read `act_sub`, `act_tenant`, `act_name` claims
+- [x] **Terminal pages:**
+  - [x] `TenantDeactivatedPage.razor` — Redirect on 403 with deactivation reason (`TerminalErrorHandler` outermost handler)
+  - [x] `ImpersonationEndedPage.razor` — Redirect when impersonation revoked (401 + act_sub; also catches `ApiRequestException(401)` from refresh failure)
+  - [x] Both rendered outside AppShell (no sidebar) — `@layout TerminalLayout`
+- [x] Added `EndImpersonationAsync` to `IImpersonationService` (POST `/api/v1/identity/impersonation/end` → `TokenResponse`) + `HasImpersonationStashAsync` / `SetFreshTokensAsync` / `RestoreTokensAsync` to `ITokenStore` (dashboard real impl; admin/hybrid no-ops)
 
 ### 3.14 Command Palette
 - [ ] **CommandPalette.razor** — MudAutocomplete with quick-nav to all pages

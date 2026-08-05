@@ -75,6 +75,20 @@ public sealed class DashboardTokenStore(IJSRuntime js) : ITokenStore
         await RemoveItemAsync(ImpersonationRefreshKey);
     }
 
+    public async Task<bool> HasImpersonationStashAsync()
+        => !string.IsNullOrEmpty(await GetItemAsync(ImpersonationAccessKey));
+
+    /// <summary>
+    /// Installs the fresh operator tokens returned by POST /impersonation/end and drops
+    /// the now-obsolete stash (React parity: stopImpersonation clears the stash).
+    /// </summary>
+    public async Task SetFreshTokensAsync(string accessToken, string? refreshToken)
+    {
+        await SetTokensAsync(accessToken, refreshToken);
+        await RemoveItemAsync(ImpersonationAccessKey);
+        await RemoveItemAsync(ImpersonationRefreshKey);
+    }
+
     private async Task<string?> GetItemAsync(string key)
         => await js.InvokeAsync<string?>("localStorage.getItem", key);
 

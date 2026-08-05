@@ -1,0 +1,27 @@
+@page "/tenant-deactivated"
+@layout TerminalLayout
+
+@* React parity: tenants/tenant-deactivated.tsx — calm centered terminal-state card shown
+   when the signed-in user's tenant is switched off mid-session. The deactivated-tenant
+   guard (MultitenancyModule) rejects every request with a 403; TerminalErrorHandler
+   detects it and routes here. No shell to render — the token is still technically valid,
+   but nothing inside the app will work. *@
+<div class="position-relative d-flex align-center justify-center" style="min-height: 100vh; background: var(--mud-palette-background); overflow: hidden;">
+    <div class="fsh-orb" style="width: 420px; height: 420px; background: color-mix(in srgb, var(--mud-palette-primary) 6%, transparent); top: -120px; left: -80px;"></div>
+    <div class="fsh-orb" style="width: 360px; height: 360px; background: color-mix(in srgb, var(--mud-palette-primary) 5%, transparent); bottom: -100px; right: -60px;"></div>
+
+    <div class="d-flex flex-column align-center text-center" style="max-width: 420px; padding: 0 24px;">
+        <FshToneIconTile Icon="@Icons.Material.Filled.Domain" Tone="Color.Secondary" TileSize="56px" IconSize="Size.Medium" Class="mb-4" />
+
+        <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-2 font-weight-medium">Tenant deactivated</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-6"
+                 Style="max-width: 380px; line-height: 1.6;">
+            This tenant has been deactivated and is no longer available. If you think this is a mistake, please contact your administrator.
+        </MudText>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Login"
+                   OnClick="BackToSignInAsync">
+            Back to sign in
+        </MudButton>
+    </div>
+</div>

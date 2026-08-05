@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using FSH.BlazorShared.Models.Identity;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace FSH.BlazorShared.Auth;
@@ -46,6 +47,32 @@ public sealed class AuthStateProvider(ITokenStore tokenStore, IPermissionsProvid
     {
         await permissionsProvider.InvalidateCache();
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+    }
+
+    /// <summary>
+    /// Detects an active impersonation session from the JWT's actor claims
+    /// (act_sub / act_tenant / act_name) and exposes the impersonation context.
+    /// Null when the current identity is a regular sign-in. React parity:
+    /// the same claims feed ImpersonationInfo in auth-context.ts.
+    /// </summary>
+    public async Task<ImpersonationInfo?> GetImpersonationAsync()
+        => GetImpersonation((await GetAuthenticationStateAsync()).User);
+
+    public static ImpersonationInfo? GetImpersonation(ClaimsPrincipal user)
+    {
+        var actor = user.FindFirst("act_sub")?.Value;
+        if (actor is null)
+        {
+            return null;
+        }
+
+        return new ImpersonationInfo(
+            ActorUserId: actor,
+            ActorTenantId: user.FindFirst("act_tenant")?.Value ?? string.Empty,
+            ActorName: user.FindFirst("act_name")?.Value ?? "Operator",
+            SubjectUserId: user.FindFirst("sub")?.Value ?? string.Empty,
+            SubjectTenantId: user.FindFirst("tenant")?.Value ?? string.Empty,
+            SubjectName: user.FindFirst("name")?.Value ?? user.FindFirst("email")?.Value ?? string.Empty);
     }
 
     private async Task<ClaimsPrincipal> CreatePrincipalAsync(string token)

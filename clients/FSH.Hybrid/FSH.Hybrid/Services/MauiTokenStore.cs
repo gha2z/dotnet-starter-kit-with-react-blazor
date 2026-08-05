@@ -61,4 +61,12 @@ public sealed class MauiTokenStore : ITokenStore
         SecureStorage.Remove(PermissionsKey);
         return Task.CompletedTask;
     }
+
+    // The MAUI app never impersonates - no stash to check; fresh tokens are a plain install.
+    public Task<bool> HasImpersonationStashAsync() => Task.FromResult(false);
+
+    public Task SetFreshTokensAsync(string accessToken, string? refreshToken)
+        => SetTokensAsync(accessToken, refreshToken);
+
+    public Task RestoreTokensAsync() => Task.CompletedTask;
 }

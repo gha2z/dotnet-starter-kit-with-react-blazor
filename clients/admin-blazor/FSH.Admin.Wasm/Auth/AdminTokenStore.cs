@@ -53,6 +53,15 @@ public sealed class AdminTokenStore(IJSRuntime js) : ITokenStore
     public async Task ClearPermissionsAsync()
         => await RemoveItemAsync(PermissionsKey);
 
+    // Impersonation never runs inside the admin app - the operator hands the session to
+    // the dashboard app via URL hash (BuildHandoffUrl), so there is no stash to check.
+    public Task<bool> HasImpersonationStashAsync() => Task.FromResult(false);
+
+    public Task SetFreshTokensAsync(string accessToken, string? refreshToken)
+        => SetTokensAsync(accessToken, refreshToken);
+
+    public Task RestoreTokensAsync() => Task.CompletedTask;
+
     private async Task<string?> GetItemAsync(string key)
         => await js.InvokeAsync<string?>("localStorage.getItem", key);
 

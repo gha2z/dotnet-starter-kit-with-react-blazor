@@ -13,6 +13,7 @@ public interface IImpersonationService
         CancellationToken ct = default);
     Task<ImpersonationResponse> StartImpersonationAsync(StartImpersonationRequest request, CancellationToken ct = default);
     Task<ImpersonationGrantDto> RevokeGrantAsync(Guid grantId, string? reason, CancellationToken ct = default);
+    Task<TokenResponse> EndImpersonationAsync(CancellationToken ct = default);
 }
 
 public sealed class ImpersonationService(HttpClient http) : IImpersonationService
@@ -51,5 +52,17 @@ public sealed class ImpersonationService(HttpClient http) : IImpersonationServic
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ImpersonationGrantDto>(ct)
             ?? throw new InvalidOperationException("Null revoke response");
+    }
+
+    /// <summary>
+    /// Ends the active impersonation grant. Returns a fresh operator token pair when
+    /// the operator had a stashed dashboard session (React parity: stopImpersonation).
+    /// </summary>
+    public async Task<TokenResponse> EndImpersonationAsync(CancellationToken ct = default)
+    {
+        var response = await http.PostAsync($"{Base}/end", content: null, ct);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<TokenResponse>(ct)
+            ?? throw new InvalidOperationException("Null end-impersonation response");
     }
 }

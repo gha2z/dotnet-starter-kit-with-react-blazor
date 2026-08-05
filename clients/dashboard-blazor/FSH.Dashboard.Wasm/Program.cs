@@ -123,11 +123,15 @@ builder.Services.AddAuthorizationCore(options =>
 
 // HTTP client with auth handler (for all authenticated API calls)
 builder.Services.AddTransient<AuthDelegatingHandler>();
+builder.Services.AddTransient<TerminalErrorHandler>();
 builder.Services.AddHttpClient("FSH.Api", (sp, client) =>
 {
     var config = sp.GetRequiredService<IRuntimeConfigService>();
     client.BaseAddress = RuntimeConfigService.ResolveApiBase(baseAddress, config.ApiBaseUrl);
 })
+// First registered = outermost: TerminalErrorHandler must see the FINAL response
+// (including AuthDelegatingHandler's refresh outcome and thrown ApiRequestException).
+.AddHttpMessageHandler<TerminalErrorHandler>()
 .AddHttpMessageHandler<AuthDelegatingHandler>();
 builder.Services.AddScoped(sp =>
     sp.GetRequiredService<IHttpClientFactory>().CreateClient("FSH.Api"));

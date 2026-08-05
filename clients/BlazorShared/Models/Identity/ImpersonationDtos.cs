@@ -28,6 +28,18 @@ public sealed record StartImpersonationRequest(
     string Reason,
     int? DurationMinutes = null);
 
+/// <summary>
+/// Impersonation context derived from JWT actor claims (act_sub / act_tenant / act_name).
+/// React parity: ImpersonationInfo in clients/dashboard/src/auth/auth-context.ts.
+/// </summary>
+public sealed record ImpersonationInfo(
+    string ActorUserId,
+    string ActorTenantId,
+    string ActorName,
+    string SubjectUserId,
+    string SubjectTenantId,
+    string SubjectName);
+
 /// <summary>One audit-visible impersonation grant row.</summary>
 public sealed record ImpersonationGrantDto(
     Guid Id,
