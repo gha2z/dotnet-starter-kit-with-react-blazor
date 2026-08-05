@@ -12,6 +12,7 @@
 @using FSH.BlazorShared.Realtime
 @using FSH.BlazorShared.Sse
 @using FSH.BlazorShared.Theming
+@using FSH.Dashboard.Wasm.Shared
 @using Microsoft.AspNetCore.SignalR.Client
 
 <AuthorizeView>
@@ -94,6 +95,8 @@
                 <ImpersonationBanner />
                 <header class="fsh-topbar">
                     <MudIconButton Icon="@Icons.Material.Filled.Menu" Size="Size.Medium" Class="fsh-topbar-menu" OnClick="ToggleDrawer" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Search" Size="Size.Medium" Class="fsh-topbar-command"
+                                   aria-label="Search (Ctrl+K)" Title="Search (Ctrl+K)" OnClick="OpenPaletteAsync" />
                     <MudSpacer />
                     <FshNotificationBell />
                     <MudMenu Class="fsh-theme-menu" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
@@ -212,6 +215,8 @@
                 </main>
             </div>
         </div>
+
+        <CommandPalette @ref="_palette" />
     </Authorized>
     <NotAuthorized>
         <div class="d-flex align-center justify-center" style="min-height: 100vh;">
@@ -231,73 +236,14 @@
     private string _userEmail = string.Empty;
     private string _tenantName = string.Empty;
     private string _currentUri = "/";
+    private CommandPalette? _palette;
 
-    private sealed record NavItem(string Href, string Icon, string Label, string? Permission, IReadOnlyList<string>? AnyPermissions);
-
-    private sealed record NavSection(string Id, string Caption, string Icon, IReadOnlyList<NavItem> Items);
-
-    // Nav spec mirrors the React dashboard app (clients/dashboard/src/components/layout/nav-data.ts).
-    private static readonly NavItem[] TopItems =
-    [
-        new("/", Icons.Material.Filled.SpaceDashboard, "Overview", null, null),
-        new("/chat", Icons.Material.Filled.Chat, "Chat", ChatPermissions.Channels.View, null),
-        new("/files", Icons.Material.Filled.FolderOpen, "My Files", FilesPermissions.Upload, null),
-    ];
-
-    private static readonly NavItem[] BottomItems =
-    [
-        new("/settings", Icons.Material.Filled.Settings, "Settings", null, null),
-    ];
-
-    private static readonly IReadOnlyList<string> TrashPermissions =
-    [
-        CatalogPermissions.Products.Restore,
-        CatalogPermissions.Brands.Restore,
-        CatalogPermissions.Categories.Restore,
-        TicketsPermissions.Restore,
-        FilesPermissions.ViewTrash,
-    ];
-
-    private static readonly NavSection[] Sections =
-    [
-        new("operations", "Operations", Icons.Material.Filled.Insights,
-        [
-            new("/activity", Icons.Material.Filled.Insights, "Live activity", null, null),
-            new("/subscription", Icons.Material.Filled.CreditCard, "Subscription", BillingPermissions.View, null),
-            new("/wallet", Icons.Material.Filled.Wallet, "WhatsApp wallet", BillingPermissions.View, null),
-            new("/invoices", Icons.Material.Filled.Receipt, "Invoices", BillingPermissions.View, null),
-        ]),
-        new("catalog", "Catalog", Icons.Material.Filled.Inventory2,
-        [
-            new("/catalog/products", Icons.Material.Filled.Inventory2, "Products", CatalogPermissions.Products.View, null),
-            new("/catalog/brands", Icons.Material.Filled.LocalOffer, "Brands", CatalogPermissions.Brands.View, null),
-            new("/catalog/categories", Icons.Material.Filled.FolderShared, "Categories", CatalogPermissions.Categories.View, null),
-        ]),
-        new("helpdesk", "Helpdesk", Icons.Material.Filled.ConfirmationNumber,
-        [
-            new("/tickets", Icons.Material.Filled.ConfirmationNumber, "Tickets", TicketsPermissions.View, null),
-        ]),
-        new("identity", "Identity", Icons.Material.Filled.People,
-        [
-            new("/identity/users", Icons.Material.Filled.People, "Users", IdentityPermissions.Users.Update, null),
-            new("/identity/roles", Icons.Material.Filled.AdminPanelSettings, "Roles", IdentityPermissions.Roles.Update, null),
-            new("/identity/groups", Icons.Material.Filled.Groups, "Groups", GroupsPermissions.Update, null),
-        ]),
-        new("system", "System", Icons.Material.Filled.MonitorHeart,
-        [
-            new("/system/health", Icons.Material.Filled.MonitorHeart, "Health", null, null),
-            new("/system/audits", Icons.Material.Filled.Article, "Audit trail", AuditingPermissions.AuditTrails.View, null),
-            new("/system/sessions", Icons.Material.Filled.Wifi, "Sessions", SessionsPermissions.ViewAll, null),
-            new("/system/trash", Icons.Material.Filled.Delete, "Trash", null, TrashPermissions),
-        ]),
-    ];
-
-    private IEnumerable<NavItem> VisibleTopItems => TopItems.Where(CanSee);
-    private IEnumerable<NavItem> VisibleBottomItems => BottomItems.Where(CanSee);
-    private IEnumerable<NavSection> VisibleSections => Sections.Where(s => s.Items.Any(CanSee));
+    private IEnumerable<NavSpec.NavItem> VisibleTopItems => NavSpec.TopItems.Where(CanSee);
+    private IEnumerable<NavSpec.NavItem> VisibleBottomItems => NavSpec.BottomItems.Where(CanSee);
+    private IEnumerable<NavSpec.NavSection> VisibleSections => NavSpec.Sections.Where(s => s.Items.Any(CanSee));
 
     // React parity: the single `Permission` (if any) AND at least one of `AnyPermissions` (if any).
-    private bool CanSee(NavItem item)
+    private bool CanSee(NavSpec.NavItem item)
         => (item.Permission is null || _permissions.Contains(item.Permission))
            && (item.AnyPermissions is null || item.AnyPermissions.Any(_permissions.Contains));
 
@@ -348,7 +294,7 @@
     private void ToggleSection(string id)
         => _openSectionId = _openSectionId == id ? string.Empty : id;
 
-    private static NavLinkMatch MatchFor(NavItem item)
+    private static NavLinkMatch MatchFor(NavSpec.NavItem item)
         => item.Href == "/" ? NavLinkMatch.All : NavLinkMatch.Prefix;
 
     private string IsActive(string path)
@@ -356,9 +302,8 @@
             ? (Nav.Uri.TrimEnd('/').Length <= 0 ? "active" : string.Empty)
             : (_currentUri.StartsWith(path, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty);
 
-    private string NavLinkClass(NavItem item)
+    private string NavLinkClass(NavSpec.NavItem item)
         => $"fsh-nav-link {(_collapsed ? "collapsed" : null)} {IsActive(item.Href)}";
-
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
         => await EvaluateUserAsync(task);
 
@@ -446,6 +391,8 @@
     private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
 
     private void CloseDrawer() => _drawerOpen = false;
+
+    private void OpenPaletteAsync() => _palette?.OpenAsync();
 
     private void GoHome() => Nav.NavigateTo("/");
 

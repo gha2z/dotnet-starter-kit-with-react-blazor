@@ -168,9 +168,13 @@ Full React parity — 6 pages + 4 dialogs, full CRUD (the plan's original read-o
 - [x] Added `EndImpersonationAsync` to `IImpersonationService` (POST `/api/v1/identity/impersonation/end` → `TokenResponse`) + `HasImpersonationStashAsync` / `SetFreshTokensAsync` / `RestoreTokensAsync` to `ITokenStore` (dashboard real impl; admin/hybrid no-ops)
 
 ### 3.14 Command Palette
-- [ ] **CommandPalette.razor** — MudAutocomplete with quick-nav to all pages
-- [ ]   Keyboard shortcut: `Ctrl+K` / `Cmd+K`
-- [ ]   Search page titles, navigate on select
+- [x] **NavSpec.cs** — single source of nav destinations (Top/Bottom/TrashPermissions/Sections) shared by sidebar + palette; mirrors React `nav-data.ts`
+- [x] **MainLayout.razor** — refactored to NavSpec; topbar search button (`aria-label="Search (Ctrl+K)"`) opens the palette
+- [x] **CommandPalette.razor** — custom overlay (fixed panel + backdrop; MudAutocomplete-in-MudDialog was abandoned: bUnit renders no list items for that combo): nav destinations + 5 account items + theme light/dark/system + sign-out; filter on label/hint/keywords; arrow-key highlight + Enter select; Esc/backdrop close; footer kbd hints
+- [x]   Keyboard shortcut: `Ctrl+K` / `Cmd+K` (JS `eval` listener → `[JSInvokable] CommandPaletteShortcutRelay`)
+- [x]   Permission gates (nav + Trash any-of) — same semantics as NavSpec
+- [x]   Sign-out via `FshConfirmDialogContent` + `AuthStateProvider.NotifyLogoutAsync()` (injects concrete `AuthStateProvider` for logout + abstract for claims — banner pattern)
+- [x]   8 bUnit tests (178/178 dashboard, 147/147 admin, icon audit PASS) — auth pattern: permission claims via `FixedAuthStateProvider`
 
 ## Next Up
 

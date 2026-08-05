@@ -1,0 +1,61 @@
+@namespace FSH.Dashboard.Wasm.Shared
+
+@if (_open)
+{
+    <div class="fsh-command-palette" style="position: fixed; inset: 0; z-index: 1300; display: flex; justify-content: center; padding-top: 12vh;">
+        <div class="fsh-command-backdrop" style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45);" @onclick="Close"></div>
+        <div class="fsh-command-panel" style="position: relative; width: min(620px, 92vw); max-height: 60vh; display: flex; flex-direction: column; background: var(--mud-palette-background); border: 1px solid var(--mud-palette-divider); border-radius: 10px; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35); overflow: hidden;">
+            <div class="d-flex align-center gap-2" style="padding: 12px 16px; border-bottom: 1px solid var(--mud-palette-divider);">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" />
+                <input @ref="_searchInput"
+                       class="fsh-command-input"
+                       style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; font-size: 14px; color: var(--mud-palette-text-primary);"
+                       placeholder="Type a command or search…"
+                       value="@_query"
+                       @oninput="OnQueryChanged"
+                       @onkeydown="OnKeyDown"
+                       aria-label="Search commands" />
+                <span class="fsh-kbd" style="font-size: 10px; color: var(--mud-palette-text-secondary);">Esc</span>
+            </div>
+
+            <div class="fsh-command-list" style="overflow-y: auto; padding: 8px;">
+                @if (FilteredItems.Count == 0)
+                {
+                    <div class="fsh-command-empty" style="text-align: center; padding: 28px 16px; color: var(--mud-palette-text-secondary); font-size: 13px;">
+                        No matches
+                    </div>
+                }
+                else
+                {
+                    for (var i = 0; i < FilteredItems.Count; i++)
+                    {
+                        var idx = i;
+                        var item = FilteredItems[i];
+                        <div role="option" aria-selected="@(idx == _highlight)"
+                             class="fsh-command-item"
+                             style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; cursor: pointer; background: @(idx == _highlight ? "var(--mud-palette-action-hover)" : "transparent");"
+                             @onclick="() => SelectAsync(item)"
+                             @onmouseenter="() => _highlight = idx">
+                            <MudIcon Icon="@item.Icon" Size="Size.Small" Color="@(idx == _highlight ? Color.Primary : Color.Default)" />
+                            <div class="d-flex flex-column">
+                                <span style="font-size: 13px; font-weight: 500;">@item.Label</span>
+                                @if (item.Hint is not null)
+                                {
+                                    <span style="font-size: 11px; color: var(--mud-palette-text-secondary);">@item.Hint</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="d-flex justify-space-between px-4 pt-2 pb-3" style="font-size: 11px; color: var(--mud-palette-text-secondary);">
+                <span>
+                    <span class="fsh-kbd">↑</span> <span class="fsh-kbd">↓</span> navigate
+                    &nbsp;·&nbsp; <span class="fsh-kbd">↵</span> select
+                </span>
+                <span>v0.1</span>
+            </div>
+        </div>
+    </div>
+}
