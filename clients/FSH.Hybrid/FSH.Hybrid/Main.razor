@@ -1,0 +1,38 @@
+@using FSH.BlazorShared.Components
+@using FSH.BlazorShared.Theming
+@inject FshThemeService Theme
+
+<MudThemeProvider Theme="FshMudTheme.CreateDashboard()" IsDarkMode="@Theme.IsDarkMode" IsDarkModeChanged="@OnThemeChanged" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<CascadingAuthenticationState>
+    <FshErrorBoundary>
+        <Router AppAssembly="@typeof(Main).Assembly">
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                    <NotAuthorized>
+                        <RedirectToLogin />
+                    </NotAuthorized>
+                    <Authorizing>
+                        <MudOverlay Visible="true">
+                            <MudProgressCircular Indeterminate="true" />
+                        </MudOverlay>
+                    </Authorizing>
+                </AuthorizeRouteView>
+            </Found>
+            <NotFound>
+                <FshNotFound />
+            </NotFound>
+        </Router>
+    </FshErrorBoundary>
+</CascadingAuthenticationState>
+
+@code {
+    private async Task OnThemeChanged(bool isDarkMode)
+        => await Theme.SetAsync(isDarkMode);
+
+    protected override async Task OnInitializedAsync()
+        => await Theme.InitializeAsync();
+}

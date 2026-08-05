@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <Color x:Key="FshBrand">#E11D48</Color>
+    <Color x:Key="FshInk">#1B2A2C</Color>
+
+    <Style TargetType="Shell">
+        <Setter Property="Shell.BackgroundColor" Value="{AppThemeBinding Light=White, Dark=#1B2A2C}" />
+        <Setter Property="Shell.ForegroundColor" Value="{AppThemeBinding Light=#1B2A2C, Dark=White}" />
+        <Setter Property="Shell.TitleColor" Value="{AppThemeBinding Light=#1B2A2C, Dark=White}" />
+        <Setter Property="Shell.TabBarBackgroundColor" Value="{AppThemeBinding Light=White, Dark=#1B2A2C}" />
+        <Setter Property="Shell.TabBarForegroundColor" Value="{StaticResource FshBrand}" />
+        <Setter Property="Shell.TabBarTitleColor" Value="{StaticResource FshBrand}" />
+    </Style>
+
+    <Style TargetType="Page">
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=White, Dark=#1B2A2C}" />
+    </Style>
+
+</ResourceDictionary>

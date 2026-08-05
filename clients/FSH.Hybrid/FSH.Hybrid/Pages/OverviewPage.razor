@@ -1,0 +1,42 @@
+@page "/"
+@attribute [Authorize]
+@using FSH.BlazorShared.Models.Dashboard
+@inject IDashboardService Dashboard
+
+<div class="d-flex flex-column gap-6">
+    <FshPageHeader Title="Overview" Subtitle="Your tenant workspace in the native shell" />
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Filled" Class="mt-4">@_error</MudAlert>
+    }
+    else
+    {
+        <div class="d-flex flex-wrap gap-4">
+            <div style="flex: 1 1 200px; min-width: 180px;">
+                <FshKpiTile Label="Tenant" Value="@(_status?.Name)" Icon="@Icons.Material.Filled.Business" Tone="Color.Primary" Loading="@_loading" />
+            </div>
+            <div style="flex: 1 1 200px; min-width: 180px;">
+                <FshKpiTile Label="Plan" Value="@(_status?.Plan)" Icon="@Icons.Material.Filled.CreditCard" Tone="Color.Secondary" Loading="@_loading" />
+            </div>
+            <div style="flex: 1 1 200px; min-width: 180px;">
+                <FshKpiTile Label="Subscription" Value="@(_status?.ExpiryState)" Icon="@Icons.Material.Filled.HourglassTop" Tone="@(_status?.ExpiryState == "Active" ? Color.Success : Color.Warning)" Loading="@_loading" />
+            </div>
+        </div>
+
+        <MudPaper Class="pa-6" Elevation="0" Outlined="true">
+            <MudText Typo="Typo.h6" Class="mb-2 font-weight-medium">Hybrid shell ready</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                The MAUI Shell flyout / tab bar handles global navigation; Blazor handles inner navigation.
+                Feature pages (chat, files, tickets, catalog, billing, settings) land with the
+                BlazorShared page parity work — this scaffold proves auth, SecureStorage token
+                persistence, biometrics and theming end to end.
+            </MudText>
+            <div class="d-flex flex-wrap gap-2">
+                <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Icon="@Icons.Material.Filled.VerifiedUser">JWT + keychain</MudChip>
+                <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Icon="@Icons.Material.Filled.Fingerprint">Biometric unlock</MudChip>
+                <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small" Icon="@Icons.Material.Filled.Palette">MudBlazor theme</MudChip>
+            </div>
+        </MudPaper>
+    }
+</div>

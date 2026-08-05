@@ -28,7 +28,7 @@
 	<ItemGroup>
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#1B2A2C" />
 		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#1B2A2C" BaseSize="128,128" />
-		<MauiImage Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+		<MauiRawResource Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<MauiFont Include="Resources\Fonts\*" />
 	</ItemGroup>
 
@@ -40,6 +40,7 @@
 		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 		<PackageReference Include="MudBlazor" Version="9.7.0" />
+		<PackageReference Include="Xamarin.AndroidX.Biometric" Version="1.1.0.33" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'" />
 	</ItemGroup>
 
 	<ItemGroup>
