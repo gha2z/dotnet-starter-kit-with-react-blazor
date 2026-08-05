@@ -1,7 +1,7 @@
 # Blazor WASM + MAUI — Implementation Roadmap
-Last Update: 2026-Aug-05, by: opencode (auto/coding, model: big-pickle).
+Last Update: 2026-Aug-06, by: opencode (auto/coding, model: deepseek-v4-flash-free).
 
-> Status: **Phase 0 ✅ | Phase 1 ✅ | Phase 2 ✅ (2.1–2.10 done — Tenants, Users, Roles, Billing, Webhooks, Audits, Health, Notifications inbox, Settings, Impersonation — admin blazor 147/147) | Phase 3 🟨 (3.1 Overview ✅ + 3.2 Activity ✅ + 3.3 Subscription ✅ + 3.4 Wallet ✅ + 3.5 Invoices ✅ + 3.6 Catalog ✅ + 3.7 Identity ✅ + 3.8 Tickets ✅ + 3.9 Chat ✅ + 3.10 Files ✅ + 3.11 System ✅ + 3.12 Settings ✅ — dashboard suite 146/146 — next: 3.13 Impersonation) | Phase 4 🔲 | Phase 5 🔲 | Phase 6 🔲 | Phase 7 🟨 (parity completion — admin pages complete + runtime DI hardened, styled 404 done)**
+> Status: **Phase 0 ✅ | Phase 1 ✅ | Phase 2 ✅ (2.1-2.10 done - admin blazor 147/147) | Phase 3 ✅ (3.1-3.14 done - dashboard 178/178) | Phase 4 🟨 (bUnit suites + admin Playwright E2E 9/9; dashboard PW suite open) | Phase 5 🟨 (5.1-5.9 done - hybrid 12/12; push skeleton Firebase-gated) | Phase 6 🔲 | Phase 7 🟨 (parity - admin palette in flight by sess-maui; accent/font/density deferred)**
 >
 > **Blazor WASM apps: admin 147/147 tests passing, dashboard 146/146 tests passing.**
 >

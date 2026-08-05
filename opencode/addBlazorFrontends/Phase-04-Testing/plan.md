@@ -1,11 +1,15 @@
 # Phase 4 — Testing
-Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-free).
+Last Update: 2026-Aug-06 05:20:00, by: opencode (auto/coding, model: deepseek-v4-flash-free).
 
 > **Target:** Comprehensive test coverage with bUnit (component unit tests) + Playwright (E2E). Auth flows, page states (loading/empty/error/edge), permission gating, form validation, SSE, SignalR.
 
 ## Status
 
-- Phase 4: **🔲 Not started**
+- Phase 4: **🟡 In progress** — bUnit suites landed; E2E landing per app.
+  - Dashboard bUnit: **178/178 ✅** (`clients/dashboard-blazor/FSH.Dashboard.Wasm.Tests`)
+  - Admin bUnit: **155/155 ✅** (`clients/admin-blazor/FSH.Admin.Wasm.Tests`)
+  - Admin Playwright E2E: **9/9 ✅** (`clients/admin-blazor/FSH.Admin.Wasm.E2E.Tests`, port 5175)
+  - Dashboard Playwright E2E: **11/11 ✅** (`clients/dashboard-blazor/FSH.Dashboard.Wasm.E2E.Tests`, port 5176)
 - Prerequisites: Phase 2 ✅ + Phase 3 ✅ (all pages built)
 
 ## Task Checklist
@@ -94,28 +98,24 @@ Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-f
 - [ ] Chat page: send message → appears in chat
 
 ### 4.9 Playwright E2E Tests
-- [ ] **Test infrastructure**: authed session seeding, mock API responses, `seedAuthedSession` equivalent
-- [ ] **Critical path: login flow**: navigate → fill form → submit → redirect → URL contains dashboard
-- [ ] **Critical path: logout**: click logout → tokens cleared → redirect to login
-- [ ] **Critical path: users list**: login → navigate to users → table loads → search works
-- [ ] **Critical path: user create**: login → navigate to users → click create → fill form → submit → row appears
-- [ ] **Critical path: tenant create**: login → navigate to tenants → create wizard → complete → tenant in list
-- [ ] **Permission gate E2E**: login as user without permission → page redirects or section hidden
-- [ ] **Inactivity timeout**: wait → warning dialog appears → dismiss → stays logged in
-- [ ] **Cross-tab logout**: open second tab → logout in first → second tab redirects
+
+Dashboard suite (`clients/dashboard-blazor/FSH.Dashboard.Wasm.E2E.Tests`), route-mocked on port 5176, mirrors the admin harness:
+- [x] **Test infrastructure**: authed session seeding (localStorage init scripts), route-level API mocks + CORS/OPTIONS, SSE/SignalR shell mocks, `WaitForBlazorReady`
+- [x] **Critical path: login flow**: navigate → fill form (tenant/email/password) → submit → tokens stored → redirect to overview
+- [x] **Critical path: login failure**: 401 → "Login failed (401)" alert → stays on /login
+- [x] **Critical path: logout**: user menu → confirm → tokens cleared → redirect to login
+- [x] **Critical path: users list**: navigate to users → rows render → search queries backend (`/identity/users/search?Search=`) and filters rows
+- [x] **Critical path: user create**: users → Register user dialog → fill form → submit → POST `/identity/register` body verified → dialog closes + success snackbar (dashboard parity: no detail navigation)
+- [x] **Permission gate E2E**: user without permission → page still renders but nav link + actions hidden (dashboard parity: no 403 surface — that is admin-app behavior)
+- [ ] **Critical path: tenant create**: admin-app concern (admin E2E suite)
+- [ ] **Inactivity timeout**: admin-app concern (admin E2E suite)
+- [x] **Cross-tab logout**: second tab → logout in first → storage event → second tab redirects to login
+
+Admin suite: 9/9 ✅ (auth flow incl. cross-tab, permission gate w/ 403 surface, users page, inactivity timeout).
 
 ## Next Up
 
-**Task 4.1**: Set up bUnit test infrastructure.
-
-1. Read existing xUnit tests in `src/Tests/` for patterns (Shouldly, NSubstitute, AutoFixture)
-2. Ensure bUnit NuGet packages are in Directory.Packages.props (already done: bunit 2.0.66)
-3. Create `TestContext` helper class in both test projects:
-   - `AuthHelper` — mock AuthenticationStateProvider
-   - `ServiceMockHelper` — AutoFixture + NSubstitute
-   - `MudBlazorTestContext` — Bootstrap MudBlazor services
-4. Write first test: `LoginPageRendersCorrectly`
-5. Run: `dotnet test clients/admin-blazor/FSH.Admin.Wasm.Tests/`
+**Remaining Phase 4**: none for the dashboard stream — both E2E suites landed. Next stream work is Phase 6 (dashboard polish) per STATUS.md.
 
 ## Architecture Decisions
 

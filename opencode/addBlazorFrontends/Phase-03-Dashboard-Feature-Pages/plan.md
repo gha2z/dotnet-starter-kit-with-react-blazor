@@ -1,11 +1,11 @@
 # Phase 3 — Dashboard Feature Pages
-Last Update: 2026-Aug-04, by: opencode (auto/coding, model: big-pickle).
+Last Update: 2026-Aug-06, by: opencode (auto/coding, model: deepseek-v4-flash-free).
 
 > **Target:** All tenant-facing dashboard pages built — Overview (SSE), Activity, Subscription, Wallet, Catalog, Invoices, Identity (profile/user/role), Tickets, Chat, Files, System. Feature parity with `clients/dashboard` React app.
 
 ## Status
 
-- Phase 3: **🟨 In progress** — 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅ · 3.9 Chat ✅ · 3.10 Files ✅ · **3.11 System ✅** · **3.12 Settings ✅** — dashboard suite **146/146** — next: 3.13 Impersonation
+- Phase 3: **✅ Complete** - 3.1 Overview ✅ - 3.2 Activity ✅ - 3.3 Subscription ✅ - 3.4 Wallet ✅ - 3.5 Invoices ✅ - 3.6 Catalog ✅ - 3.7 Identity ✅ - 3.8 Tickets ✅ - 3.9 Chat ✅ - 3.10 Files ✅ - 3.11 System ✅ - 3.12 Settings ✅ - 3.13 Impersonation ✅ - 3.14 Command Palette ✅ - dashboard suite **178/178** - 3.11 actually landed in 52861c37 on 2026-08-05 (this section was stale)
 - Prerequisites: Phase 1 ✅ (auth+login working, AppShell)
 - **Parity sprint deliverables already in place:** `SseService` (token flow `POST /api/v1/sse/token` → `GET /api/v1/sse/stream?token=`, backoff reconnect, `ConnectionChanged` event), SSE status dot in topbar, full sidebar (accordion, permission-gated) — no rebuilds needed, only page work.
 - Terminal pages `/tenant-deactivated` + `/impersonation-ended` do **not** exist yet (docs previously claimed they did) — tracked as 3.15 in `Phase-07-Parity-Completion/plan.md`.
@@ -178,17 +178,16 @@ Full React parity — 6 pages + 4 dialogs, full CRUD (the plan's original read-o
 
 ## Next Up
 
-**Task 3.11 — System pages** (services in BlazorShared already exist: `IHealthService`, `IAuditService`,
-`ISessionService`, `ICatalogService` with trash/restore, `ITicketService` with trash/restore,
-`IFileService` with trash/restore). Build `Pages/System/` in dashboard-blazor:
-1. `HealthPage` — reuses admin HealthPage pattern, route `/system/health`, anonymous probe `/health/ready`
-2. `AuditsPage` — MudTable with time-range presets, filter bar, summary strip, detail side-sheet
-3. `SessionsPage` — MudTable with search, include-inactive toggle, per-row revoke, auto-refresh
-4. `TrashPage` — tabbed (Products/Brands/Categories/Tickets/Files), each with paginated list + restore
-Register `IHealthService`/`IAuditService` in `FSH.Dashboard.Wasm/Program.cs`, add bUnit tests,
-run full solution build (0 warnings) + both test suites. React source of truth:
-`clients/dashboard/src/pages/{health,audits,system/trash,system/sessions}.tsx` +
-`clients/dashboard/src/api/{health,audits,catalog,tickets,files,sessions}.ts`.
+**Phase 3 is COMPLETE (3.1–3.14, dashboard suite 178/178).** The previous "Next Up: 3.11 System pages" was
+stale — 3.11 (Health/Audits/Sessions/Trash + tests) actually landed in `52861c37` on 2026-08-05, before
+this section was last written. 3.12 (Settings), 3.13 (Impersonation: banner, terminal pages, token stash)
+and 3.14 (Command Palette: NavSpec + Ctrl+K) are also landed and committed (3a6bf25e, 6937c600, dcf17028).
+
+Genuinely open work for the dashboard stream (verify on the board before claiming — another session may
+own it):
+1. Phase 4 — dashboard-blazor Playwright E2E suite (Phase 4.9 covered admin-blazor only)
+2. Phase 6 — Polish & Perf (bundle/AOT/trimming, ServerData audit, debounced search)
+3. Phase 7 — parity leftovers (admin accent/font/density settings — tracked in `Phase-07-Parity-Completion/plan.md`; admin command palette is in flight by sess-maui)
 
 ## Architecture Decisions
 
