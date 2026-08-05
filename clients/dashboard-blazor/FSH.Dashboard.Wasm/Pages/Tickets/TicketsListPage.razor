@@ -14,7 +14,8 @@
 </FshPageHeader>
 
 <MudTextField @bind-Value="_search"
-              Placeholder="Find by number, title, or description…"
+              @bind-Value:after="(async () => await OnSearchChangedAsync(_search))"
+              Placeholder="Find by number, title, or description."
               Variant="Variant.Outlined"
               Adornment="Adornment.Start"
               AdornmentIcon="@Icons.Material.Filled.Search"

@@ -8,7 +8,7 @@
     <AssemblyName>FSH.Dashboard.Wasm</AssemblyName>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
     <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
-    <BlazorWebAssemblyEnableTrimming>false</BlazorWebAssemblyEnableTrimming>
+    <BlazorWebAssemblyEnableTrimming>true</BlazorWebAssemblyEnableTrimming>
   </PropertyGroup>
 
   <ItemGroup>

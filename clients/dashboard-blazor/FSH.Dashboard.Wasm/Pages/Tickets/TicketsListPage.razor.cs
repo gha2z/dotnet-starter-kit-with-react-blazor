@@ -5,7 +5,7 @@ using MudBlazor;
 
 namespace FSH.Dashboard.Wasm.Pages.Tickets;
 
-public sealed partial class TicketsListPage
+public sealed partial class TicketsListPage : IDisposable
 {
     [Inject] private ITicketService Tickets { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
@@ -22,6 +22,7 @@ public sealed partial class TicketsListPage
     private bool _loading = true;
     private string? _error;
     private bool _createDialogOpen;
+    private CancellationTokenSource? _debounceCts;
 
     private static readonly TicketStatus?[] AllStatuses = [null, TicketStatus.Open, TicketStatus.InProgress, TicketStatus.Resolved, TicketStatus.Closed];
     private static readonly TicketPriority?[] AllPriorities = [null, TicketPriority.Low, TicketPriority.Medium, TicketPriority.High, TicketPriority.Critical];
@@ -62,6 +63,39 @@ public sealed partial class TicketsListPage
     private void SetStatus(TicketStatus? s) { _statusFilter = s; _pageNumber = 1; _ = LoadAsync(); }
     private void SetPriority(TicketPriority? p) { _priorityFilter = p; _pageNumber = 1; _ = LoadAsync(); }
 
+    /// <summary>
+    /// Debounced server-side search: cancels any in-flight debounce on a new
+    /// keystroke and reloads 250 ms after typing settles (mirrors
+    /// UsersListPage). Without this, Immediate="true" only updated the bound
+    /// field and never re-queried the backend.
+    /// </summary>
+    private async Task OnSearchChangedAsync(string value)
+    {
+        _search = value;
+        _debounceCts?.Cancel();
+        _debounceCts = new CancellationTokenSource();
+        var token = _debounceCts.Token;
+
+        try
+        {
+            await Task.Delay(250, token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        if (token.IsCancellationRequested)
+        {
+            return;
+        }
+
+        _pageNumber = 1;
+        await LoadAsync();
+    }
+
+    public void Dispose() => _debounceCts?.Dispose();
+
     private void GoToPage(int page) { _pageNumber = Math.Clamp(page, 1, Math.Max(_totalPages, 1)); _ = LoadAsync(); }
 
     private void ClearFilters()
@@ -84,7 +118,9 @@ public sealed partial class TicketsListPage
     }
 
     private string EmptyDescription => HasFilters
-        ? "No tickets match the current filters."
+        ? SearchActive
+            ? $"Nothing matches \"{_search.Trim()}\". Try a different term or clear the search."
+            : "No tickets match the current filters."
         : "Open the first ticket to start tracking work. Tickets carry a status, priority, an optional assignee, and a comment thread.";
 
     private string MetaText =>

@@ -109,4 +109,36 @@ public sealed class TicketsListPageTests : TestSetup
 
         cut.WaitForAssertion(() => cut.Markup.ShouldContain(assigneeId.ToString()[..8]));
     }
+
+    [Fact]
+    public void Reloads_with_search_term_after_debounce()
+    {
+        var calls = 0;
+        _tickets.SearchTicketsAsync(
+            Arg.Any<string?>(), Arg.Any<TicketStatus?>(), Arg.Any<TicketPriority?>(),
+            Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<int>(),
+            Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(_ => new PagedResult<TicketDto>(
+                calls++ == 0 ? [SampleTicket("Login fails")] : [SampleTicket("Payments crash")],
+                1, 20, 1, 1, false, false));
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Tickets.TicketsListPage>();
+        cut.WaitForAssertion(() => cut.Markup.ShouldContain("Login fails"));
+
+        cut.Find("input[placeholder='Find by number, title, or description.']").Input("payments");
+
+        cut.WaitForAssertion(
+            () => _tickets.Received(2)
+                .SearchTicketsAsync(Arg.Any<string?>(), Arg.Any<TicketStatus?>(), Arg.Any<TicketPriority?>(),
+                    Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<int>(),
+                    Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>()),
+            TimeSpan.FromSeconds(2));
+
+        _tickets.Received().SearchTicketsAsync(
+            "payments", Arg.Any<TicketStatus?>(), Arg.Any<TicketPriority?>(),
+            Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<int>(),
+            Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
+
+        cut.WaitForAssertion(() => cut.Markup.ShouldContain("Payments crash"), TimeSpan.FromSeconds(2));
+    }
 }

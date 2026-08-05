@@ -12,9 +12,11 @@
 </head>
 <body>
     <div id="app">
-        <div class="fsh-loading-container">
-            <div class="fsh-loading-spinner"></div>
-            <p>Loading...</p>
+        <div class="fsh-loading-container" role="status" aria-live="polite">
+            <div class="fsh-loading-brand" aria-hidden="true">F</div>
+            <div class="fsh-loading-spinner" aria-hidden="true"></div>
+            <p class="fsh-loading-title">FullStackHero</p>
+            <p class="fsh-loading-sub">Loading your dashboard…</p>
         </div>
     </div>
     <div id="blazor-error-ui" class="fsh-error-ui">
@@ -29,6 +31,7 @@
     <script src="_framework/blazor.webassembly.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="js/fshDownload.js"></script>
+    <script src="js/fshSkipLink.js"></script>
     <script src="_content/FSH.BlazorShared/js/fshError.js"></script>
 </body>
 </html>

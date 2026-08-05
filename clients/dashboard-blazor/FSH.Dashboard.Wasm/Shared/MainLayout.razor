@@ -17,6 +17,7 @@
 
 <AuthorizeView>
     <Authorized>
+        <a href="#fsh-main" class="fsh-skip-link" @onclick="OnSkipLinkClick" @onclick:preventDefault="true">Skip to content</a>
         <div class="d-flex" style="height: 100vh; overflow: hidden; background: var(--mud-palette-background);">
 
             @if (_drawerOpen)
@@ -39,11 +40,11 @@
                     </a>
                     @if (!_collapsed)
                     {
-                        <MudIconButton Icon="@Icons.Material.Filled.ViewSidebar" Size="Size.Small" OnClick="ToggleCollapsed" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ViewSidebar" Size="Size.Small" aria-label="Collapse sidebar" OnClick="ToggleCollapsed" />
                     }
                 </div>
 
-                <nav class="flex-grow-1 fsh-nav-scroll" style="overflow-y: auto; overflow-x: clip; padding: 8px 0 16px;">
+                <nav class="flex-grow-1 fsh-nav-scroll" style="overflow-y: auto; overflow-x: clip; padding: 8px 0 16px;" aria-label="Primary">
                     @foreach (var item in VisibleTopItems)
                     {
                         <NavLink href="@item.Href" Match="@MatchFor(item)" class="@NavLinkClass(item)" title="@(_collapsed ? item.Label : null)">
@@ -81,7 +82,7 @@
                     @if (_collapsed)
                     {
                         <div class="d-flex justify-center">
-                            <MudIconButton Icon="@Icons.Material.Filled.ViewSidebar" Size="Size.Small" OnClick="ToggleCollapsed" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ViewSidebar" Size="Size.Small" aria-label="Expand sidebar" OnClick="ToggleCollapsed" />
                         </div>
                     }
                     else
@@ -94,7 +95,7 @@
             <div class="d-flex flex-column" style="flex: 1; min-width: 0;">
                 <ImpersonationBanner />
                 <header class="fsh-topbar">
-                    <MudIconButton Icon="@Icons.Material.Filled.Menu" Size="Size.Medium" Class="fsh-topbar-menu" OnClick="ToggleDrawer" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Menu" Size="Size.Medium" Class="fsh-topbar-menu" aria-label="Open navigation" OnClick="ToggleDrawer" />
                     <MudIconButton Icon="@Icons.Material.Filled.Search" Size="Size.Medium" Class="fsh-topbar-command"
                                    aria-label="Search (Ctrl+K)" title="Search (Ctrl+K)" OnClick="OpenPaletteAsync" />
                     <MudSpacer />
@@ -210,7 +211,7 @@
                     </MudMenu>
                 </header>
 
-                <main style="flex: 1; overflow: auto; padding: 20px 24px;" id="main-content">
+                <main id="fsh-main" tabindex="-1" style="flex: 1; overflow: auto; padding: 20px 24px;">
                     @Body
                 </main>
             </div>
@@ -246,6 +247,14 @@
     private bool CanSee(NavSpec.NavItem item)
         => (item.Permission is null || _permissions.Contains(item.Permission))
            && (item.AnyPermissions is null || item.AnyPermissions.Any(_permissions.Contains));
+
+    private Task OnSkipLinkClick()
+    {
+        // Blazor's SPA click interceptor would swallow a plain "#fsh-main"
+        // navigation (hash changes, focus never moves), so the default is
+        // prevented and focus/scroll are performed from JS instead.
+        return Js.InvokeVoidAsync("fshSkipLink.focusMain").AsTask();
+    }
 
     protected override void OnInitialized()
     {
