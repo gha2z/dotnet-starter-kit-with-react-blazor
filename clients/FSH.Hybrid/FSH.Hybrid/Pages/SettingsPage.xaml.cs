@@ -1,5 +1,7 @@
+using FSH.BlazorShared.Infrastructure;
 using FSH.Hybrid.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace FSH.Hybrid.Pages;
 
@@ -8,43 +10,66 @@ public sealed partial class SettingsPage : ContentPage
     private MauiAuthStateProvider? _authState;
     private IBiometricService? _biometric;
     private HybridRuntimeConfigService? _config;
+    private ILogger<SettingsPage>? _logger;
 
     protected override void OnAppearing()
     {
         base.OnAppearing();
 
-        _authState ??= Application.Current?.Handler?.MauiContext?.Services.GetService<MauiAuthStateProvider>();
-        _biometric ??= Application.Current?.Handler?.MauiContext?.Services.GetService<IBiometricService>();
-        _config ??= Application.Current?.Handler?.MauiContext?.Services.GetService<HybridRuntimeConfigService>();
-
-        if (_authState is not null)
+        // A settings page must never take down the app: resolve lazily and log failures.
+        try
         {
-            BiometricSwitch.IsToggled = _authState.IsBiometricLockEnabled;
+            var services = Application.Current?.Handler?.MauiContext?.Services;
+            if (services is null)
+            {
+                return;
+            }
+
+            _logger ??= services.GetService<ILogger<SettingsPage>>();
+            _authState ??= services.GetService<MauiAuthStateProvider>();
+            _biometric ??= services.GetService<IBiometricService>();
+            _config ??= services.GetService<IRuntimeConfigService>() as HybridRuntimeConfigService;
+
+            if (_authState is not null)
+            {
+                BiometricSwitch.IsToggled = _authState.IsBiometricLockEnabled;
+            }
+
+            if (_biometric is not null)
+            {
+                _ = RefreshBiometricStatusAsync();
+            }
+
+            if (_config is not null)
+            {
+                ApiBaseEntry.Text = _config.ApiBaseUrl;
+                ApiBaseHintLabel.Text = $"Applied immediately for new HTTP calls (currently: {_config.ApiBaseUrl})";
+            }
         }
-
-        if (_biometric is not null)
+        catch (Exception ex)
         {
-            _ = RefreshBiometricStatusAsync();
-        }
-
-        if (_config is not null)
-        {
-            ApiBaseEntry.Text = _config.ApiBaseUrl;
-            ApiBaseHintLabel.Text = $"Applied immediately for new HTTP calls (currently: {_config.ApiBaseUrl})";
+            _logger?.LogError(ex, "SettingsPage failed to initialize");
         }
     }
 
     private async Task RefreshBiometricStatusAsync()
     {
-        if (_biometric is null)
+        try
         {
-            return;
-        }
+            if (_biometric is null)
+            {
+                return;
+            }
 
-        var available = await _biometric.IsAvailableAsync();
-        BiometricStatusLabel.Text = available
-            ? "Available on this device"
-            : "Not available on this device";
+            var available = await _biometric.IsAvailableAsync();
+            BiometricStatusLabel.Text = available
+                ? "Available on this device"
+                : "Not available on this device";
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Biometric availability check failed");
+        }
     }
 
     private void OnBiometricLockToggled(object? sender, ToggledEventArgs e)

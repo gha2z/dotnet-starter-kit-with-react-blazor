@@ -26,6 +26,29 @@
             <button class="fsh-reload-btn" onclick="window.location.reload()">Reload</button>
         </div>
     </div>
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
+    <script>
+        // The native message bridge (window.external.receiveMessage) is attached only after
+        // the .NET runtime finishes initializing; auto-start races it on cold start.
+        // Wait for the bridge, then boot Blazor exactly once.
+        (function () {
+            var booted = false;
+            function tryStart() {
+                if (booted) {
+                    return;
+                }
+
+                if (window.Blazor && window.external && typeof window.external.receiveMessage === "function") {
+                    booted = true;
+                    window.Blazor.start();
+                } else {
+                    setTimeout(tryStart, 250);
+                }
+            }
+
+            tryStart();
+        })();
+    </script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="_content/FSH.BlazorShared/js/fshError.js"></script>
 </body>
