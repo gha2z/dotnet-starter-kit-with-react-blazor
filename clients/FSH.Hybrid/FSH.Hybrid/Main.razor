@@ -1,6 +1,8 @@
 @using FSH.BlazorShared.Components
 @using FSH.BlazorShared.Theming
+@using FSH.Hybrid.Services
 @inject FshThemeService Theme
+@inject NavigationManager Nav
 
 <MudThemeProvider Theme="FshMudTheme.CreateDashboard()" IsDarkMode="@Theme.IsDarkMode" IsDarkModeChanged="@OnThemeChanged" />
 <MudPopoverProvider />
@@ -34,5 +36,15 @@
         => await Theme.SetAsync(isDarkMode);
 
     protected override async Task OnInitializedAsync()
-        => await Theme.InitializeAsync();
+    {
+        await Theme.InitializeAsync();
+
+        // Consume a deep-linked Blazor route (fsh://<path>) handed in from the native shell.
+        var pending = HybridNavigationBridge.PendingPath;
+        HybridNavigationBridge.PendingPath = null;
+        if (!string.IsNullOrEmpty(pending))
+        {
+            Nav.NavigateTo(pending);
+        }
+    }
 }

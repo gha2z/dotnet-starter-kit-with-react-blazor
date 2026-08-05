@@ -11,7 +11,7 @@ Last Update: 2026-08-06, by: opencode.
 | Phase 2 | ✅ (2.1–2.10) | admin 147/147 |
 | Phase 3 | 🟨 (3.1–3.14 ✅, next: 3.11) | dashboard 178/178 |
 | Phase 4 | 🔲 | — |
-| Phase 5 | 🔲 | — |
+| Phase 5 | 🟨 (5.5–5.9 done: offline queue, native camera/picker upload, deep links, files page, splash; push 5.4 compile-gated — blocked on Firebase setup) | hybrid 12/12 |
 | Phase 6 | 🔲 | — |
 | Phase 7 | 🟨 (parity sprint 1 + hotfixes + page build-out) | both 0 warnings |
 

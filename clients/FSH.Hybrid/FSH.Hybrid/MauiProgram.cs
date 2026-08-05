@@ -28,6 +28,12 @@ public static class MauiProgram
         builder.Services.AddSingleton<ITokenStore, MauiTokenStore>();
         builder.Services.AddSingleton<IBiometricService, BiometricService>();
         builder.Services.AddSingleton<IRuntimeConfigService, HybridRuntimeConfigService>();
+        builder.Services.AddSingleton<IConnectivityService, ConnectivityService>();
+        builder.Services.AddSingleton<IOfflineQueueService>(_ => new OfflineQueueService());
+        builder.Services.AddSingleton<IOfflineQueueProcessor, OfflineQueueProcessor>();
+        builder.Services.AddSingleton<IDeepLinkService, DeepLinkService>();
+        builder.Services.AddSingleton<IMediaPickerService, MediaPickerService>();
+        builder.Services.AddSingleton<IPushNotificationService, PushNotificationService>();
 
         // Auth
         builder.Services.AddScoped<AuthStateProvider>();
@@ -40,6 +46,7 @@ public static class MauiProgram
 
         // HTTP
         builder.Services.AddTransient<AuthDelegatingHandler>();
+        builder.Services.AddTransient<OfflineDelegatingHandler>();
         builder.Services.AddHttpClient("FSH.Auth", (sp, client) =>
         {
             client.BaseAddress = new Uri(sp.GetRequiredService<IRuntimeConfigService>().ApiBaseUrl);
@@ -48,7 +55,9 @@ public static class MauiProgram
         {
             client.BaseAddress = new Uri(sp.GetRequiredService<IRuntimeConfigService>().ApiBaseUrl);
         })
+        .AddHttpMessageHandler<OfflineDelegatingHandler>()
         .AddHttpMessageHandler<AuthDelegatingHandler>();
+        builder.Services.AddHttpClient("FSH.Storage");
         builder.Services.AddScoped(sp =>
             sp.GetRequiredService<IHttpClientFactory>().CreateClient("FSH.Api"));
 
@@ -67,6 +76,7 @@ public static class MauiProgram
         builder.Services.AddScoped<IFileService, FileService>();
         builder.Services.AddScoped<IHealthService, HealthService>();
         builder.Services.AddScoped<IAuditService, AuditService>();
+        builder.Services.AddScoped<IHybridFileUploadService, HybridFileUploadService>();
 
         builder.Services.AddAuthorizationCore(FshPolicies.Register);
 

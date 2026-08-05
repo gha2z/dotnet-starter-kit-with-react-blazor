@@ -6,7 +6,9 @@
 **NEVER commit until the user explicitly approves.**
 
 After completing a feature:
-1. `git add -A`
+1. Stage **only your session's files by explicit path** — `git add <paths>`. NEVER `git add -A`
+   in the shared checkout: it sweeps other sessions' uncommitted work into your commit (see
+   "Multi-Session Coordination Protocol" below)
 2. Show: `git diff --cached --stat` + one-line summary of what changed
 3. Wait for user approval
 4. Then commit
@@ -17,16 +19,21 @@ After completing a feature:
 
 On session start:
 1. `git status` — confirm the tree is clean or matches the expected in-progress work
-2. Determine your actual model identity (see "Model Identity Convention" below) and record it
+2. Determine your session id: the user names this session (`sess-main`, `sess-maui`, …). If
+   unnamed, ask. Every doc and coordination file uses it
+3. Determine your actual model identity (see "Model Identity Convention" below) and record it
    for today's docs
-3. Read `./opencode/addBlazorFrontends/STATUS.md` — current state, next task
-4. Read the latest `./opencode/addBlazorFrontends/00_summary/implementation-summary-*.md` — what was last done
-5. Read `.agents/rules/frontend/blazor-shared.md` — Blazor conventions (plus `blazor-admin.md`,
+4. Read `./opencode/addBlazorFrontends/STATUS.md` — current state, next task
+5. Read ALL `./opencode/addBlazorFrontends/live/*.md` (session coordination — see
+   "Multi-Session Coordination Protocol"); create `live/<your-session-id>.md` from
+   `live/_template.md` if it does not exist
+6. Read the latest `./opencode/addBlazorFrontends/00_summary/implementation-summary-*.md` — what was last done
+7. Read `.agents/rules/frontend/blazor-shared.md` — Blazor conventions (plus `blazor-admin.md`,
    `blazor-dashboard.md`, or `maui-hybrid.md` for the target app)
-6. Load any relevant skills from `.agents/skills/` (e.g. `add-blazor-page`, `add-feature`,
+8. Load any relevant skills from `.agents/skills/` (e.g. `add-blazor-page`, `add-feature`,
    `setup-blazor-auth`, `setup-blazor-realtime`, `implement-blazor-list`, `implement-blazor-form`,
    `add-permission`) before you start
-7. Verify builds + tests pass before starting work
+9. Verify builds + tests pass before starting work
 
 ---
 
@@ -53,6 +60,63 @@ git worktree add -b feature/<name> .worktrees/<name> develop
 - **`BlazorShared` is owned by the Main stream only** — parallel streams treat it read-only and
   route requested changes through Main
 - Subagents never commit; each stream's work is committed by the user after approval (Commit Policy)
+
+**Same-checkout is the default for parallel sessions** — several sessions run side-by-side in the
+repo root with disjoint directory ownership and coordinate through MD files (see
+"Multi-Session Coordination Protocol" below). Worktrees remain available for heavy isolation.
+
+## Multi-Session Coordination Protocol
+
+Parallel sessions in the same checkout coordinate **entirely through MD files** under
+`opencode/addBlazorFrontends/live/`:
+
+```
+live/
+├── README.md          # this protocol's quick reference (stable)
+├── board.md           # cross-session requests & handoffs (append-only rows)
+├── _template.md       # skeleton for a new session file
+├── sess-<id>.md       # ONE file per session — only that session writes it
+└── ...
+```
+
+### Rules (binding once a session has read this section)
+
+1. **Session identity** — the user names each session at launch (`sess-main`, `sess-maui`, …).
+   Record it + your model identity + scope + heartbeat in `live/<session-id>.md` before any work.
+2. **Single-writer files** — you write ONLY `live/<your-session-id>.md`. You may APPEND rows to
+   `live/board.md` (re-read it first; never rewrite existing rows). Every other file is read-only
+   unless the ownership map gives it to you.
+3. **Ownership map** (directory → owner):
+
+   | Zone | Owner |
+   |------|-------|
+   | `clients/dashboard-blazor/**` · `clients/BlazorShared/**` | `sess-main` (others read-only) |
+   | `clients/admin-blazor/**` | `sess-admin` — parallel-safe when `sess-main`'s active task is confined to dashboard-blazor/BlazorShared (check STATUS.md "Active Streams") |
+   | `clients/FSH.Hybrid/**` | `sess-maui` |
+   | `opencode/addBlazorFrontends/live/*` | per-file (rule 2) |
+   | `STATUS.md` · `00-Index.md` · phase-plan status lines | `sess-main` (streams may APPEND their own row to "Active Streams"; streams own the status lines of tasks they claimed) |
+   | `.agents/rules/frontend/*.md` · root `README.md` | any session, but announce the edit on `board.md` first |
+
+4. **Task claims** — the phase plans (`Phase-*.md`) are the task source of truth. Claim a task by
+   appending `— claimed by <sid> @ <yyyy-MM-dd HH:mm>` to its task line; finish it with
+   `✅ by <sid>`. Never edit a line another session claimed. **Your incoming queue = unclaimed
+   tasks in your owned zones** — reading the plans + claims tells every session what every other
+   session is doing now and next.
+5. **Read-fresh ceremony** — re-read ALL `live/*.md` fresh (never from memory): at session start,
+   before starting any task, before staging, and before merging.
+6. **Overlap pre-check** — before a task: is it claimed by another session? Does it touch any file
+   in another session's "Touched files" register? If either → do not start; post a request on
+   `board.md` or take another task.
+7. **Heartbeat** — stamp `heartbeat:` on every task boundary. A claim whose owner's heartbeat is
+   older than 12h is void; the user re-assigns it.
+8. **Staging** — explicit-path `git add` only; never `git add -A` (sweeps peers' work). The commit
+   diff review is the final guard — if your staged stat shows files outside your scope, unstage them.
+9. **verify.ps1 contention** — `verify.ps1` cleans `obj/`/`bin/` and builds BOTH WASM apps from the
+   shared checkout. Do not have uncommitted edits in `admin-blazor`/`dashboard-blazor` while another
+   session runs it. Announce "running verify" on `board.md` before starting one.
+10. **Worktree variant** — if a stream ever moves to a worktree, MD sync requires small
+    user-approved "sync commits" of `live/` + claim lines only, pulled via
+    `git merge --ff-only develop` at task boundaries. Same-checkout stays the default.
 
 ## Subagent Dispatch Protocol
 
@@ -165,10 +229,13 @@ Before writing any `.razor` file, read an existing working page in the same proj
 Modify ONLY:
 
 - `./clients/BlazorShared` — **Main stream only**; parallel streams treat it read-only
-- `./clients/admin-blazor` · `./clients/dashboard-blazor` — Main stream (parallel-safe only for
-  standalone test projects, e.g. `clients/admin-blazor/FSH.Admin.Wasm.E2E.Tests`)
+- `./clients/admin-blazor` — Main stream by default; **parallel-safe** (app code included) when
+  the Main stream's active task is confined to `dashboard-blazor`/`BlazorShared` (check STATUS.md
+  "Active Streams"); standalone test projects (`FSH.Admin.Wasm.E2E.Tests`) always parallel-safe
+- `./clients/dashboard-blazor` — Main stream (parallel-safe only for standalone test projects)
 - `./clients/FSH.Hybrid` — parallel-safe (MAUI stream)
-- `./opencode/addBlazorFrontends`
+- `./opencode/addBlazorFrontends` (incl. `live/` — per-file ownership, see coordination protocol)
+- `./README.md` — root project docs (announce the edit on `live/board.md` first)
 - `./.agents/rules/frontend/{blazor-shared,blazor-admin,blazor-dashboard,maui-hybrid}.md` — OUR docs
 - `./.agents/skills/{add-blazor-page,add-maui-hybrid-feature,add-permission-csharp,implement-blazor-form,implement-blazor-list,setup-blazor-auth,setup-blazor-realtime,setup-blazor-sse}/SKILL.md` — OUR skills
 
@@ -176,6 +243,8 @@ NEVER modify (upstream baseline / React reference):
 
 - `clients/admin` · `clients/dashboard` (React apps — READ-ONLY parity source)
 - `AGENTS.md` · `CLAUDE.md` · `GEMINI.md` · `.github/**` · `deploy/**` · `src/**`
+  - `.github/**` is frozen; the Phase 5.10 MAUI CI workflow is deferred until the user approves
+    a change here — the local `verify-hybrid.ps1` covers the gate meanwhile
 - `.agents/rules/**` (all other rule files) · `.agents/skills/*` (all other skills) · `.agents/workflows/**`
 
 ---
@@ -190,11 +259,12 @@ full findings to a temp file while returning only a compact severity-ranked list
 
 ## Implementation Summary
 
-Write an MD file named `implementation-summary-<yyyy-MM-dd-HH-mm-ss>.md` (24-hour clock) in
-`./opencode/addBlazorFrontends/00_summary/`. **Use `00_summary/_template.md` as the canonical
+Write an MD file named `implementation-summary-<yyyy-MM-dd-HH-mm-ss>-<session-id>.md` (24-hour clock)
+in `./opencode/addBlazorFrontends/00_summary/`. **Use `00_summary/_template.md` as the canonical
 schema** (header, description/creator/duration front-matter, verification block) — it supersedes
-inline templates; fill the verification block from `verify.ps1` output. Parallel streams write
-their own summary inside their worktree's `opencode/addBlazorFrontends/00_summary/`.
+inline templates; fill the verification block from `verify.ps1` output. Same-checkout sessions
+write theirs in the same folder — timestamp + session-id keep filenames unique. Parallel streams
+in worktrees write their own summary inside their worktree's `opencode/addBlazorFrontends/00_summary/`.
 
 ---
 

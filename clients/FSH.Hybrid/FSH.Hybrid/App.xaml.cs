@@ -17,8 +17,34 @@ public sealed partial class App : Application
 #if WINDOWS
         window.HandlerChanged += OnWindowHandlerChanged;
 #endif
+        window.Created += (_, _) =>
+        {
+            // Start the offline queue: subscribe to connectivity + flush anything pending.
+            if (Current?.Handler?.MauiContext?.Services.GetService<IOfflineQueueProcessor>() is { } processor)
+            {
+                _ = processor.ProcessQueueAsync();
+            }
+        };
 
         return window;
+    }
+
+    protected override void OnAppLinkRequestReceived(Uri uri)
+    {
+        base.OnAppLinkRequestReceived(uri);
+
+        var target = Current?.Handler?.MauiContext?.Services.GetService<IDeepLinkService>()?.Parse(uri);
+        if (target is null)
+        {
+            return;
+        }
+
+        if (target.BlazorPath is not null)
+        {
+            HybridNavigationBridge.PendingPath = target.BlazorPath;
+        }
+
+        _ = Shell.Current.GoToAsync($"//{target.ShellRoute}");
     }
 
     protected override void OnSleep()
@@ -36,6 +62,11 @@ public sealed partial class App : Application
         if (Current?.Handler?.MauiContext?.Services.GetService<MauiAuthStateProvider>() is { } auth)
         {
             _ = auth.OnAppResumedAsync();
+        }
+
+        if (Current?.Handler?.MauiContext?.Services.GetService<IOfflineQueueProcessor>() is { } processor)
+        {
+            _ = processor.ProcessQueueAsync();
         }
 
         base.OnResume();
