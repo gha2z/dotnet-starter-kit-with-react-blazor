@@ -10,11 +10,15 @@
     Title="FSH Hybrid">
 
     <FlyoutItem Title="FSH Hybrid" FlyoutDisplayOptions="AsMultipleItems">
-        <TabBar>
-            <ShellContent Title="Dashboard" Route="home" ContentTemplate="{DataTemplate hybrid:MainPage}" />
-            <ShellContent Title="Settings" Route="settings" ContentTemplate="{DataTemplate pages:SettingsPage}" />
-            <ShellContent Title="About" Route="about" ContentTemplate="{DataTemplate pages:AboutPage}" />
-        </TabBar>
+        <Tab Title="Dashboard" Route="home">
+            <ShellContent ContentTemplate="{DataTemplate hybrid:MainPage}" />
+        </Tab>
+        <Tab Title="Settings" Route="settings">
+            <ShellContent ContentTemplate="{DataTemplate pages:SettingsPage}" />
+        </Tab>
+        <Tab Title="About" Route="about">
+            <ShellContent ContentTemplate="{DataTemplate pages:AboutPage}" />
+        </Tab>
     </FlyoutItem>
 
 </Shell>

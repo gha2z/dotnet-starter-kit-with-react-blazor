@@ -93,8 +93,8 @@ public static class MauiProgram
         builder.Services.AddScoped<IHubConnectionService, HubConnectionService>();
         builder.Services.AddScoped<ISseService, SseService>();
 
-        // Blazor WebView
-        builder.Services.AddBlazorWebView();
+        // Blazor WebView (handler + services; .NET MAUI 10 API)
+        builder.Services.AddMauiBlazorWebView();
 
 #if DEBUG
         builder.Logging.AddDebug();
