@@ -1,5 +1,5 @@
 # AddBlazorFrontends — Session Instructions
-** Last updated: 2026-Aug-05, by: Project Owner a.k.a user: FIKRUL IRSYAD.**
+**Last updated: 2026-08-06 03:26, by: sess-main (opencode, model: deepseek-v4-flash-free) — multi-session hardening (verify lock, coordination.ps1 gate, single-source ownership).**
 
 ## Commit Policy
 
@@ -12,6 +12,11 @@ After completing a feature:
 2. Show: `git diff --cached --stat` + one-line summary of what changed
 3. Wait for user approval
 4. Then commit
+5. **Never `git push`** — pushes are user-managed; independent pushes break coordination
+
+Also run the staging gate first: `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid>`
+(validates your session file, heartbeat, file ownership and the touched-files overlap check —
+see "Coordination Gate Script" below).
 
 ---
 
@@ -84,16 +89,20 @@ live/
 1. **Session identity** — the user names each session at launch (`sess-main`, `sess-maui`, …).
    Record it + your model identity + scope + heartbeat in `live/<session-id>.md` before any work.
 2. **Single-writer files** — you write ONLY `live/<your-session-id>.md`. You may APPEND rows to
-   `live/board.md` (re-read it first; never rewrite existing rows). Every other file is read-only
-   unless the ownership map gives it to you.
-3. **Ownership map** (directory → owner):
+   `live/board.md` (re-read it first; never rewrite existing rows; if the file changed under you,
+   re-read and re-append — a concurrent append must never be lost). **Only the owner writes their
+   session file — other sessions may create a stub from `_template.md` at most, never populate or
+   edit it** (seeding another session's identity/heartbeat caused drift before). Every other file
+   is read-only unless the ownership map gives it to you.
+3. **Ownership map** — **`Scope Restriction` below is the single authority; this map is derived
+   from it. If the two disagree, Scope Restriction wins.** (directory → owner):
 
    | Zone | Owner |
    |------|-------|
    | `clients/dashboard-blazor/**` · `clients/BlazorShared/**` | `sess-main` (others read-only) |
-   | `clients/admin-blazor/**` | `sess-admin` — parallel-safe when `sess-main`'s active task is confined to dashboard-blazor/BlazorShared (check STATUS.md "Active Streams") |
+   | `clients/admin-blazor/**` | Main-owned by default (app code + tests); app-code edits by other sessions require a board sign-off per task (Phase C palette granted — row #1); standalone test projects (`FSH.Admin.Wasm.E2E.Tests`) always parallel-safe |
    | `clients/FSH.Hybrid/**` | `sess-maui` |
-   | `opencode/addBlazorFrontends/live/*` | per-file (rule 2) |
+   | `opencode/addBlazorFrontends/live/*` | per-file (rule 2); `locks/*` are the shared verify lock (rule 9) |
    | `STATUS.md` · `00-Index.md` · phase-plan status lines | `sess-main` (streams may APPEND their own row to "Active Streams"; streams own the status lines of tasks they claimed) |
    | `.agents/rules/frontend/*.md` · root `README.md` | any session, but announce the edit on `board.md` first |
 
@@ -107,16 +116,53 @@ live/
 6. **Overlap pre-check** — before a task: is it claimed by another session? Does it touch any file
    in another session's "Touched files" register? If either → do not start; post a request on
    `board.md` or take another task.
-7. **Heartbeat** — stamp `heartbeat:` on every task boundary. A claim whose owner's heartbeat is
+7. **Heartbeat** — stamp `heartbeat:` on **every user turn** (not only task boundaries) — an
+   idle-but-mid-task session must still be visible as alive. A claim whose owner's heartbeat is
    older than 12h is void; the user re-assigns it.
-8. **Staging** — explicit-path `git add` only; never `git add -A` (sweeps peers' work). The commit
-   diff review is the final guard — if your staged stat shows files outside your scope, unstage them.
-9. **verify.ps1 contention** — `verify.ps1` cleans `obj/`/`bin/` and builds BOTH WASM apps from the
-   shared checkout. Do not have uncommitted edits in `admin-blazor`/`dashboard-blazor` while another
-   session runs it. Announce "running verify" on `board.md` before starting one.
+8. **Staging** — explicit-path `git add` only; never `git add -A` (sweeps peers' work). Run the
+   gate (`coordination.ps1`) and re-read `live/*.md` before staging. The commit diff review is the
+   final guard — if your staged stat shows files outside your scope, unstage them.
+9. **Build/verify contention — lock, don't announce** — `verify.ps1` / `verify-hybrid.ps1` clean
+   `obj/`/`bin/` and build from the shared checkout. Before running either, create the lock file
+   `live/locks/verify.lock` (atomic `New-Item`); delete it when done. While the lock exists, no
+   session runs `dotnet build`/`dotnet test`/verify on any shared-checkout project (`coordination.ps1`
+   refuses when the lock is present). A stale lock (creator's heartbeat > 12h) may be removed by
+   anyone after announcing on `board.md`. Windows note: VS open on the solution, `.vs` locks, or
+   running dev servers can abort the clean step — stop them or use `-SkipClean` first.
 10. **Worktree variant** — if a stream ever moves to a worktree, MD sync requires small
     user-approved "sync commits" of `live/` + claim lines only, pulled via
     `git merge --ff-only develop` at task boundaries. Same-checkout stays the default.
+11. **Shared MD files are UTF-8** — always read + write them as UTF-8 (`Set-Content -Encoding UTF8`,
+    never a default-ANSI rewrite). Terminal displays may render emoji as `?` even when the file is
+    fine — verify with the read tool / `git show HEAD:<file>` before assuming corruption.
+12. **Incident recovery** (keep short — see full playbook in the readme appendix):
+    - Swept foreign files into your staged set → `git restore --staged <paths>` and re-check.
+    - Lost board row (concurrent append) → re-read, re-append with the same ID + `(re-appended)`.
+    - Stale verify.lock → remove after checking creator heartbeat, announce on `board.md`.
+    - Wrong identity in docs → fix the header only after re-verifying (never copy from memory).
+
+## Coordination Gate Script
+
+`opencode/addBlazorFrontends/coordination.ps1` turns rules 1/7/8/9 into a mechanical gate — run it
+at session start, before staging, and before any shared-checkout build:
+
+```powershell
+# session start: validates session file + stamps a fresh heartbeat
+pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Start
+
+# before staging: ownership + touched-files + heartbeat checks (exit code 1 on violations)
+pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Gate
+
+# build/verify lock (rule 9) — create before verify.ps1 / verify-hybrid.ps1, delete after
+pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -LockVerify
+pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -UnlockVerify
+
+# stamp heartbeat on every user turn
+pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Heartbeat
+```
+
+The zone→session map lives at the top of the script (keep it in sync with `Scope Restriction`
+below — the script fails closed: any path outside your zones blocks staging).
 
 ## Subagent Dispatch Protocol
 
@@ -168,20 +214,22 @@ actual model (e.g. `big-pickle`). Writing the combo as the model is wrong.
 
 1. **Inspect the opencode raw-message JSON** (system prompt / context window / raw messages) for the
    `modelID` + `providerID` of your current session.
-2. **If `modelID` is a concrete model** (not `auto`/`auto/*`, e.g. `mimo-v2.5-free` via provider
-   `opencode`) → use it directly. **No gateway log query needed.**
+2. **If `modelID` is a concrete model** (not `auto`/`auto/*`, e.g. `opencode/deepseek-v4-flash-free`,
+   `mimo-v2.5-free` via provider `opencode`) → use it directly. **No gateway log query needed.**
 3. **If `modelID` is an `auto` combo** (e.g. `auto/coding`, provider `omniroute`) → resolve the real
-   routed model through the omniroute log:
-   - Open `http://localhost:20128/login`, enter the password (see dev machine secrets)
-   - Open `http://localhost:20128/api/usage/call-logs?status=ok&limit=1`
-   - Read the `model` field of the most recent `ok` entry (e.g. `big-pickle`)
+   routed model through the omniroute usage log (`/api/usage/call-logs?status=ok&limit=1` — ask the
+   user for the gateway dashboard URL and credentials; they are NOT stored in this repo). Read the
+   `model` field of the most recent `ok` entry.
+4. **If you cannot verify** (no raw-message access, gateway unreachable) → write
+   `model: <modelID> (unresolved)` and flag it in the session summary. **Never guess, never copy
+   from an older doc** — identity drift happened before and propagated for two sessions.
 
 ### Identity format in docs
 
-Use the resolved model everywhere identity appears:
-
-- Headers: `Last Update: <yyyy-MM-dd HH:mm:ss>, by: opencode (auto/coding, model: <routed-model>).`
-- Summaries: `**Creator:** opencode (auto/coding, model: <routed-model>)`
+- Concrete model: `Last Update: <yyyy-MM-dd HH:mm:ss>, by: opencode (model: <modelID>).`
+- Resolved auto combo: `Last Update: <yyyy-MM-dd HH:mm:ss>, by: opencode (auto/coding, model: <routed-model>).`
+- Unresolved: `Last Update: <yyyy-MM-dd HH:mm:ss>, by: opencode (model: <modelID> — unresolved).`
+- Summaries: `**Creator:** opencode (model: <modelID>)` — same three variants.
 
 Use the actual session timestamp (24-hour clock), not a value copied from a prior file.
 
@@ -217,6 +265,8 @@ Before writing any `.razor` file, read an existing working page in the same proj
   apps counting warnings/errors, runs both test suites, performs the MudBlazor icon audit, and
   prints a paste-ready verification block for the summary. Variants: `-SkipClean`, `-SkipTests`.
 - Run verify.ps1 **inside the stream's own worktree** — the main checkout cannot verify worktree state.
+  **In the shared checkout, take the verify lock first** (rule 9): `coordination.ps1 -LockVerify`
+  before, `-UnlockVerify` after.
 - Full solution build + both app suites at phase end (catches cross-project breakage)
 - **Icon smoke check (MudBlazor):** verify.ps1 audits `Icons.Material.*` references by reflection;
   still spot-check new icons manually — names drift between MudBlazor versions (`Bell` → use
@@ -229,9 +279,9 @@ Before writing any `.razor` file, read an existing working page in the same proj
 Modify ONLY:
 
 - `./clients/BlazorShared` — **Main stream only**; parallel streams treat it read-only
-- `./clients/admin-blazor` — Main stream by default; **parallel-safe** (app code included) when
-  the Main stream's active task is confined to `dashboard-blazor`/`BlazorShared` (check STATUS.md
-  "Active Streams"); standalone test projects (`FSH.Admin.Wasm.E2E.Tests`) always parallel-safe
+- `./clients/admin-blazor` — Main stream by default (app code + tests). App-code edits by other
+  sessions require a board sign-off per task (granted for the Phase C admin palette — board row #1);
+  standalone test projects (`FSH.Admin.Wasm.E2E.Tests`) always parallel-safe
 - `./clients/dashboard-blazor` — Main stream (parallel-safe only for standalone test projects)
 - `./clients/FSH.Hybrid` — parallel-safe (MAUI stream)
 - `./opencode/addBlazorFrontends` (incl. `live/` — per-file ownership, see coordination protocol)
