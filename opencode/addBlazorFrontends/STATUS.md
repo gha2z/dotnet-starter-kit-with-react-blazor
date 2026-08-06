@@ -20,7 +20,7 @@ Last Update: 2026-08-06 09:40, by: opencode (model: deepseek-v4-flash-free).
 | Stream | Branch | Worktree | Scope | Owner | State |
 |--------|--------|----------|-------|-------|-------|
 | Main (dashboard) | `develop` | repo root | Phase 3 ✅ + Phase 4 ✅ (dashboard E2E 11/11); Phase 6 polish/perf in progress — **wave 4: dashboard lazy loading landed** (Pages RCL + `.wasm` lazy item + `AdditionalAssemblies`, E2E 18/18 + bUnit 179/179, 20.34 MB eager publish) | sess-main | active |
-| MAUI Phase 5 | `develop` (same checkout) | — | 5.4–5.9 done `bc00bea5`; admin palette Phase C landed `671d2f80` (158/158); admin accent/font/density landed `c229c95e` (board row #3) | sess-maui | active |
+| MAUI Phase 5 | `develop` (same checkout) | — | 5.4–5.9 done `bc00bea5`; admin palette Phase C landed `671d2f80` (158/158); admin accent/font/density landed `c229c95e` (board row #2) | sess-maui | active |
 
 **Closed:** MAUI Hybrid (`feature/maui-hybrid` → `c77c9939`) and E2E Playwright (`feature/e2e-playwright` → `38890349`) merged into `develop` and verified (Gate 2 green: both apps 0/0, dashboard 146/146, admin 147/147, E2E 9/9 + 1 skipped, hybrid 0 errors / 9 known NU1608 warnings).
 

@@ -19,7 +19,7 @@ Last Update: 2026-Aug-06, by: opencode (auto/coding, model: deepseek-v4-flash-fr
   registrations** in `FSH.Admin.Wasm/Program.cs` were added (Audit/Billing/Impersonation/Role/Session/
   Tenant/TwoFactor/User/Webhook) and `IHealthService` was registered as the interface (was concrete only).
   Also fixed `js/fshWindow.js` `export` syntax error on a plain `<script>` load (now `window.openUrl`).
-- Prerequisites: Phases 0–1 ✅ · Phase 2 ✅ (2.1–2.10 + admin overview) · Phase 5 unblocked — MAUI workload
+- Prerequisites: Phases 0–1 ✅ · Phase 2 ✅ (2.1–2.10 + admin overview) · Phase 5 ✅ delivered (5.1–5.9, `bc00bea5`; device demo verified on emulator-5554) — MAUI workload
   installed (elevated) and `clients/FSH.Hybrid` migrated to .NET 10 conventions (see §7.6 in
   `hands-on-phase-7.md` for the full saga + project-file recipe).
 
@@ -99,11 +99,13 @@ Last Update: 2026-Aug-06, by: opencode (auto/coding, model: deepseek-v4-flash-fr
 
 ### MAUI Hybrid — `clients/FSH.Hybrid`
 
+> Rows refreshed 2026-08-06 (board row #3 — sess-maui flagged staleness; verified: app now has `.razor` pages + `FshThemeService` wired).
+
 | Surface | Status |
 |---|---|
-| Shell (sidebar/topbar parity, theme) | 🔲 5.x — app has **zero `.razor` pages**; workload now installed (elevated) and project migrated to .NET 10 conventions — builds 4 TFMs green (§7.6 of `hands-on-phase-7.md`) |
-| All dashboard screens | 🔲 Phase 5 |
-| Native features (SecureStorage, push, biometric, camera, offline queue, deep links) | 🔲 Phase 5 |
+| Shell (sidebar/topbar parity, theme) | 🟨 — app has `.razor` pages + shared layout (`Main.razor`, `Login`, `OverviewPage`, `FilesPage`, `SettingsPage`, `Shared/` layout); `FshThemeService` wired (`fsh.theme`/System in `MauiProgram.cs`, same contract as dashboard). MAUI Shell flyout = Home/Settings/About; sidebar/topbar 1:1 parity with the WASM dashboard NOT yet done (5.x next). Builds 4 TFMs green (§7.6 of `hands-on-phase-7.md`) |
+| All dashboard screens | 🔲 — only Overview (3.1) + Files (3.10) ported; remaining screens (Activity, Subscription, Wallet, Invoices, Catalog, Identity, Tickets, Chat, System, Settings, Notifications…) pending Phase 5 follow-up |
+| Native features | 🟨 Phase 5: SecureStorage tokens ✅ (5.2) · biometric unlock ✅ (5.2) · offline queue ✅ (5.5, SQLite, 12/12) · camera/media picker + presigned upload ✅ (5.6) · deep links ✅ (5.7, `fsh://`) · push ⚠️ compile-gated (5.4 — needs Firebase/APNs, see `push-setup.md`) · IAP 🔲 blocked/external (5.8) · signing/CI 🔲 blocked/external (5.10) |
 
 ## Build order
 
