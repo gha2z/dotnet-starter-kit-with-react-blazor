@@ -2,6 +2,8 @@ using FSH.BlazorShared.Auth;
 using FSH.BlazorShared.Sse;
 using FSH.Dashboard.Wasm.Auth;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.AspNetCore.Components.WebAssembly.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
@@ -14,10 +16,40 @@ public sealed partial class App : IDisposable
     [Inject] private NavigationManager Nav { get; set; } = default!;
     [Inject] private IJSRuntime Js { get; set; } = default!;
     [Inject] private ImpersonationHandoff ImpersonationHandoff { get; set; } = default!;
+    [Inject] private LazyAssemblyLoader LazyLoader { get; set; } = default!;
     [Inject] private ILogger<App> Logger { get; set; } = default!;
 
     private IDisposable? _sseSub;
     private bool _sseStarting;
+    private bool _pageAssemblyLoaded;
+    private bool _loadingPages;
+
+    private async Task OnNavigateAsync(NavigationContext context)
+    {
+        if (_pageAssemblyLoaded || context.CancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        _loadingPages = true;
+        StateHasChanged();
+        try
+        {
+            _lazyAssemblies.AddRange(await LazyLoader.LoadAssembliesAsync(PagesAssemblyPaths));
+            _pageAssemblyLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to lazy-load the pages assembly for {Route}", context.Path);
+        }
+        finally
+        {
+            _loadingPages = false;
+            StateHasChanged();
+        }
+    }
+
+    private static readonly string[] PagesAssemblyPaths = ["FSH.Dashboard.Pages.wasm"];
 
     protected override async Task OnInitializedAsync()
     {

@@ -9,7 +9,7 @@
 
 <CascadingAuthenticationState>
     <FshErrorBoundary>
-        <Router AppAssembly="@typeof(App).Assembly">
+        <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="@_lazyAssemblies" OnNavigateAsync="@OnNavigateAsync">
             <Found Context="routeData">
                 <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                     <NotAuthorized>
@@ -26,10 +26,18 @@
                 <FshNotFound />
             </NotFound>
         </Router>
+        @if (_loadingPages)
+        {
+            <div class="fsh-route-loading" role="status" aria-live="polite">
+                <MudProgressCircular Indeterminate="true" Size="Size.Medium" />
+                <span>Loading page…</span>
+            </div>
+        }
     </FshErrorBoundary>
 </CascadingAuthenticationState>
 
 @code {
+    private List<System.Reflection.Assembly> _lazyAssemblies = [];
     private async Task OnThemeChanged(bool isDarkMode)
         => await Theme.SetAsync(isDarkMode);
 }

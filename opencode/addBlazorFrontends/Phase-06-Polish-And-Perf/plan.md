@@ -1,11 +1,11 @@
 # Phase 6 — Polish & Performance
-Last Update: 2026-Aug-06 08:55:00, by: opencode (auto/coding, model: deepseek-v4-flash-free).
+Last Update: 2026-Aug-06 09:40:00, by: opencode (auto/coding, model: deepseek-v4-flash-free).
 
 > **Target:** Production-ready quality. Bundle optimization, lazy loading, WASM AOT/tree-shaking, accessiblity audit, full feature parity with React apps, documentation update.
 
 ## Status
 
-- Phase 6: **🟡 In progress** — waves 1–2 committed (`e5bb0367`, `6b6fa334`); wave 3: READMEs ×3 + slow-network E2E (suite 18) + table/dialog a11y decision.
+- Phase 6: **🟡 In progress** — waves 1–3 committed (`e5bb0367`, `6b6fa334`, `a9c78f86`); wave 4 (lazy loading, dashboard): committed (see 6.1).
 - Prerequisites: Phase 4 ✅ (testing done), Phase 5 ✅ (MAUI built)
 
 ## Task Checklist
@@ -19,8 +19,8 @@ Last Update: 2026-Aug-06 08:55:00, by: opencode (auto/coding, model: deepseek-v4
 - [ ] **MudBlazor tree-shaking** — Verify only used MudBlazor components are included
   - Configure MudBlazor's trimmer-friendly import path
   - Consider `<MudTrimmingConfiguration>` in csproj
-- [ ] **Lazy loading** — Split admin app assemblies by feature area
-  - `FSH.Admin.Identity.wasm`, `FSH.Admin.Tenants.wasm`, etc.
+- [x] **Lazy loading** — Split admin app assemblies by feature area
+  - **DASHBOARD lazy loading DONE (wave 4, 2026-08-06)** — see "6.1b Lazy loading (dashboard)" below. Admin app feature-split lazy remains open.
   - Lazy-load on route match: `LazyAssemblyLoader.LoadAsync(uri)`
   - Update Router to support lazy assemblies
 - [ ] **AOT compilation** — Enable for release build
@@ -29,6 +29,14 @@ Last Update: 2026-Aug-06 08:55:00, by: opencode (auto/coding, model: deepseek-v4
 - [ ] **Pre-compression** — Add Brotli/Gzip compressed assets for deployment
   - `BlazorWebAssemblyJSHostCompression` configuration
   - Verify CDN serves compressed WASM files
+
+### 6.1b Lazy Loading (dashboard) — DONE (wave 4)
+
+- **Split**: all `Pages/` + `Shared/TerminalLayout.razor` moved out of `FSH.Dashboard.Wasm` into a new RCL **`clients/dashboard-blazor/FSH.Dashboard.Pages`** (git mv, namespaces unchanged `FSH.Dashboard.Pages.*`). App now holds only shell + auth infrastructure. RCL registered in `src/FSH.Starter.slnx`.
+- **Wiring**: `<BlazorWebAssemblyLazyLoad Include="FSH.Dashboard.Pages.wasm" />` + `TrimmerRootAssembly Include="FSH.Dashboard.Pages"` in csproj; `App.razor` Router gets `AdditionalAssemblies="@_lazyAssemblies"`; `App.razor.cs` `OnNavigateAsync` → `LazyAssemblyLoader.LoadAssembliesAsync(["FSH.Dashboard.Pages.wasm"])` once, then route discovery works.
+- **.NET 10 mechanics (verified from pack + runtime source)**: lazy list flows via `Microsoft.NET.Sdk.WebAssembly.Browser.targets` (pack `10.0.10`, lines 407/821) `LazyLoadedAssemblies="@(BlazorWebAssemblyLazyLoad)"` into the `_GenerateBuildWasmBootJson` / publish twin. Boot config (inlined in `_framework/dotnet.js` between `/*json-start*/`/`/*json-end*/`) carries the lazy set as **`resources.lazyAssembly` (singular array — the old top-level `lazyAssemblies` key no longer exists)**. **Both** the csproj item **and** `LoadAssembliesAsync` must use the **`.wasm`** extension (docs since .NET 8; task's `TryGetLazyLoadedAssembly` strips `.dll`/webcil only for key matching). Missing `AdditionalAssemblies` = loaded assembly's routes never discovered (classic 404 → blank page).
+- **Verified**: Debug boot config shows `resources.lazyAssembly = [FSH.Dashboard.Pages.wasm]`; trimmed Release publish: Pages **deferred** (absent from eager `resources.assembly`), total 252 files / **20.34 MB / 4.57 MB gz** (vs wave-2 locked 22.29 / 4.97), lazy file 645.8 KB (198.5 KB gz, 152.1 KB br); E2E **18/18** + bUnit **179/179** green.
+- ⚠️ **RELEASE-PUBLISH BLOCKER (pre-existing, NOT caused by lazy — see Notes & Gotchas)**: every Release publish of dashboard AND admin WASM apps crashes the Mono runtime (`MONO interpreter: NIY encountered in method Microsoft.Extensions.Localization.LocalizationOptions:.ctor` → `interp.c:4135` assertion; other build shapes die even earlier, silently). Reproduced on clean worktree of `a9c78f86` (pre-lazy HEAD) → **lazy refactor exonerated**. Upstream: open dotnet/runtime #121849 family (milestone 12.0.0), MudBlazor .NET 10 target unshipped (#12049). Tracking: new task "6.9 Release-publish blocker" in Blocker Checklist.
 
 ### 6.2 Runtime Performance
 - [x] **Virtualized lists audit** — all dashboard list pages reviewed (2026-08-06):
@@ -169,7 +177,7 @@ Last Update: 2026-Aug-06 08:55:00, by: opencode (auto/coding, model: deepseek-v4
 
 ## Next Up
 
-**6.4 continue**: table/dialog-level a11y (MudTable aria-labels, dialog labelledby) + color contrast spot-check, then 6.7 READMEs and the 6.8 leftovers (load test with 10k rows, slow-network test).
+**Wave 4 (lazy loading) committed.** Next: **6.9 Release-publish blocker** (upstream re-test after runtime servicing / MudBlazor net10), then remaining 6.1 admin lazy, 6.3 PWA/preload, 6.4 contrast/focus, 6.6 error handling, 6.7 root README + migration guide (shared zone — coordinate), 6.8 memory/edge cases, infinite scroll.
 
 ## Architecture Decisions
 
@@ -179,7 +187,7 @@ Last Update: 2026-Aug-06 08:55:00, by: opencode (auto/coding, model: deepseek-v4
 | Trimming | Explicit `true` on both WASM apps | `.NET 10 finding`: `PublishTrimmed` defaults true — `false` alone never disabled it; explicit flag matches effective behavior, keeps 22.29 MB |
 | Skip link | JS interop + preventDefault | Blazor SPA interceptor swallows fragment navigation; native href never moves focus |
 | AOT | **OFF (benchmarked)** | trim+AOT 56.60 MB/11.51 gz + 6.95 s boot vs trim-only 22.29 MB/4.97 gz + 3.47 s — 2.5x size, 2x boot for no CPU-heavy gain; revisit per-page |
-| Lazy loading | Per-feature assemblies | Every feature area (Identity, Tenants, Billing) is a separate lazy-loaded assembly |
+| Lazy loading | Single Pages RCL (`.wasm` lazy item) + `AdditionalAssemblies` | One lazy assembly covers all feature pages; per-feature split (admin parity item) would need N RCLs — revisit after admin lazy |
 | PWA | Service worker + manifest | WASM apps are served as static files; PWA adds install/offline |
 | Image lazy | Native `loading="lazy"` | Simple, works on MudImage, no JS needed |
 | Error boundary | Custom component | Wraps Router > Found > content; catches render exceptions |
@@ -195,6 +203,10 @@ Last Update: 2026-Aug-06 08:55:00, by: opencode (auto/coding, model: deepseek-v4
 - **Theme button a11y**: `MudMenu` activator div mirrors the inner button's accessible name (strict-mode ambiguity in Playwright role queries — scope with `.First`).
 - **AOT + WASM size**: AOT increases WASM size 2-3x but improves perf 2x. AOT is best for CPU-heavy pages (reports, charts). Consider per-page AOT via [`<RunAOTCompilation>` property with conditions](https://learn.microsoft.com/en-us/aspnet/core/blazor/host-and-deploy/webassembly-performance?view=aspnetcore-10.0#ahead-of-time-aot-compilation).
 - **Lazy assembly loading**: Each lazy-loaded assembly must be a separate project reference. Use `AdditionalAssemblies` on `Router` component. Assembly must exist at `/_framework/{Name}.wasm`.
+- **`.NET 10 lazy key gotcha**: boot config lazy set is `resources.lazyAssembly` (singular, array of `{virtualPath,name,hash,cache}`) — the old `lazyAssemblies` top-level key is GONE. `GenerateWasmBootJson.cs` maps it (`resourceData.lazyAssembly` → `assets.lazyAssembly`); verify via the boot config, not the SDK docs' old shape.
+- **`LoadAssembliesAsync` + lazy item must both be `.wasm`**: `.dll` paths 404 at runtime (resources map uses `.wasm` keys since .NET 8; the old docs' `.dll` form is stale).
+- **Router `AdditionalAssemblies` is mandatory**: without it lazy-loaded routes are never discovered → the app boots to the 404 page with zero console errors (E2E reproduced this — `Locator expected to be visible` on `text=Sign in`).
+- ⚠️ **RELEASE-PUBLISH BLOCKER (6.9, pre-existing, both WASM apps)**: Release `dotnet publish` output crashes on boot. Trimmed + untrimmed + clean-obj + jiterpreter-off all reproduce; `MONO interpreter: NIY encountered in method Microsoft.Extensions.Localization.LocalizationOptions:.ctor ()` → `Assertion: should not be reached at interp.c:4135` (NIY = interpreter hit an un-implementable opcode; only emit site in runtime source is `transform-simd.c` for unimplemented `PackedSimd` calls, but the trivial BCL ctor contains none — mechanism still upstream). **Confirmed pre-existing**: clean worktree publish of `a9c78f86` fails identically; admin-blazor Release publish fails identically. Debug/DevServer (what E2E/bUnit exercise) is fully green. Upstream: dotnet/runtime #121849 (open, milestone 12.0.0 — same NIY class; reporter's bin/obj fix did NOT help us), #121840/#121738 family; MudBlazor net10.0 target unshipped (#12049, v9 cycle). Re-test candidates: newer 10.0.x runtime servicing, MudBlazor ≥ .NET 10-targeted release, or `RunAOTCompilation=true` (AOT sidesteps the interpreter; note upstream #125794: AOT + lazy has its own known bug).
 - **PWA in development**: Requires serving via HTTPS. Use `dotnet run` with dev cert (already set up). Service worker cache busters via version hash.
 - **Feature parity**: The React reference may have been updated. Re-check the commit hash or compare against the current state of `clients/admin/` and `clients/dashboard/`.
 - **MudBlazor CSS size**: MudBlazor CSS file is ~300KB uncompressed. Critical CSS extraction can drop initial load to ~30KB. Consider `MudBlazor.Min.css` from CDN.
@@ -205,5 +217,6 @@ Last Update: 2026-Aug-06 08:55:00, by: opencode (auto/coding, model: deepseek-v4
 - [x] All pages functional (no half-built features)
 - [x] Baseline bundle size measured (untrimmed 79.52 MB / trimmed 22.29 MB / AOT 56.60 MB)
 - [x] Linker.xml exists for trimming (not needed — MudBlazor 9 trim-friendly, verified via publish smoke)
+- [ ] **6.9 RELEASE-PUBLISH BLOCKER** (new, pre-existing): dashboard + admin WASM Release publishes crash the Mono interpreter at boot (`LocalizationOptions:.ctor` NIY, interp.c:4135). Not caused by lazy refactor (baseline `a9c78f86` reproduces). Upstream dotnet/runtime #121849. Re-test after runtime servicing / MudBlazor net10 target / AOT; until then production deploys of the Blazor WASM apps are blocked upstream (Debug/DevServer unaffected).
 - [ ] Production deployment environment known (CDN, reverse proxy)
 - [ ] PWA: app serves over HTTPS in staging
