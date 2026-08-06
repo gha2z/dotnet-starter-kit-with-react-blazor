@@ -1,5 +1,5 @@
 # sess-maui
-identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-06 11:52
+identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-06 13:34
 
 scope: clients/FSH.Hybrid/** · clients/admin-blazor/** (per amended scope) · root README.md ·
 .agents/rules/frontend/maui-hybrid.md · opencode/addBlazorFrontends/live/sess-maui.md ·
@@ -55,6 +55,8 @@ Device demo loop (emulator pos-testing): DONE - login + dashboard verified end-t
 - [ ] Demo interactivity: needs human on emulator (login) — first-run device loop otherwise complete
 
 ## Device demo state (live, 2026-08-06)
+- DEMO LOOP COMPLETE: login -> dashboard verified on emulator-5554 (cold boot -> Overview "Acme Corp / SUBSCRIPTION / Active", no FshErrorBoundary); fixes committed 78606f20
+- Teardown DONE 11:58: API pid 22024 stopped; fsh-dev-postgres/redis/minio stopped (Exited 0); adb reverse/forward rules lapsed with process cleanup
 - AVD `pos-testing` booted (emulator-5554); hybrid app installed (com.fullstackhero.hybrid, pid live)
 - Dev data plane: `fsh-dev-postgres` (5432), `fsh-dev-redis` (6379), `fsh-dev-minio` (9000/9001, bucket `local/fsh`); DB migrated+seeded (root/acme/globex tenants)
 - API pid 31172 on http://0.0.0.0:5030 (dev env, S3→MinIO); `adb reverse tcp:5030` + `tcp:9000`
