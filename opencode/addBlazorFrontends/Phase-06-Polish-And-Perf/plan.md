@@ -1,19 +1,21 @@
 # Phase 6 — Polish & Performance
-Last Update: 2026-Aug-06 07:15:00, by: opencode (auto/coding, model: deepseek-v4-flash-free).
+Last Update: 2026-Aug-06 08:10:00, by: opencode (auto/coding, model: deepseek-v4-flash-free).
 
 > **Target:** Production-ready quality. Bundle optimization, lazy loading, WASM AOT/tree-shaking, accessiblity audit, full feature parity with React apps, documentation update.
 
 ## Status
 
-- Phase 6: **🟡 In progress** — trim on (measured), tickets search debounce, branded splash, shell a11y (skip link + aria labels), mobile viewport E2E.
+- Phase 6: **🟡 In progress** — trim on + verified via published smoke; AOT benchmarked (rejected); tickets search debounce; branded splash; shell a11y; icon-button labels; mobile viewport E2E; deployability bug (OverrideHtmlAssetPlaceholders) fixed on BOTH apps.
 - Prerequisites: Phase 4 ✅ (testing done), Phase 5 ✅ (MAUI built)
 
 ## Task Checklist
 
 ### 6.1 WASM Bundle Size Optimization
 - [x] **Assembly trimming** — `BlazorWebAssemblyEnableTrimming=true` (dashboard; was `false`)
-  - ⚠️ **`.NET 10 finding`**: `false` alone was ineffective — `PublishTrimmed` defaults true, so the app was ALREADY shipping trimmed. Verified: untrimmed publish (`false` + `PublishTrimmed=false`) = **79.52 MB**; trimmed = **22.29 MB** (4.97 MB gz) — ~3.6x smaller. `admin-blazor` has the same latent config; flag to the admin session to set `true` explicitly for clarity.
-  - Linker.xml not required so far (MudBlazor 9 is trim-friendly); publish smoke on Release still TODO (E2E runs Debug only — trimming is publish-time).
+  - ⚠️ **`.NET 10 finding`**: `false` alone was ineffective — `PublishTrimmed` defaults true, so the app was ALREADY shipping trimmed. Verified: untrimmed publish (`false` + `PublishTrimmed=false`) = **79.52 MB**; trimmed = **22.29 MB** (4.97 MB gz) — ~3.6x smaller. **admin-blazor csproj also fixed** (`true` + removed `OverrideHtmlAssetPlaceholders`).
+  - ✅ **Trimmed publish smoke PASSED** (static hosting of `dotnet publish` output): splash shown, boot 3.47 s, login rendered, zero JS errors, no `#blazor-error-ui`.
+- [x] **Deployability fix — `OverrideHtmlAssetPlaceholders` removed (both apps)**
+  - With the flag `true`, the published `index.html` kept the literal `_framework/blazor.webassembly.js` script src, but the publish emits only the content-hashed `blazor.webassembly.{hash}.js` → **any static hosting 404s and the app never boots**. The dev server masks it (it serves the logical name). Removing the flag makes the publish emit the un-hashed bootstrap copy. Root-caused via trimmed-publish smoke; smoke now runs against a real static server (port 5180, `npx serve -s`).
 - [ ] **MudBlazor tree-shaking** — Verify only used MudBlazor components are included
   - Configure MudBlazor's trimmer-friendly import path
   - Consider `<MudTrimmingConfiguration>` in csproj
@@ -22,17 +24,19 @@ Last Update: 2026-Aug-06 07:15:00, by: opencode (auto/coding, model: deepseek-v4
   - Lazy-load on route match: `LazyAssemblyLoader.LoadAsync(uri)`
   - Update Router to support lazy assemblies
 - [ ] **AOT compilation** — Enable for release build
-  - `RunAOTCompilation=true` in csproj
-  - Benchmark: page load time, interaction response, bundle size
-  - Measure: with/without AOT, with/without trimming
+  - **Benchmarked (2026-08-06): trim+AOT = 56.60 MB / 11.51 MB gz vs trim-only 22.29 / 4.97**; boot 6.95 s vs 3.47 s (static localhost, cold browser). **Decision: keep AOT OFF** — 2.5x size + 2x boot for a CRUD dashboard with no CPU-heavy paths. Revisit if per-page AOT / reporting-heavy pages land. `RunAOTCompilation` not set.
+  - Measure: with/without AOT, with/without trimming (done — table in Architecture Decisions)
 - [ ] **Pre-compression** — Add Brotli/Gzip compressed assets for deployment
   - `BlazorWebAssemblyJSHostCompression` configuration
   - Verify CDN serves compressed WASM files
 
 ### 6.2 Runtime Performance
-- [ ] **Virtualized lists** — Audit all MudTable with large datasets
-  - Ensure `ServerData` pattern everywhere (no client-side paging)
-  - Use MudTable with `RowsPerPage="20"` and server-side total count
+- [x] **Virtualized lists audit** — all dashboard list pages reviewed (2026-08-06):
+  - **Server-side paging already correct**: Users, Tickets, Products, Brands, Categories, Invoices, Audits, Sessions, Wallet (page controls reload with `_pageNumber`/`PageSize`).
+  - **Roles / Groups**: full-set fetch + client-side filter — OK: bounded sets (tenant roles/groups), matches React parity.
+  - **Activity**: SSE event list capped at 200 (`MaxEvents`) — OK.
+  - **Trash**: loads full trash sets (products/brands/categories) — matches React page; note for future paging if data grows.
+  - No MudTable `Items`+`Pager` client-side-paging anti-patterns beyond the bounded cases above. No changes required.
 - [ ] **Infinite scroll** — Activity log, chat messages
   - Implement `OnScroll` JS interop for detect-bottom
   - Load more items via service call, append to list
@@ -65,6 +69,7 @@ Last Update: 2026-Aug-06 07:15:00, by: opencode (auto/coding, model: deepseek-v4
   - `MainLayout` renders `.fsh-skip-link` (visually hidden until focus) targeting `main#fsh-main` (`tabindex="-1"`). **Gotcha**: Blazor's SPA click interceptor swallows plain `#fsh-main` fragment navigation (hash changes, focus never moves) — fixed via `@onclick:preventDefault` + `js/fshSkipLink.js` (`fshSkipLink.focusMain`). E2E `SkipLink_IsFirstTabStop_AndJumpsFocusToMainContent` verifies Tab → focus → Enter → focus lands on `#fsh-main`.
 - [x] **MudIconButton aria-labels** — icon-only buttons named
   - Sidebar collapse ("Collapse sidebar"), collapsed expand ("Expand sidebar"), drawer trigger ("Open navigation"). Search + Theme already labeled. Nav landmark: `aria-label="Primary"`; `main` landmark present.
+  - **Audit pass**: 20 candidate icon buttons reviewed — 17 already labeled (Brands/Categories/Products row edit-delete, Product detail cover/remove, File manager preview/download/delete, Group remove-member, Session revoke/delete, Chat create-channel…). Added labels to the 3 missing: StockDialog "Decrease/Increase stock by 1", Chat "Send message", Audits "View audit detail".
 - [ ] **Screen reader support** — ARIA labels and roles (continue)
   - MudTable: `aria-label`, `aria-sort`
   - MudButton: `aria-label` for icon-only buttons
@@ -163,25 +168,28 @@ Last Update: 2026-Aug-06 07:15:00, by: opencode (auto/coding, model: deepseek-v4
 
 ## Next Up
 
-**Task 6.2 remainder / 6.4 continue**: virtualized lists audit + remaining a11y labels, then 6.1 release-publish smoke (trimmed Release run + AOT benchmark).
+**6.4 continue**: table/dialog-level a11y (MudTable aria-labels, dialog labelledby) + color contrast spot-check, then 6.7 READMEs and the 6.8 leftovers (load test with 10k rows, slow-network test).
 
 ## Architecture Decisions
 
 | Decision | Choice | Why |
 |---|---|---|
 | Bundle measurement | Publish + `_framework` size sum | Direct output measurement (built-in `dotnet wasm` size report not available for AOT-less publish) |
-| Trimming | Explicit `true` on dashboard | `.NET 10 finding`: `PublishTrimmed` defaults true — `false` alone never disabled it; explicit flag matches effective behavior, keeps 22.29 MB |
+| Trimming | Explicit `true` on both WASM apps | `.NET 10 finding`: `PublishTrimmed` defaults true — `false` alone never disabled it; explicit flag matches effective behavior, keeps 22.29 MB |
 | Skip link | JS interop + preventDefault | Blazor SPA interceptor swallows fragment navigation; native href never moves focus |
+| AOT | **OFF (benchmarked)** | trim+AOT 56.60 MB/11.51 gz + 6.95 s boot vs trim-only 22.29 MB/4.97 gz + 3.47 s — 2.5x size, 2x boot for no CPU-heavy gain; revisit per-page |
 | Lazy loading | Per-feature assemblies | Every feature area (Identity, Tenants, Billing) is a separate lazy-loaded assembly |
 | PWA | Service worker + manifest | WASM apps are served as static files; PWA adds install/offline |
-| AOT | Enable for Release only | Dev build speed > AOT speed during development |
 | Image lazy | Native `loading="lazy"` | Simple, works on MudImage, no JS needed |
 | Error boundary | Custom component | Wraps Router > Found > content; catches render exceptions |
 
 ## Notes & Gotchas
 
-- **Trimming + MudBlazor**: MudBlazor 9 ships trim-friendly; no Linker.xml needed yet. Trimmed publish smoke test still pending (E2E runs Debug).
-- **`BlazorWebAssemblyEnableTrimming=false` is a lie in .NET 10**: only `PublishTrimmed=false` actually disables trimming (79.52 MB baseline proves it). Both apps currently ship trimmed.
+- **`OverrideHtmlAssetPlaceholders=true` breaks static hosting** (both apps had it): published index.html references the literal `_framework/blazor.webassembly.js` which only exists as `blazor.webassembly.{hash}.js` in `_framework/` — dev server masks it, any CDN/nginx/static server 404s and the app never boots. Removed from both csproj files; verified via static-host smoke.
+- **Smoke harness** (temp, not committed): publish → `npx serve -s` on 5180 → Playwright boot check (splash, `.mud-theme-provider` attached, login heading, `#blazor-error-ui` absent, JS errors). `http-server` lacks SPA fallback — `serve -s` required.
+- **Trimmed publish measurement gotcha**: publishing twice into the same obj folder reuses cached `wasm` intermediates (identical hash-named outputs, misleading "no trim" result). Always clean `obj/Release` between configs.
+- **AOT measurement**: 56.60 MB total / 11.51 MB gz; `dotnet.native.wasm` alone 27.93 MB (8.61 gz).
+- **Trimming + MudBlazor**: MudBlazor 9 ships trim-friendly; no Linker.xml needed (verified by publish smoke).
 - **Skip link + Blazor interceptor**: fragment-only `href` gets intercepted by `blazor.webassembly.js` — always pair with `@onclick:preventDefault` + JS focus.
 - **Theme button a11y**: `MudMenu` activator div mirrors the inner button's accessible name (strict-mode ambiguity in Playwright role queries — scope with `.First`).
 - **AOT + WASM size**: AOT increases WASM size 2-3x but improves perf 2x. AOT is best for CPU-heavy pages (reports, charts). Consider per-page AOT via [`<RunAOTCompilation>` property with conditions](https://learn.microsoft.com/en-us/aspnet/core/blazor/host-and-deploy/webassembly-performance?view=aspnetcore-10.0#ahead-of-time-aot-compilation).
@@ -194,7 +202,7 @@ Last Update: 2026-Aug-06 07:15:00, by: opencode (auto/coding, model: deepseek-v4
 
 - [x] Phase 4 + 5 complete
 - [x] All pages functional (no half-built features)
-- [x] Baseline bundle size measured (untrimmed 79.52 MB / trimmed 22.29 MB)
-- [ ] Linker.xml exists for trimming (not needed yet — pending Release smoke)
+- [x] Baseline bundle size measured (untrimmed 79.52 MB / trimmed 22.29 MB / AOT 56.60 MB)
+- [x] Linker.xml exists for trimming (not needed — MudBlazor 9 trim-friendly, verified via publish smoke)
 - [ ] Production deployment environment known (CDN, reverse proxy)
 - [ ] PWA: app serves over HTTPS in staging

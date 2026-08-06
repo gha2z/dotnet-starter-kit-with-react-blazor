@@ -187,6 +187,7 @@
                               OnKeyDown="HandleKeyDown" Variant="Variant.Outlined" Margin="Margin.Dense"
                               Class="flex-grow-1" Lines="1" />
                 <MudIconButton Icon="@Icons.Material.Outlined.Send" Color="Color.Primary" Size="Size.Small"
+                               aria-label="Send message"
                                OnClick="SendMessage" Disabled="string.IsNullOrWhiteSpace(_messageText)" Class="ml-2" />
             </MudPaper>
         }

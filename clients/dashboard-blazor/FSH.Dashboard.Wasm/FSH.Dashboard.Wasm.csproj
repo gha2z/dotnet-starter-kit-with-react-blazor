@@ -6,7 +6,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>FSH.Dashboard.Wasm</RootNamespace>
     <AssemblyName>FSH.Dashboard.Wasm</AssemblyName>
-    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
     <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
     <BlazorWebAssemblyEnableTrimming>true</BlazorWebAssemblyEnableTrimming>
   </PropertyGroup>

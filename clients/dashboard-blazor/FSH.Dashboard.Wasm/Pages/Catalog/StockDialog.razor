@@ -16,6 +16,7 @@
 
         <div class="d-flex align-center gap-3 mb-2">
             <MudIconButton Icon="@Icons.Material.Filled.Remove" Color="Color.Default" Variant="Variant.Outlined"
+                           aria-label="Decrease stock by 1"
                            Disabled="_isSubmitting" OnClick="() => Adjust(-1)" />
             <MudTextField T="int" @bind-Value="_delta"
                           Adornment="@Adornment.Start"
@@ -24,6 +25,7 @@
                           Margin="Margin.Dense"
                           Style="min-width: 140px;" />
             <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Default" Variant="Variant.Outlined"
+                           aria-label="Increase stock by 1"
                            Disabled="_isSubmitting" OnClick="() => Adjust(1)" />
         </div>
         <MudText Typo="Typo.caption" Color="Color.Secondary">
