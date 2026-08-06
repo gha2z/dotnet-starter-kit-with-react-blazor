@@ -1,12 +1,12 @@
 # sess-maui
-identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-06 04:37
+identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-06 11:52
 
 scope: clients/FSH.Hybrid/** · clients/admin-blazor/** (per amended scope) · root README.md ·
 .agents/rules/frontend/maui-hybrid.md · opencode/addBlazorFrontends/live/sess-maui.md ·
 opencode/addBlazorFrontends/verify-hybrid.ps1 · 00_summary summaries
 
 ## Current task
-Row #2 committed (7 files). Phase-05 plan-state refresh done (5.1–5.7/5.9 ✅ w/ refs, blocked/external annotated, Next Up rewritten) + board row #3 heads-up (Phase-07 MAUI rows stale). Next: summary + staging (awaiting approval).
+Device demo loop (emulator pos-testing): DONE - login + dashboard verified end-to-end. Fixed the cold-start double Blazor.start() (manual poll script removed from index.html; native Android WebKitWebViewClient.OnPageFinished owns startup) and the dashboard FshErrorBoundary (FshPageHeader Subtitle -> Description in OverviewPage + FilesPage). Dashboard renders "Acme Corp / SUBSCRIPTION / Active" from live API on cold boot. Ready to commit.
 
 ## Touched files (update as you go)
 - opencode/addBlazorFrontends/Phase-05-MAUI-Hybrid/plan.md (checklist refresh + Next Up + arch-decision fix)
@@ -43,10 +43,24 @@ Row #2 committed (7 files). Phase-05 plan-state refresh done (5.1–5.7/5.9 ✅ 
 - clients/FSH.Hybrid/FSH.Hybrid/Platforms/iOS/Info.plist (new: fsh URL scheme)
 - clients/FSH.Hybrid/FSH.Hybrid/Resources/Splash/splash.svg (F monogram)
 - clients/FSH.Hybrid/FSH.Hybrid.Tests/ (new project: 12 tests)
+- clients/FSH.Hybrid/FSH.Hybrid/wwwroot/index.html (removed manual Blazor.start() poll script - double-start fix)
+- clients/FSH.Hybrid/FSH.Hybrid/Pages/OverviewPage.razor (FshPageHeader Subtitle -> Description)
+- clients/FSH.Hybrid/FSH.Hybrid/Pages/FilesPage.razor (FshPageHeader Subtitle -> Description)
+- clients/FSH.Hybrid/FSH.Hybrid/Pages/SettingsPage.xaml.cs (missing InitializeComponent() - crash fix)
+- clients/FSH.Hybrid/FSH.Hybrid/Shared/RedirectToLogin.razor (NavigateTo without forceReload)
 
 ## Blockers / requests to other sessions
 - [x] Admin palette (Phase C) parked until sess-main's 3.14 lands + verify gate passes → board row #1
 - [x] 5.4 push: blocked on Firebase project + google-services.json + backend sender — compile-gated + push-setup.md written
+- [ ] Demo interactivity: needs human on emulator (login) — first-run device loop otherwise complete
+
+## Device demo state (live, 2026-08-06)
+- AVD `pos-testing` booted (emulator-5554); hybrid app installed (com.fullstackhero.hybrid, pid live)
+- Dev data plane: `fsh-dev-postgres` (5432), `fsh-dev-redis` (6379), `fsh-dev-minio` (9000/9001, bucket `local/fsh`); DB migrated+seeded (root/acme/globex tenants)
+- API pid 31172 on http://0.0.0.0:5030 (dev env, S3→MinIO); `adb reverse tcp:5030` + `tcp:9000`
+- `fsh.hybrid.apiBase` preference seeded → http://10.0.2.2:5030
+- First-run crash fixes (committed 70dd9af2): AppShell TabBar→Tab (FlyoutItem can't hold TabBar), ACCESS_NETWORK_STATE permission (ConnectivityService), AddMauiBlazorWebView (MAUI 10 renamed UseMauiBlazor)
+- Teardown when done: containers fsh-dev-*, kill API pid 31172
 
 ## Done today
 - [x] Phase A coordination package
@@ -60,4 +74,5 @@ Row #2 committed (7 files). Phase-05 plan-state refresh done (5.1–5.7/5.9 ✅ 
 - [x] Phase D docs (maui-hybrid.md refresh, committed 6a5d84e2; verify-hybrid 12/12 + admin 155/155 re-run green)
 - [x] Board row #2: admin accent/font/density settings (AppearancePage parity, committed 2026-08-06 04:47)
 - [x] Phase-05 plan-state refresh (5.1–5.7/5.9 ✅ + blocked/external annotations) + board row #3
+- [x] Device demo loop: login -> dashboard verified on emulator; fixed cold-start double Blazor.start() + FshPageHeader Subtitle bug (pending commit)
 - [ ] refresh summary + explicit-path staging (awaiting user approval; never `git add -A`)

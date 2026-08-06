@@ -7,6 +7,11 @@ namespace FSH.Hybrid.Pages;
 
 public sealed partial class SettingsPage : ContentPage
 {
+    public SettingsPage()
+    {
+        InitializeComponent();
+    }
+
     private MauiAuthStateProvider? _authState;
     private IBiometricService? _biometric;
     private HybridRuntimeConfigService? _config;
