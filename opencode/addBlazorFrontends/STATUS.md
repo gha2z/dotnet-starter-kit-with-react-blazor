@@ -1,6 +1,6 @@
 # Current Status
 
-Last Update: 2026-08-06 08:10, by: opencode (model: deepseek-v4-flash-free).
+Last Update: 2026-08-06 08:55, by: opencode (model: deepseek-v4-flash-free).
 
 ## Progress
 
@@ -12,7 +12,7 @@ Last Update: 2026-08-06 08:10, by: opencode (model: deepseek-v4-flash-free).
 | Phase 3 | ✅ Complete (3.1-3.14 - all dashboard pages, Settings, Impersonation, Command Palette) | dashboard 178/178 |
 | Phase 4 | ✅ Testing — bUnit 178/178 (dashboard) + 155/155 (admin); Playwright E2E 9/9 (admin) + 11/11 (dashboard, 4.9) | both 0 warnings |
 | Phase 5 | 🟨 (5.1–5.9 done; push 5.4 compile-gated — blocked on Firebase setup) | hybrid 12/12 |
-| Phase 6 | 🟡 (6.1 trim verified + AOT rejected + deployability fix; 6.2 audit + tickets debounce; 6.3 splash; 6.4 shell a11y + icon labels; 6.8 mobile E2E) | dashboard bUnit 179/179 + E2E 17/17 |
+| Phase 6 | 🟡 (6.1–6.4, 6.7, 6.8 largely done — see plan; remaining: root README, migration guide, infinite scroll, PWA, lazy loading) | dashboard bUnit 179/179 + E2E 18/18 |
 | Phase 7 | 🟨 (parity sprint 1 + hotfixes + page build-out; admin accent/font/density delegated to sess-maui) | both 0 warnings |
 
 ## Active Streams (parallel, git worktrees)

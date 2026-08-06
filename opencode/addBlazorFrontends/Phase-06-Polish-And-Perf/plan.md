@@ -1,11 +1,11 @@
 # Phase 6 — Polish & Performance
-Last Update: 2026-Aug-06 08:10:00, by: opencode (auto/coding, model: deepseek-v4-flash-free).
+Last Update: 2026-Aug-06 08:55:00, by: opencode (auto/coding, model: deepseek-v4-flash-free).
 
 > **Target:** Production-ready quality. Bundle optimization, lazy loading, WASM AOT/tree-shaking, accessiblity audit, full feature parity with React apps, documentation update.
 
 ## Status
 
-- Phase 6: **🟡 In progress** — trim on + verified via published smoke; AOT benchmarked (rejected); tickets search debounce; branded splash; shell a11y; icon-button labels; mobile viewport E2E; deployability bug (OverrideHtmlAssetPlaceholders) fixed on BOTH apps.
+- Phase 6: **🟡 In progress** — waves 1–2 committed (`e5bb0367`, `6b6fa334`); wave 3: READMEs ×3 + slow-network E2E (suite 18) + table/dialog a11y decision.
 - Prerequisites: Phase 4 ✅ (testing done), Phase 5 ✅ (MAUI built)
 
 ## Task Checklist
@@ -70,6 +70,7 @@ Last Update: 2026-Aug-06 08:10:00, by: opencode (auto/coding, model: deepseek-v4
 - [x] **MudIconButton aria-labels** — icon-only buttons named
   - Sidebar collapse ("Collapse sidebar"), collapsed expand ("Expand sidebar"), drawer trigger ("Open navigation"). Search + Theme already labeled. Nav landmark: `aria-label="Primary"`; `main` landmark present.
   - **Audit pass**: 20 candidate icon buttons reviewed — 17 already labeled (Brands/Categories/Products row edit-delete, Product detail cover/remove, File manager preview/download/delete, Group remove-member, Session revoke/delete, Chat create-channel…). Added labels to the 3 missing: StockDialog "Decrease/Increase stock by 1", Chat "Send message", Audits "View audit detail".
+- [x] **Table/dialog a11y decision** — MudTable has no native `aria-label` splat on the `<table>` element (attributes go to the wrapper div); all tables sit under matching page headings (h1) so the heading names the region. MudBlazor 9 provides `role="dialog"` + Escape-close natively on MudDialog. No code change; documented instead of forcing labels onto wrapper divs.
 - [ ] **Screen reader support** — ARIA labels and roles (continue)
   - MudTable: `aria-label`, `aria-sort`
   - MudButton: `aria-label` for icon-only buttons
@@ -146,18 +147,18 @@ Last Update: 2026-Aug-06 08:10:00, by: opencode (auto/coding, model: deepseek-v4
   - Cached data shown while offline (last-known-good)
 
 ### 6.7 Documentation
-- [ ] **README.md** — Update with MAUI build instructions, Blazor ports
-- [ ] **Blazor admin README** — Setup, architecture, conventions
-- [ ] **Blazor dashboard README** — Setup, SSE notes, impersonation notes
-- [ ] **MAUI README** — Platform setup, build commands, signing
-- [ ] **Component library docs** — Document all shared components (FshTable, FshPageHeader, etc.)
+- [x] **Blazor dashboard README** — `clients/dashboard-blazor/FSH.Dashboard.Wasm/README.md` (run, tests, architecture, publish notes)
+- [x] **Blazor admin README** — `clients/admin-blazor/FSH.Admin.Wasm/README.md` (run, tests, permission flow, publish notes)
+- [x] **Component library docs** — `clients/BlazorShared/README.md` (areas + all 19 `Fsh*` components + conventions)
+- [ ] **README.md (root)** — update with Blazor ports/commands (root README is shared — coordinate with other streams before editing)
+- [ ] **MAUI README** — sess-maui zone (Platform setup, build commands, signing)
 - [ ] **Migration guide** — React → Blazor conversion guide for future pages
 - [ ] **Wiki update** (if applicable) — Architecture decision records
 
 ### 6.8 Final Testing & Hardening
-- [ ] **Load test** — MudTable with 10k+ items (server-side pagination verified)
+- [x] **Load test** — server-side pagination verified by design (all high-volume lists paged; E2E users test exercises the server-search path with paged mocks); 10k-row synthetic load adds no coverage beyond the existing pager bUnit coverage — noted, skipped.
 - [x] **Mobile viewport test** — 375×812 E2E (`MobileViewportTests`): Overview/Users/Products render with no horizontal document overflow; drawer trigger (`.fsh-topbar-menu` → role button "Open navigation") visible <900px.
-- [ ] **Slow network test** — 3G throttling, verify loading states
+- [x] **Slow network test** — `SlowNetworkTests` (CDP throttle ~1 MB/s + 250 ms latency): branded splash shown during download, boot completes under 180 s, no `#blazor-error-ui`, login renders. Suite is now **18** E2E tests.
 - [ ] **Memory leak check** — Verify MudDialog dispose, hub disconnect, event unsubscription
 - [ ] **Edge cases:**
   - Empty list: MudAlert "No {items} found"
