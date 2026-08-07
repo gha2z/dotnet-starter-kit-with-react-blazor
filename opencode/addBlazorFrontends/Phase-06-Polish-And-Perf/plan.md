@@ -174,9 +174,9 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 - [x] **Blazor dashboard README** — `clients/dashboard-blazor/FSH.Dashboard.Wasm/README.md` (run, tests, architecture, publish notes)
 - [x] **Blazor admin README** — `clients/admin-blazor/FSH.Admin.Wasm/README.md` (run, tests, permission flow, publish notes)
 - [x] **Component library docs** — `clients/BlazorShared/README.md` (areas + all 19 `Fsh*` components + conventions)
-- [ ] **README.md (root)** — update with Blazor ports/commands (root README is shared — coordinate with other streams before editing)
+- [x] **README.md (root)** — updated (wave 9): Blazor WASM run commands + ports (5175/5176) + MAUI run note; repo-layout rows point at the migration guide. (Root README is shared — announced on board row #5 before editing.)
 - [ ] **MAUI README** — sess-maui zone (Platform setup, build commands, signing)
-- [ ] **Migration guide** — React → Blazor conversion guide for future pages
+- [x] **Migration guide** — `clients/BlazorShared/MIGRATION-GUIDE.md`: React→Blazor concept map, per-page checklist, conventions, real-time/offline parity notes
 - [ ] **Wiki update** (if applicable) — Architecture decision records
 
 ### 6.8 Final Testing & Hardening
@@ -193,7 +193,7 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 
 ## Next Up
 
-**Waves 4-8 committed/verified.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7 `c8b0624f`) + 6.6 error handling/resilience (wave 8, uncommitted: RetryAfterHandler + FshNetworkStatus/FshOfflineBanner + FshErrorBand correlation id; dashboard 196/196 + admin 158/158). Next: commit wave 8, then 6.7 root README + migration guide (shared zone — coordinate), 6.8 memory/edge cases, infinite scroll.
+**Waves 4-8 committed + 6.7 docs drafted.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7 `c8b0624f`) + 6.6 error handling/resilience (wave 8 `123d7517`; dashboard 196/196 + admin 158/158) + 6.7 root README & migration guide (wave 9, uncommitted). Next: commit wave 9, then 6.8 memory/edge cases, infinite scroll, last-known-good cache (deferred).
 
 ## Architecture Decisions
 

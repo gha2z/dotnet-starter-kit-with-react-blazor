@@ -99,6 +99,22 @@ dotnet run --project src/Host/FSH.Starter.AppHost
 
 > **Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download) · [Docker](https://www.docker.com/) (Postgres/Valkey/MinIO via Aspire) · [Node 20+](https://nodejs.org/) (for the React apps). Blazor WASM apps need no extra tools; MAUI Hybrid requires `dotnet workload install maui`.
 
+**Blazor WASM apps** (run against a running API — e.g. the Aspire stack above):
+
+```bash
+dotnet run --project clients/admin-blazor/FSH.Admin.Wasm        # → http://localhost:5175
+dotnet run --project clients/dashboard-blazor/FSH.Dashboard.Wasm # → http://localhost:5176
+```
+
+**MAUI Hybrid** (Android/iOS/Windows):
+
+```bash
+dotnet workload install maui                                     # one-time
+dotnet build clients/FSH.Hybrid/FSH.Hybrid/FSH.Hybrid.csproj
+```
+
+**Ports:** API 7030 (https)/5030 (http) · admin (React) 5173 · dashboard (React) 5174 · admin-blazor 5175 · dashboard-blazor 5176 · Postgres 5432 · pgAdmin 5050 · Valkey 6379 · MinIO 9000/9001.
+
 **`fsh` commands:** `new` · `doctor` · `info` · `update` · `--version`. Full reference → [fullstackhero.net/docs/cli](https://fullstackhero.net/docs/cli/).
 
 ---
@@ -134,9 +150,9 @@ dotnet run --project src/Host/FSH.Starter.AppHost
 | `src/Host/FSH.Starter.DbMigrator` | One-shot migrate/seed runner (DB is **not** migrated at API startup) |
 | `src/Tools/CLI` | The `fsh` CLI (Spectre.Console) |
 | `clients/admin`, `clients/dashboard` | The two React apps |
-| `clients/admin-blazor` | Blazor WASM operator app (MudBlazor) |
-| `clients/dashboard-blazor` | Blazor WASM tenant app (MudBlazor + SSE) |
-| `clients/BlazorShared` | Shared Blazor RCL (auth, theming, components) |
+| `clients/admin-blazor` | Blazor WASM operator app (MudBlazor) → `http://localhost:5175` |
+| `clients/dashboard-blazor` | Blazor WASM tenant app (MudBlazor + SSE) → `http://localhost:5176` |
+| `clients/BlazorShared` | Shared Blazor RCL (auth, theming, components, real-time) — see [`MIGRATION-GUIDE.md`](clients/BlazorShared/MIGRATION-GUIDE.md) for the React→Blazor conversion playbook |
 | `clients/FSH.Hybrid` | MAUI Blazor Hybrid (Android/iOS/Windows) |
 | `deploy/` | Docker Compose, Terraform (AWS), Dokploy |
 | `src/Tests/` | Unit, Architecture (NetArchTest), Integration (Testcontainers) |
