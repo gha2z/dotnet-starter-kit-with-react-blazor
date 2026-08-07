@@ -20,6 +20,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\BlazorShared\FSH.BlazorShared.csproj" />
+    <ProjectReference Include="..\FSH.Admin.Pages\FSH.Admin.Pages.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <BlazorWebAssemblyLazyLoad Include="FSH.Admin.Pages.wasm" />
+    <TrimmerRootAssembly Include="FSH.Admin.Pages" />
   </ItemGroup>
 
 </Project>

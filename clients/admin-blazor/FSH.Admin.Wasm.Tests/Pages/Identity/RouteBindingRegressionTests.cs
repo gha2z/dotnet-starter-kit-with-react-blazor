@@ -66,6 +66,7 @@ public sealed class RouteBindingRegressionTests : TestSetup
 
         return Render<Router>(p => p
             .Add(x => x.AppAssembly, typeof(FSH.Admin.Wasm.App).Assembly)
+            .Add(x => x.AdditionalAssemblies, new[] { typeof(FSH.Admin.Wasm.Pages.Dashboard.OverviewPage).Assembly })
             .Add(x => x.Found, FoundFragment())
 #pragma warning disable CS0618 // Router.NotFound is deprecated but lets the test assert arbitrary markup without a routed page type.
             .Add(x => x.NotFound, NotFoundFragment()));

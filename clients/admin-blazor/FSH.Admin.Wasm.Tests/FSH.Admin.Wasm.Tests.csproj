@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FSH.Admin.Wasm\FSH.Admin.Wasm.csproj" />
+    <ProjectReference Include="..\FSH.Admin.Pages\FSH.Admin.Pages.csproj" />
     <ProjectReference Include="..\..\BlazorShared\FSH.BlazorShared.csproj" />
   </ItemGroup>
 

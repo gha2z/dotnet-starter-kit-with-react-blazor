@@ -1,6 +1,8 @@
 @using FSH.BlazorShared.Theming
 @using FSH.BlazorShared.Components
 @inject FshThemeService Theme
+@inject Microsoft.AspNetCore.Components.WebAssembly.Services.LazyAssemblyLoader LazyLoader
+@inject ILogger<App> Logger
 
 <MudThemeProvider Theme="FshMudTheme.CreateAdmin()" IsDarkMode="@Theme.IsDarkMode" IsDarkModeChanged="@OnThemeChanged" />
 <MudPopoverProvider />
@@ -8,26 +10,64 @@
 <MudSnackbarProvider />
 
 <CascadingAuthenticationState>
-    <Router AppAssembly="@typeof(App).Assembly">
-        <Found Context="routeData">
-            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-                <NotAuthorized>
-                    <RedirectToLogin />
-                </NotAuthorized>
-                <Authorizing>
-                    <MudOverlay Visible="true">
-                        <MudProgressCircular Indeterminate="true" />
-                    </MudOverlay>
-                </Authorizing>
-            </AuthorizeRouteView>
-        </Found>
-        <NotFound>
-            <FshNotFound />
-        </NotFound>
-    </Router>
+    <FshErrorBoundary>
+        <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="@_lazyAssemblies" OnNavigateAsync="@OnNavigateAsync">
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                    <NotAuthorized>
+                        <RedirectToLogin />
+                    </NotAuthorized>
+                    <Authorizing>
+                        <MudOverlay Visible="true">
+                            <MudProgressCircular Indeterminate="true" />
+                        </MudOverlay>
+                    </Authorizing>
+                </AuthorizeRouteView>
+            </Found>
+            <NotFound>
+                <FshNotFound />
+            </NotFound>
+        </Router>
+        @if (_loadingPages)
+        {
+            <div class="fsh-route-loading" role="status" aria-live="polite">
+                <MudProgressCircular Indeterminate="true" Size="Size.Medium" />
+                <span>Loading page…</span>
+            </div>
+        }
+    </FshErrorBoundary>
 </CascadingAuthenticationState>
 
 @code {
+    private List<System.Reflection.Assembly> _lazyAssemblies = [];
+    private bool _loadingPages;
+
     private async Task OnThemeChanged(bool isDarkMode)
         => await Theme.SetAsync(isDarkMode);
+
+    private async Task OnNavigateAsync(Microsoft.AspNetCore.Components.Routing.NavigationContext context)
+    {
+        if (_lazyAssemblies.Count > 0 || context.CancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        _loadingPages = true;
+        StateHasChanged();
+        try
+        {
+            _lazyAssemblies.AddRange(await LazyLoader.LoadAssembliesAsync(PagesAssemblyPaths));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to lazy-load the admin pages assembly for {Route}", context.Path);
+        }
+        finally
+        {
+            _loadingPages = false;
+            StateHasChanged();
+        }
+    }
+
+    private static readonly string[] PagesAssemblyPaths = ["FSH.Admin.Pages.wasm"];
 }
