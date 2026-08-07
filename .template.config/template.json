@@ -47,6 +47,12 @@
             "description": "Internal: keep the fsh CLI project in the solution (FSH repo only).",
             "defaultValue": "false"
         },
+        "workflow": {
+            "type": "parameter",
+            "datatype": "bool",
+            "description": "Include the agentic workflow layer (.agents/ skills + rules, .opencode/ swarm config, AGENTS.md, opencode/ workflow scripts).",
+            "defaultValue": "true"
+        },
         "contactEmail": {
             "type": "parameter",
             "datatype": "string",
@@ -122,16 +128,20 @@
                 "**/.vscode/**",
                 "**/.vs/**",
                 ".github/**",
-                ".agents/**",
                 ".claude/**",
                 ".devcontainer/**",
                 ".git/**",
                 "templates/**/*",
+                "superpowers/**",
                 "demo/**",
                 "docs/**",
                 "nupkgs/**",
                 "scripts/**",
                 "src/Tools/**",
+                "opencode/addBlazorFrontends/**",
+                "opencode/Next apps/**",
+                "opencode/other/**",
+                "opencode/temp/**",
                 "clients/**/node_modules/**",
                 "clients/**/dist/**",
                 "clients/**/build/**",
@@ -168,7 +178,16 @@
                 {
                     "condition": "(!frontend)",
                     "exclude": [
-                        "clients/**"
+                        "clients/admin/**",
+                        "clients/dashboard/**"
+                    ]
+                },
+                {
+                    "condition": "(!workflow)",
+                    "exclude": [
+                        ".agents/**",
+                        "opencode/AGENTIC-GUIDE.md",
+                        "opencode/init-saas-workflow.ps1"
                     ]
                 }
             ]
