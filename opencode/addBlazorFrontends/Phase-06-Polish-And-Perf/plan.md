@@ -52,8 +52,9 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
   - **Activity**: SSE event list capped at 200 (`MaxEvents`) — OK.
   - **Trash**: loads full trash sets (products/brands/categories) — matches React page; note for future paging if data grows.
   - No MudTable `Items`+`Pager` client-side-paging anti-patterns beyond the bounded cases above. No changes required.
-- [ ] **Infinite scroll** — Activity log, chat messages
-  - Implement `OnScroll` JS interop for detect-bottom
+- [x] **Infinite scroll** — Activity log, chat messages
+  - **Chat (wave 11, dashboard)**: scroll-top load-older via ES-module interop (`fshChatScroll.js` — `watchScrollTop/unwatchScrollTop/scrollToBottom/scrollHeight/restoreScrollPosition`, per-reference cleanup map). Cursor = oldest loaded message id (`ListChannelMessagesAsync(channelId, before, pageSize)`); `InitialPageSize=100`, `OlderPageSize=50`; `_hasOlder` set when a full page returns; dedupe against SignalR arrivals via id set; scroll offset preserved across prepend (saved `scrollHeight` before fetch, restored after render); reentrancy guard `_loadingOlder`; `[JSInvokable] OnScrollTopReached`; module invoked via `IJSObjectReference` (never global lookup). 4 new bUnit tests (prepend, exhaustion, in-flight guard, no-channel no-op). Dashboard suite 204/204.
+  - **Activity (wave 11, N/A)**: live SSE ring buffer (`MaxEvents=200`) with NO history endpoint — infinite scroll not applicable; React parity (dashboard Activity also shows latest only). No work.
   - Load more items via service call, append to list
 - [x] **Debounced search** — All search MudTextField
   - **Tickets list**: search was `Immediate="true"` with NO reload handler (typing did nothing server-side) — fixed with debounced `OnSearchChangedAsync` (250 ms, CancellationTokenSource, resets to page 1), mirroring `UsersListPage`. bUnit `Reloads_with_search_term_after_debounce` covers it. Users page already had the pattern.
@@ -183,7 +184,7 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 - [x] **Load test** — server-side pagination verified by design (all high-volume lists paged; E2E users test exercises the server-search path with paged mocks); 10k-row synthetic load adds no coverage beyond the existing pager bUnit coverage — noted, skipped.
 - [x] **Mobile viewport test** — 375×812 E2E (`MobileViewportTests`): Overview/Users/Products render with no horizontal document overflow; drawer trigger (`.fsh-topbar-menu` → role button "Open navigation") visible <900px.
 - [x] **Slow network test** — `SlowNetworkTests` (CDP throttle ~1 MB/s + 250 ms latency): branded splash shown during download, boot completes under 180 s, no `#blazor-error-ui`, login renders. Suite is now **18** E2E tests.
-- [ ] **Memory leak check** — Verify MudDialog dispose, hub disconnect, event unsubscription
+- [x] **Memory leak check** — Verify MudDialog dispose, hub disconnect, event unsubscription
   - **Audit (wave 10, 2026-08-08):** every `+=` subscription in both apps + BlazorShared has a matching `-=` in `Dispose()`/`DisposeAsync()` — verified 17 unsubscribe sites (MainLayout auth/nav/SSE, App.razor.cs TokensChanged, FshNotificationBell Hub.StateChanged, FshOfflineBanner Network.StatusChanged, Overview/Activity SSE, both Appearance pages Theme.Changed, ImpersonationBanner, ChatPage SignalR sub list, CommandPalette, HealthPage, Audits debounce CTS, Tickets debounce CTS). `InactivityTimerService` is `IAsyncDisposable` (timer disposed in `Stop()`). ChatPage disposes its SignalR subscription list. **No leaks found.**
 - [x] **Edge cases:**
   - Empty list: `FshEmptyState` used on **all** list pages (39 usages across both apps) — ✅
@@ -194,7 +195,7 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 
 ## Next Up
 
-**Waves 4-10 committed.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7) + 6.6 error handling/resilience (wave 8) + 6.7 docs (wave 9) + **6.8 audit + refresh-race fix (wave 10, uncommitted: dashboard 200/200 + admin 158/158)**. Next: commit wave 10, then infinite scroll, last-known-good cache (deferred), 6.9 blocker (upstream).
+**Waves 4-11 committed.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7) + 6.6 error handling/resilience (wave 8) + 6.7 docs (wave 9) + **6.8 audit + refresh-race fix (wave 10: dashboard 200/200 + admin 158/158)** + **chat infinite scroll (wave 11: dashboard 204/204)**. Next: last-known-good cache (deferred), 6.9 blocker (upstream), preload (deferred).
 
 ## Architecture Decisions
 

@@ -11,9 +11,14 @@ namespace FSH.Dashboard.Wasm.Pages.Chat;
 
 public sealed partial class ChatPage : IAsyncDisposable
 {
+    private const int InitialPageSize = 100;
+    private const int OlderPageSize = 50;
+
     [Inject] private IChatService ChatService { get; set; } = default!;
     [Inject] private IHubConnectionService Hub { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
 
     private readonly List<ChannelDto> _channels = [];
     private readonly List<MessageDto> _messages = [];
@@ -26,6 +31,11 @@ public sealed partial class ChatPage : IAsyncDisposable
     private string _currentUserId = string.Empty;
     private bool _loadingChannels;
     private bool _loadingMessages;
+    private bool _loadingOlder;
+    private bool _hasOlder = true;
+    private double _scrollHeightBeforeOlderLoad = -1;
+    private IJSObjectReference? _scrollModule;
+    private DotNetObjectReference<ChatPage>? _dotNetRef;
     private ElementReference _messagesContainer;
 
     private readonly List<IDisposable> _signalrSubscriptions = [];
@@ -35,6 +45,96 @@ public sealed partial class ChatPage : IAsyncDisposable
         await LoadChannels();
         await EnsureHubConnected();
         SubscribeToSignalREvents();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AttachScrollWatcherAsync();
+        }
+        else if (_scrollHeightBeforeOlderLoad >= 0)
+        {
+            // Older messages were just prepended — restore the previous scroll offset
+            // so the user's reading position doesn't jump.
+            var fromHeight = _scrollHeightBeforeOlderLoad;
+            _scrollHeightBeforeOlderLoad = -1;
+            try
+            {
+                if (_scrollModule is not null)
+                {
+                    await _scrollModule.InvokeVoidAsync("restoreScrollPosition", fromHeight);
+                }
+            }
+            catch
+            {
+                // Interop unavailable (prerender/tests) — skip restoration.
+            }
+        }
+    }
+
+    private async Task AttachScrollWatcherAsync()
+    {
+        try
+        {
+            _scrollModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/FSH.BlazorShared/js/fshChatScroll.js");
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            await _scrollModule.InvokeVoidAsync("watchScrollTop", _dotNetRef);
+        }
+        catch
+        {
+            // Interop unavailable (prerender/tests) — infinite scroll simply won't trigger.
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnScrollTopReached()
+    {
+        await LoadOlderMessagesAsync();
+    }
+
+    private async Task LoadOlderMessagesAsync()
+    {
+        if (_activeChannelId is null || _loadingOlder || !_hasOlder || _messages.Count == 0)
+        {
+            return;
+        }
+
+        _loadingOlder = true;
+        try
+        {
+            _scrollHeightBeforeOlderLoad = _scrollModule is null
+                ? 0
+                : await _scrollModule.InvokeAsync<double>("scrollHeight");
+            var older = await ChatService.ListChannelMessagesAsync(_activeChannelId.Value, before: _messages[0].Id, pageSize: OlderPageSize);
+            if (older.Count == 0)
+            {
+                _hasOlder = false;
+            }
+            else
+            {
+                // Prepend older history (ascending), dedupe against anything that
+                // arrived via SignalR while the fetch was in flight.
+                var existing = _messages.Select(m => m.Id).ToHashSet();
+                var toAdd = older.Where(m => existing.Add(m.Id)).OrderBy(m => m.CreatedAtUtc).ToList();
+                _messages.InsertRange(0, toAdd);
+                if (older.Count < OlderPageSize)
+                {
+                    _hasOlder = false;
+                }
+            }
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            _scrollHeightBeforeOlderLoad = -1;
+            Snackbar.Add($"Failed to load earlier messages: {ex.Message}", Severity.Warning);
+        }
+        finally
+        {
+            _loadingOlder = false;
+        }
     }
 
     private async Task EnsureHubConnected()
@@ -169,13 +269,15 @@ public sealed partial class ChatPage : IAsyncDisposable
     private async Task LoadMessages(Guid channelId)
     {
         _loadingMessages = true;
+        _hasOlder = true;
         await InvokeAsync(StateHasChanged);
 
         try
         {
-            var messages = await ChatService.ListChannelMessagesAsync(channelId, pageSize: 100);
+            var messages = await ChatService.ListChannelMessagesAsync(channelId, pageSize: InitialPageSize);
             _messages.Clear();
             _messages.AddRange(messages.OrderBy(m => m.CreatedAtUtc));
+            _hasOlder = messages.Count >= InitialPageSize;
         }
         catch (Exception ex)
         {
@@ -278,7 +380,10 @@ public sealed partial class ChatPage : IAsyncDisposable
     {
         try
         {
-            await JS.InvokeVoidAsync("eval", "document.querySelector('.fsh-chat-messages')?.scrollTo(0, 999999)");
+            if (_scrollModule is not null)
+            {
+                await _scrollModule.InvokeVoidAsync("scrollToBottom");
+            }
         }
         catch
         {
@@ -307,10 +412,21 @@ public sealed partial class ChatPage : IAsyncDisposable
         {
             sub.Dispose();
         }
+
+        try
+        {
+            if (_scrollModule is not null && _dotNetRef is not null)
+            {
+                await _scrollModule.InvokeVoidAsync("unwatchScrollTop", _dotNetRef);
+                _dotNetRef.Dispose();
+                await _scrollModule.DisposeAsync();
+            }
+        }
+        catch
+        {
+            // Interop may already be torn down during navigation.
+        }
     }
 
     private sealed record TypingEvent(Guid ChannelId, string UserId);
-
-    [Inject] private IJSRuntime JS { get; set; } = default!;
-    [Inject] private IDialogService DialogService { get; set; } = default!;
 }

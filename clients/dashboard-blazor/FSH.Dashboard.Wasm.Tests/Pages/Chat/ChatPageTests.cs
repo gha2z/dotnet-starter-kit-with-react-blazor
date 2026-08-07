@@ -154,6 +154,125 @@ public sealed class ChatPageTests : TestSetup
         cut.Find("button[aria-label='Create channel']").ShouldNotBeNull();
     }
 
+    [Fact]
+    public async Task Scroll_top_loads_older_messages_and_prepends_them()
+    {
+        var channel = SampleChannel("General");
+        var initialPage = BuildMessages(100, "Initial");
+        var firstMessage = initialPage.First();
+        var history = BuildMessages(2, "Ancient", offsetMinutes: 600);
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([channel]);
+        _chat.ListChannelMessagesAsync(channel.Id, Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(initialPage, history);
+        _chat.MarkChannelReadAsync(Arg.Any<Guid>(), Arg.Any<MarkChannelReadRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
+
+        cut.Find(".fsh-chat-channel-item").Click();
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 100, timeout: TimeSpan.FromSeconds(5));
+
+        await cut.InvokeAsync(() => cut.Instance.OnScrollTopReached());
+
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 102, timeout: TimeSpan.FromSeconds(5));
+        await _chat.Received(1).ListChannelMessagesAsync(channel.Id, firstMessage.Id, 50, Arg.Any<CancellationToken>());
+        cut.FindAll(".fsh-chat-message").First().TextContent.ShouldContain("Ancient 0");
+    }
+
+    [Fact]
+    public async Task Scroll_top_stops_loading_when_history_exhausted()
+    {
+        var channel = SampleChannel("General");
+        var initialPage = BuildMessages(100, "Initial");
+        var firstMessage = initialPage.First();
+        var partialPage = BuildMessages(1, "Ancient", offsetMinutes: 600);
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([channel]);
+        _chat.ListChannelMessagesAsync(channel.Id, Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(initialPage, partialPage);
+        _chat.MarkChannelReadAsync(Arg.Any<Guid>(), Arg.Any<MarkChannelReadRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
+
+        cut.Find(".fsh-chat-channel-item").Click();
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 100, timeout: TimeSpan.FromSeconds(5));
+
+        await cut.InvokeAsync(() => cut.Instance.OnScrollTopReached());
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 101, timeout: TimeSpan.FromSeconds(5));
+
+        // Second call: partial page → _hasOlder=false → no further fetch.
+        await cut.InvokeAsync(() => cut.Instance.OnScrollTopReached());
+
+        await _chat.Received(1).ListChannelMessagesAsync(channel.Id, firstMessage.Id, 50, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Scroll_top_is_ignored_while_already_loading_older()
+    {
+        var channel = SampleChannel("General");
+        var initialPage = BuildMessages(100, "Initial");
+        var firstMessage = initialPage.First();
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([channel]);
+        _chat.MarkChannelReadAsync(Arg.Any<Guid>(), Arg.Any<MarkChannelReadRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+
+        var gate = new TaskCompletionSource<IReadOnlyList<MessageDto>>();
+        _chat.ListChannelMessagesAsync(channel.Id, Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult(initialPage), _ => gate.Task);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
+
+        cut.Find(".fsh-chat-channel-item").Click();
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 100, timeout: TimeSpan.FromSeconds(5));
+
+        // First scroll-top call starts the gated older-load; second must be ignored while it's in flight.
+        _ = cut.Instance.OnScrollTopReached();
+        await Task.Delay(50);
+        await cut.InvokeAsync(() => cut.Instance.OnScrollTopReached());
+
+        await _chat.Received(1).ListChannelMessagesAsync(channel.Id, firstMessage.Id, 50, Arg.Any<CancellationToken>());
+
+        gate.SetResult([]);
+    }
+
+    [Fact]
+    public async Task Scroll_top_does_nothing_without_an_active_channel()
+    {
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([SampleChannel("General")]);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
+
+        await cut.InvokeAsync(() => cut.Instance.OnScrollTopReached());
+
+        await _chat.DidNotReceive().ListChannelMessagesAsync(Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+    }
+
+    private static IReadOnlyList<MessageDto> BuildMessages(int count, string prefix, int offsetMinutes = 0)
+    {
+        var list = new List<MessageDto>(count);
+        for (var i = 0; i < count; i++)
+        {
+            list.Add(new MessageDto(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                "user-1",
+                $"{prefix} {i}",
+                null,
+                0,
+                null,
+                null,
+                DateTime.UtcNow.AddMinutes(-offsetMinutes - count + i),
+                [],
+                []));
+        }
+
+        return list;
+    }
+
     private sealed class DisposableStub : IDisposable
     {
         public void Dispose() { }
