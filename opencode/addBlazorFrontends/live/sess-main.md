@@ -1,5 +1,5 @@
 # sess-main
-identity: opencode/deepseek-v4-flash-free (concrete modelID, verified 2026-08-06) | started: 2026-08-06 | state: active | heartbeat: 2026-08-08 00:45
+identity: opencode/deepseek-v4-flash-free (concrete modelID, verified 2026-08-06) | started: 2026-08-06 | state: active | heartbeat: 2026-08-08 01:05
 
 scope: clients/dashboard-blazor/** · clients/BlazorShared/** (Main-only) · clients/admin-blazor/** (Main-owned by default; app-code edits by other sessions need a board sign-off per task) · STATUS.md · 00-Index.md · Phase-02/03/04/06/07 plan files · opencode/addBlazorFrontends coordination docs (readme.md, verify.ps1, coordination.ps1) · implementation summaries
 
@@ -10,16 +10,19 @@ M2 (Phase 6 dashboard polish/perf) — waves 1–7 (lazy loading + PWA + a11y co
 - **Wave 5 committed (`8bc78500`): admin lazy loading** — `Pages/**` (77 files) → RCL `FSH.Admin.Pages`. bUnit **158/158 green**. Trimmed publish: lazyAssembly confirmed, 21.17 MB total.
 - **Wave 6 committed (`68401ba3`): PWA both apps** — manifest.json (rose theme), service-worker.js (v1.0, cache-first `_framework/*`, offline.html fallback), offline.html, 192/512/maskable PNG icons. Both apps build 0 errors; admin 158/158 + dashboard 179/179 green; publish smoke confirms PWA assets emitted.
 - **Wave 7 committed (`c8b0624f`): 6.4 contrast/focus DONE** — WCAG AA audit → Light Primary `#D11A42` (was #E11D48, 4.31 on bg), Secondary `#457383` (was 4A7B8C, 4.28), Dark PrimaryContrastText `#121216` (white was 2.69 on #FB7185); global `:focus-visible` in fsh.css. Guard: `FshMudThemeContrastTests` (2 new, dashboard 181/181 + admin 158/158).
-- **Wave 8 committed (`123d7517`): 6.6 error handling/resilience DONE** — `RetryAfterHandler` (429 Retry-After, single retry, idempotent verbs only, 30s cap — innermost in both apps' FSH.Api chain) + `FshNetworkStatus`/`INetworkStatus` + `fshNetwork.js` module + `FshOfflineBanner` (both MainLayouts, auto-dismiss on reconnect) + `FshErrorBand` optional `CorrelationId`. Tests: 7 RetryAfterHandler + 5 FshOfflineBanner + 3 FshErrorBand → dashboard **196/196**, admin **158/158**, 0 warnings.
-- **Wave 9 (6.7 docs, in progress — uncommitted)**: root README Blazor run commands + ports (5175/5176) + MAUI note (board row #5 announcement, shared zone); new `clients/BlazorShared/MIGRATION-GUIDE.md` (React→Blazor concept map + per-page checklist + conventions).
-Next: commit wave 9, then 6.9 re-test (upstream — re-checked 23:35: #121849 still open, milestone 12.0.0 → still deferred), 6.8 memory/edge cases, infinite scroll, last-known-good cache (deferred). MAUI README (6.7) = sess-maui zone.
+- **Wave 9 committed (`0cbbfde3`): 6.7 docs DONE (main zone)** — root README: Blazor WASM run commands + ports (5175/5176) + MAUI run note + repo-layout rows point at the migration guide (board row #5 announcement first — shared zone). New `clients/BlazorShared/MIGRATION-GUIDE.md`: React→Blazor concept map, per-page checklist, conventions, real-time/offline parity. MAUI README row stays sess-maui (idle).
+- **Wave 10 (6.8 audit + fix, uncommitted)**: memory-leak audit — all 17 `+=` subscription sites have matching `-=` in Dispose (verified); `InactivityTimerService` IAsyncDisposable; ChatPage disposes SignalR subs. Edge cases: empty lists (FshEmptyState ×39), long text (fsh-truncate + title ×55), XSS (zero MarkupString in clients/), multi-tab logout (storage events + E2E). **Real bug found + fixed**: `AuthDelegatingHandler` refresh-token rotation race — read refresh token before the lock, second concurrent 401 refreshed with rotated (invalid) token → session killed. Fix: re-read store after lock (double-checked). 4 new `AuthDelegatingHandlerTests` → dashboard **200/200**, admin **158/158**; also fixed pre-existing CS0105 duplicate using in admin LoginPage.razor.
+Next: commit wave 10, then 6.9 re-test (upstream — #121849 still open, milestone 12.0.0 → deferred), infinite scroll, last-known-good cache (deferred).
 
 ## Touched files (waves 7-8 committed `c8b0624f`/`123d7517` — OFF-LIMITS for other sessions until next commit)
 - opencode/addBlazorFrontends/live/sess-main.md (this file)
 - opencode/addBlazorFrontends/STATUS.md (Phase 6 row + 6.9 blocker)
-- opencode/addBlazorFrontends/Phase-06-Polish-And-Perf/plan.md (6.1c + 6.3 PWA sections + gotchas + 6.4 audit + 6.6 wave 8 + 6.7 wave 9)
+- opencode/addBlazorFrontends/Phase-06-Polish-And-Perf/plan.md (6.1c + 6.3 PWA sections + gotchas + 6.4 audit + 6.6 wave 8 + 6.7 wave 9 + 6.8 wave 10)
 - README.md (root — wave 9: Blazor run commands + ports; shared zone, board row #5)
 - clients/BlazorShared/MIGRATION-GUIDE.md (new — wave 9)
+- clients/BlazorShared/Infrastructure/AuthDelegatingHandler.cs (wave 10 — refresh race fix)
+- clients/dashboard-blazor/FSH.Dashboard.Wasm.Tests/Infrastructure/AuthDelegatingHandlerTests.cs (new — wave 10)
+- clients/admin-blazor/FSH.Admin.Pages/Pages/Auth/LoginPage.razor (wave 10 — CS0105 fix)
 - clients/BlazorShared/Theming/FshMudTheme.cs (6.4: AA palette — Light Primary/Secondary, Dark PrimaryContrastText)
 - clients/BlazorShared/wwwroot/css/fsh.css (6.4: global :focus-visible)
 - clients/dashboard-blazor/FSH.Dashboard.Wasm.Tests/Theming/FshMudThemeContrastTests.cs (new — AA guard)

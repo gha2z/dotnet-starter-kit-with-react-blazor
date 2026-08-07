@@ -12,7 +12,7 @@ Last Update: 2026-08-07 23:40, by: opencode (model: deepseek-v4-flash-free).
 | Phase 3 | ✅ Complete (3.1-3.14 - all dashboard pages, Settings, Impersonation, Command Palette) | dashboard 178/178 |
 | Phase 4 | ✅ Testing — bUnit 178/178 (dashboard) + 155/155 (admin); Playwright E2E 9/9 (admin) + 11/11 (dashboard, 4.9) | both 0 warnings |
 | Phase 5 | 🟨 (5.1–5.9 done; push 5.4 compile-gated — blocked on Firebase setup) | hybrid 12/12 |
-| Phase 6 | 🟡 (waves 4–9: lazy loading ✅ + PWA ✅ + 6.4 contrast/focus ✅ + 6.6 error handling/resilience ✅ + **6.7 docs ✅** — root README Blazor commands/ports + React→Blazor migration guide; remaining: MAUI README (sess-maui), last-known-good cache, preload, infinite scroll, **6.9 Release-publish blocker** ⚠️) | dashboard bUnit 196/196 + E2E 18/18 · admin bUnit 158/158 |
+| Phase 6 | 🟡 (waves 4–10: lazy loading ✅ + PWA ✅ + 6.4 contrast/focus ✅ + 6.6 error handling/resilience ✅ + 6.7 docs ✅ + **6.8 audit ✅** — memory-leak audit clean, edge cases covered, **refresh-rotation race fixed** in AuthDelegatingHandler; remaining: MAUI README (sess-maui), last-known-good cache, preload, infinite scroll, **6.9 Release-publish blocker** ⚠️) | dashboard bUnit 200/200 + E2E 18/18 · admin bUnit 158/158 |
 | Phase 7 | 🟨 (parity sprint 1 + hotfixes + page build-out; admin accent/font/density delegated to sess-maui) | both 0 warnings |
 
 ## Active Streams (parallel, git worktrees)
@@ -28,7 +28,7 @@ Last Update: 2026-08-07 23:40, by: opencode (model: deepseek-v4-flash-free).
 
 ## Next Task
 
-**Phase 6 waves 4-9.** Lazy loading + PWA + 6.4 contrast/focus + 6.6 error handling/resilience + **6.7 docs** (wave 9, uncommitted): root README updated with Blazor WASM run commands + ports (5175/5176) + MAUI note; new `clients/BlazorShared/MIGRATION-GUIDE.md` (React→Blazor concept map, per-page checklist, conventions). Remaining: MAUI README (sess-maui zone), last-known-good cache (deferred), preload, infinite scroll, 6.8 memory/edge cases, **6.9 blocker** (upstream #121849, milestone 12.0.0).
+**Phase 6 waves 4-10.** Lazy loading + PWA + 6.4 contrast/focus + 6.6 error handling/resilience + 6.7 docs (wave 9) + **6.8 audit (wave 10, uncommitted)**: memory-leak audit clean (all subscriptions paired), edge cases covered (empty states, truncation, no MarkupString, multi-tab), **refresh-rotation race fixed** in `AuthDelegatingHandler` (double-checked store re-read after lock; 4 new tests → dashboard **200/200**, admin **158/158**) + admin LoginPage CS0105 fix. Remaining: MAUI README (sess-maui zone), last-known-good cache (deferred), preload, infinite scroll, **6.9 blocker** (upstream #121849, milestone 12.0.0).
 
 ⚠️ **6.9 RELEASE-PUBLISH BLOCKER (pre-existing, both WASM apps):** Release publishes crash the Mono interpreter at boot (`LocalizationOptions:.ctor` NIY → `interp.c:4135`; other shapes die silently earlier). Reproduced on clean `a9c78f86` worktree + admin-blazor → NOT caused by lazy/trimming/webcil/jiterpreter. Upstream: dotnet/runtime #121849 (re-checked 2026-08-07 23:35 — still **open**, milestone **12.0.0**, no servicing fix), MudBlazor net10 target unshipped. Debug/DevServer (test pipeline) unaffected. Re-test after MudBlazor net10 / AOT / .NET 12.
 

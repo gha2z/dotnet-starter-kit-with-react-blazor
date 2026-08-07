@@ -5,7 +5,7 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 
 ## Status
 
-- Phase 6: **🟡 In progress** — waves 1–3 committed (`e5bb0367`, `6b6fa334`, `a9c78f86`); wave 4 dashboard lazy (see 6.1b); wave 5 admin lazy (see 6.1c); wave 6 PWA (see 6.3).
+- Phase 6: **🟡 In progress** — waves 1–6 committed (`e5bb0367`, `6b6fa334`, `a9c78f86`, `5d4eaaca`, `8bc78500`, `68401ba3`); wave 7 `c8b0624f` (6.4 contrast); wave 8 `123d7517` (6.6 resilience); wave 9 `0cbbfde3` (6.7 docs).
 - Prerequisites: Phase 4 ✅ (testing done), Phase 5 ✅ (MAUI built)
 
 ## Task Checklist
@@ -184,16 +184,17 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 - [x] **Mobile viewport test** — 375×812 E2E (`MobileViewportTests`): Overview/Users/Products render with no horizontal document overflow; drawer trigger (`.fsh-topbar-menu` → role button "Open navigation") visible <900px.
 - [x] **Slow network test** — `SlowNetworkTests` (CDP throttle ~1 MB/s + 250 ms latency): branded splash shown during download, boot completes under 180 s, no `#blazor-error-ui`, login renders. Suite is now **18** E2E tests.
 - [ ] **Memory leak check** — Verify MudDialog dispose, hub disconnect, event unsubscription
-- [ ] **Edge cases:**
-  - Empty list: MudAlert "No {items} found"
-  - Very long text: MudTable text truncation with tooltip
-  - Special characters: XSS prevention, HTML encoding
-  - Concurrent logins: Token refresh race condition
-  - Multi-tab: Storage events, auth state sync
+  - **Audit (wave 10, 2026-08-08):** every `+=` subscription in both apps + BlazorShared has a matching `-=` in `Dispose()`/`DisposeAsync()` — verified 17 unsubscribe sites (MainLayout auth/nav/SSE, App.razor.cs TokensChanged, FshNotificationBell Hub.StateChanged, FshOfflineBanner Network.StatusChanged, Overview/Activity SSE, both Appearance pages Theme.Changed, ImpersonationBanner, ChatPage SignalR sub list, CommandPalette, HealthPage, Audits debounce CTS, Tickets debounce CTS). `InactivityTimerService` is `IAsyncDisposable` (timer disposed in `Stop()`). ChatPage disposes its SignalR subscription list. **No leaks found.**
+- [x] **Edge cases:**
+  - Empty list: `FshEmptyState` used on **all** list pages (39 usages across both apps) — ✅
+  - Very long text: `fsh-truncate` class + `title=` tooltip on all long-text cells (55 usages) — ✅
+  - Special characters: **no `MarkupString` anywhere in clients/** — Blazor auto-HTML-encodes by default — ✅
+  - Concurrent logins: **refresh-token rotation race FIXED (wave 10)** — server rotates refresh tokens (`RefreshTokenRotated` audit), but `AuthDelegatingHandler` read the refresh token *before* acquiring the static `RefreshLock` — a second concurrent 401 waited on the lock, then refreshed with the now-rotated (invalid) token → session killed. Fix: re-read the store after acquiring the lock (double-checked); if another request already refreshed, retry with the fresh access token instead of refreshing. 4 new tests in `AuthDelegatingHandlerTests` (dashboard 200/200, admin 158/158).
+  - Multi-tab: **already handled** — both apps' `App.razor.cs` listen for `storage` events and reload on token removal (cross-tab logout); E2E `AuthFlowTests` cover it — ✅
 
 ## Next Up
 
-**Waves 4-8 committed + 6.7 docs drafted.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7 `c8b0624f`) + 6.6 error handling/resilience (wave 8 `123d7517`; dashboard 196/196 + admin 158/158) + 6.7 root README & migration guide (wave 9, uncommitted). Next: commit wave 9, then 6.8 memory/edge cases, infinite scroll, last-known-good cache (deferred).
+**Waves 4-10 committed.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7) + 6.6 error handling/resilience (wave 8) + 6.7 docs (wave 9) + **6.8 audit + refresh-race fix (wave 10, uncommitted: dashboard 200/200 + admin 158/158)**. Next: commit wave 10, then infinite scroll, last-known-good cache (deferred), 6.9 blocker (upstream).
 
 ## Architecture Decisions
 

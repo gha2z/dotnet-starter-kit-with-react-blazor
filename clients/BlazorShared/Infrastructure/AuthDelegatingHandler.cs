@@ -33,13 +33,28 @@ public sealed class AuthDelegatingHandler(ITokenStore tokenStore, IHttpClientFac
                 await RefreshLock.WaitAsync(cancellationToken);
                 try
                 {
-                    var newToken = await RefreshAccessTokenAsync(token!, refresh, cancellationToken);
-                    await tokenStore.SetTokensAsync(newToken.Token, newToken.RefreshToken);
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", newToken.Token);
+                    // A concurrent request may have refreshed while we waited (server rotates
+                    // refresh tokens) — re-read the store instead of refreshing with a stale
+                    // token, which would fail and kill the session.
+                    var freshToken = await tokenStore.GetAccessTokenAsync();
+                    if (freshToken is not null && freshToken != token)
+                    {
+                        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", freshToken);
 
-                    // Dispose old response before retry
-                    response.Dispose();
-                    response = await base.SendAsync(request, cancellationToken);
+                        // Dispose old response before retry
+                        response.Dispose();
+                        response = await base.SendAsync(request, cancellationToken);
+                    }
+                    else
+                    {
+                        var newToken = await RefreshAccessTokenAsync(token!, refresh, cancellationToken);
+                        await tokenStore.SetTokensAsync(newToken.Token, newToken.RefreshToken);
+                        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", newToken.Token);
+
+                        // Dispose old response before retry
+                        response.Dispose();
+                        response = await base.SendAsync(request, cancellationToken);
+                    }
                 }
                 catch (Exception ex)
                 {
