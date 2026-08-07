@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:FSH.Hybrid"
              xmlns:blazor="clr-namespace:Microsoft.AspNetCore.Components.WebView.Maui;assembly=Microsoft.AspNetCore.Components.WebView.Maui"
-             x:Class="FSH.Hybrid.MainPage">
+             x:Class="FSH.Hybrid.MainPage"
+             SafeAreaEdges="None">
     <blazor:BlazorWebView HostPage="wwwroot/index.html">
         <blazor:BlazorWebView.RootComponents>
             <blazor:RootComponent Selector="#app" ComponentType="{x:Type local:Main}" />
