@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     <title>FullStackHero Dashboard</title>
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#E11D48" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
     <link href="_content/FSH.BlazorShared/css/fsh.css" rel="stylesheet" />
@@ -33,5 +36,10 @@
     <script src="js/fshDownload.js"></script>
     <script src="js/fshSkipLink.js"></script>
     <script src="_content/FSH.BlazorShared/js/fshError.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js').catch(function() {});
+        }
+    </script>
 </body>
 </html>

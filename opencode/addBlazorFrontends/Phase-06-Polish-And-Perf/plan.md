@@ -1,11 +1,11 @@
 # Phase 6 — Polish & Performance
-Last Update: 2026-Aug-07 12:30:00, by: opencode (auto/coding, model: deepseek-v4-flash-free).
+Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4-flash-free).
 
 > **Target:** Production-ready quality. Bundle optimization, lazy loading, WASM AOT/tree-shaking, accessiblity audit, full feature parity with React apps, documentation update.
 
 ## Status
 
-- Phase 6: **🟡 In progress** — waves 1–3 committed (`e5bb0367`, `6b6fa334`, `a9c78f86`); wave 4 (lazy loading, dashboard): committed (see 6.1).
+- Phase 6: **🟡 In progress** — waves 1–3 committed (`e5bb0367`, `6b6fa334`, `a9c78f86`); wave 4 dashboard lazy (see 6.1b); wave 5 admin lazy (see 6.1c); wave 6 PWA (see 6.3).
 - Prerequisites: Phase 4 ✅ (testing done), Phase 5 ✅ (MAUI built)
 
 ## Task Checklist
@@ -74,10 +74,13 @@ Last Update: 2026-Aug-07 12:30:00, by: opencode (auto/coding, model: deepseek-v4
   - Preconnect to API endpoint
 - [ ] **HTTP/2 Server Push** — For deployment behind reverse proxy
   - Push key assemblies on first request
-- [ ] **PWA** — Progressive Web App support
-  - Service worker for offline/caching
-  - `manifest.json` for installable WASM app
-  - Offline fallback page
+- [x] **PWA** — Progressive Web App support
+  - **DONE (wave 6, 2026-08-07)**: both WASM apps (admin + dashboard) are installable + offline-capable.
+  - `manifest.json` per app (name, short_name, rose theme `#E11D48`, dark bg `#1B2A2C`, standalone, scope `/`, maskable + any icons).
+  - Service worker `service-worker.js` (v1.0): precaches shell (index/manifest/offline), cache-first for `_framework/*` (content-hashed = immutable), network-first for navigation with `offline.html` fallback, network-first+fallback elsewhere. Version-busted via `CACHE_NAME`.
+  - `offline.html` branded fallback page (retry button). Icons generated as PNG (192/512/maskable-512) via a node script (`.opencode/temp/gen-icons.js`).
+  - `index.html` both apps: `<link rel="manifest">`, theme-color meta, apple-touch-icon, SW registration guarded by `'serviceWorker' in navigator`.
+  - Verified: both apps build 0 errors; admin bUnit **158/158** + dashboard bUnit **179/179** green; publish smoke confirmed all PWA assets emitted (manifest/offline/sw/icons with gz/br sidecars).
 
 ### 6.4 Accessibility Audit
 - [x] **Skip-to-content link** — First Tab stop in the shell
@@ -184,7 +187,7 @@ Last Update: 2026-Aug-07 12:30:00, by: opencode (auto/coding, model: deepseek-v4
 
 ## Next Up
 
-**Waves 4-5 committed.** Both WASM apps lazy-loaded. Next: **6.9 Release-publish blocker** (upstream re-test after runtime servicing / MudBlazor net10), then 6.3 PWA/preload, 6.4 contrast/focus, 6.6 error handling, 6.7 root README + migration guide (shared zone — coordinate), 6.8 memory/edge cases, infinite scroll.
+**Waves 4-6 committed.** Both WASM apps lazy-loaded + PWA. Next: **6.9 Release-publish blocker** (upstream re-test after runtime servicing / MudBlazor net10), then 6.4 contrast/focus, 6.6 error handling, 6.7 root README + migration guide (shared zone — coordinate), 6.8 memory/edge cases, infinite scroll.
 
 ## Architecture Decisions
 
@@ -195,7 +198,7 @@ Last Update: 2026-Aug-07 12:30:00, by: opencode (auto/coding, model: deepseek-v4
 | Skip link | JS interop + preventDefault | Blazor SPA interceptor swallows fragment navigation; native href never moves focus |
 | AOT | **OFF (benchmarked)** | trim+AOT 56.60 MB/11.51 gz + 6.95 s boot vs trim-only 22.29 MB/4.97 gz + 3.47 s — 2.5x size, 2x boot for no CPU-heavy gain; revisit per-page |
 | Lazy loading | Single Pages RCL (`.wasm` lazy item) + `AdditionalAssemblies` | One lazy assembly covers all feature pages; per-feature split (admin parity item) would need N RCLs — revisit after admin lazy |
-| PWA | Service worker + manifest | WASM apps are served as static files; PWA adds install/offline |
+| PWA | Custom service worker + manifest (hand-written) | WASM apps are served as static files; PWA adds install/offline. Avoids `BlazorWebAssemblyPWA` template SDK bits (keeps full control over cache strategy; `_framework/*` cache-first since content-hashed) |
 | Image lazy | Native `loading="lazy"` | Simple, works on MudImage, no JS needed |
 | Error boundary | Custom component | Wraps Router > Found > content; catches render exceptions |
 
