@@ -125,6 +125,7 @@ builder.Services.AddAuthorizationCore(options =>
 // HTTP client with auth handler (for all authenticated API calls)
 builder.Services.AddTransient<AuthDelegatingHandler>();
 builder.Services.AddTransient<TerminalErrorHandler>();
+builder.Services.AddTransient<RetryAfterHandler>();
 builder.Services.AddHttpClient("FSH.Api", (sp, client) =>
 {
     var config = sp.GetRequiredService<IRuntimeConfigService>();
@@ -133,7 +134,10 @@ builder.Services.AddHttpClient("FSH.Api", (sp, client) =>
 // First registered = outermost: TerminalErrorHandler must see the FINAL response
 // (including AuthDelegatingHandler's refresh outcome and thrown ApiRequestException).
 .AddHttpMessageHandler<TerminalErrorHandler>()
-.AddHttpMessageHandler<AuthDelegatingHandler>();
+.AddHttpMessageHandler<AuthDelegatingHandler>()
+// Innermost: RetryAfterHandler retries a single 429 (idempotent verbs only) after
+// honoring Retry-After, so the outer handlers see the retried response.
+.AddHttpMessageHandler<RetryAfterHandler>();
 builder.Services.AddScoped(sp =>
     sp.GetRequiredService<IHttpClientFactory>().CreateClient("FSH.Api"));
 
@@ -146,6 +150,10 @@ builder.Services.AddMudServices(config =>
 
 // Theme (React parity: dashboard key is fsh.theme, default mode is System)
 builder.Services.AddSingleton(sp => new FshThemeService(sp.GetRequiredService<IJSRuntime>(), "fsh.theme", ThemeMode.System));
+
+// Connectivity (React parity: offline banner) — singleton so the banner and any
+// page share one browser event subscription.
+builder.Services.AddSingleton<INetworkStatus>(sp => new FshNetworkStatus(sp.GetRequiredService<IJSRuntime>()));
 
 // Realtime + SSE
 builder.Services.AddScoped<IHubConnectionService, HubConnectionService>();

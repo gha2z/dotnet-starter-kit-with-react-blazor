@@ -93,12 +93,16 @@ builder.Services.AddAuthorizationCore(options =>
 
 // HTTP client with auth handler (for all authenticated API calls)
 builder.Services.AddTransient<AuthDelegatingHandler>();
+builder.Services.AddTransient<RetryAfterHandler>();
 builder.Services.AddHttpClient("FSH.Api", (sp, client) =>
 {
     var config = sp.GetRequiredService<IRuntimeConfigService>();
     client.BaseAddress = RuntimeConfigService.ResolveApiBase(baseAddress, config.ApiBaseUrl);
 })
-.AddHttpMessageHandler<AuthDelegatingHandler>();
+.AddHttpMessageHandler<AuthDelegatingHandler>()
+// Innermost: RetryAfterHandler retries a single 429 (idempotent verbs only) after
+// honoring Retry-After, so the auth handler sees the retried response.
+.AddHttpMessageHandler<RetryAfterHandler>();
 builder.Services.AddScoped(sp =>
     sp.GetRequiredService<IHttpClientFactory>().CreateClient("FSH.Api"));
 
@@ -112,6 +116,10 @@ builder.Services.AddMudServices(config =>
 
 // Theme (dark default, persisted to localStorage - React parity)
 builder.Services.AddSingleton(sp => new FshThemeService(sp.GetRequiredService<IJSRuntime>(), "fsh.admin.theme"));
+
+// Connectivity (React parity: offline banner) — singleton so the banner and any
+// page share one browser event subscription.
+builder.Services.AddSingleton<INetworkStatus>(sp => new FshNetworkStatus(sp.GetRequiredService<IJSRuntime>()));
 
 // API services (all use the scoped "FSH.Api" HttpClient with auth handler)
 builder.Services.AddScoped<IAuditService, AuditService>();

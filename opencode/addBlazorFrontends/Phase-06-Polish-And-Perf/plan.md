@@ -151,23 +151,24 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 - [ ] **Impersonation flow** — Cross-app redirect works correctly
 
 ### 6.6 Error Handling & Resilience
-- [ ] **Global error boundary** — `FshErrorBoundary` wraps all pages
+- [x] **Global error boundary** — `FshErrorBoundary` wraps all pages (both apps)
   - Catches unhandled exceptions in render tree
   - Displays "Something went wrong" with reload button
   - Logs error to console / telemetry
-- [ ] **HTTP error handling** — All service calls handle 4xx/5xx
+- [x] **HTTP error handling** — All service calls handle 4xx/5xx
   - 401 → AuthDelegatingHandler refresh flow
-  - 403 → Permission denied page or component hide
-  - 404 → Not found page
-  - 429 → Retry-After handling
-  - 500 → Error alert with correlation ID
-- [ ] **Network connectivity** — Detect offline state, show banner
-  - `Navigator.onLine` via JS interop
-  - MudAlert: "You are offline. Some features may be unavailable."
-  - Auto-dismiss on reconnect
+  - 403 → Permission denied page or component hide (FshPermissionGate) + tenant-deactivated/impersonation-ended routing (TerminalErrorHandler)
+  - 404 → Not found page (FshNotFound)
+  - 429 → **Retry-After handling (wave 8): `RetryAfterHandler`** — single retry honoring Retry-After (delta or HTTP-date), capped at 30 s, idempotent verbs only (GET/HEAD/PUT/DELETE; POST/PATCH surface the 429). Registered innermost in both apps' `FSH.Api` chain. Tests: 7 in `RetryAfterHandlerTests`.
+  - 500 → Error alert with correlation ID — `FshErrorBand` gained optional `CorrelationId` param (rendered as "Request <id>"); pages pass the id when they have it.
+- [x] **Network connectivity** — Detect offline state, show banner (wave 8)
+  - `navigator.onLine` via JS interop (`fshNetwork.js` module + `FshNetworkStatus : INetworkStatus`)
+  - MudAlert: "You are offline. Some features may be unavailable." (`FshOfflineBanner` in both MainLayouts)
+  - Auto-dismiss on reconnect (browser online event → StatusChanged → banner hides)
+  - Tests: 5 in `FshOfflineBannerTests` + 3 `FshErrorBandTests`.
 - [ ] **Graceful degradation** — Components render even if API is down
-  - Skeleton loading (MudSkeleton instead of spinner)
-  - Cached data shown while offline (last-known-good)
+  - [x] Skeleton loading (MudSkeleton instead of spinner) — pages already render `fsh-skeleton` rows while loading
+  - [ ] Cached data shown while offline (last-known-good) — deferred; needs a data-cache layer, not yet scoped
 
 ### 6.7 Documentation
 - [x] **Blazor dashboard README** — `clients/dashboard-blazor/FSH.Dashboard.Wasm/README.md` (run, tests, architecture, publish notes)
@@ -192,7 +193,7 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 
 ## Next Up
 
-**Waves 4-6 committed.** Both WASM apps lazy-loaded + PWA. Next: **6.9 Release-publish blocker** (upstream re-test after runtime servicing / MudBlazor net10), then 6.4 contrast/focus, 6.6 error handling, 6.7 root README + migration guide (shared zone — coordinate), 6.8 memory/edge cases, infinite scroll.
+**Waves 4-8 committed/verified.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7 `c8b0624f`) + 6.6 error handling/resilience (wave 8, uncommitted: RetryAfterHandler + FshNetworkStatus/FshOfflineBanner + FshErrorBand correlation id; dashboard 196/196 + admin 158/158). Next: commit wave 8, then 6.7 root README + migration guide (shared zone — coordinate), 6.8 memory/edge cases, infinite scroll.
 
 ## Architecture Decisions
 
