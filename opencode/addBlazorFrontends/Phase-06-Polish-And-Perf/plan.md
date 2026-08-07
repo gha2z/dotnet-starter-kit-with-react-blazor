@@ -95,9 +95,14 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
   - MudIcon: `aria-hidden="true"` with accessible text nearby
   - MudAlert: `role="alert"`
   - MudDialog: `role="dialog"`, `aria-labelledby`
-- [ ] **Color contrast** — Verify WCAG 2.1 AA compliance
-  - MudBlazor palette contrast ratios
-  - Focus indicators visible
+- [x] **Color contrast** — Verify WCAG 2.1 AA compliance (DONE 2026-08-07)
+  - **Audit**: computed WCAG ratios for every palette pair (light + dark). Dark passed fully. Light had 2 text violations + 1 button violation:
+    - Primary `#E11D48` on Background `#F5F5F7` = **4.31:1** (< 4.5) → **`#D11A42`** (4.9 bg / 5.3 surface / 5.3 white-on)
+    - Secondary `#4A7B8C` on Background = **4.28:1** → **`#457383`** (4.8 bg / 5.2 surface)
+    - Dark PrimaryContrastText default white on `#FB7185` = **2.69:1** (filled buttons) → **`#121216`** (6.9:1)
+  - Divider rules (1.3:1 light / 1.2:1 dark) are decorative — headings + hover carry the boundary; documented, not changed.
+  - **Guard**: `FshMudThemeContrastTests` (dashboard suite) re-audits both palettes on every run — 2 new tests, dashboard 181/181 + admin 158/158 green.
+- [x] **Focus indicators visible** — global `:focus-visible` rule added to `BlazorShared/wwwroot/css/fsh.css` (2px primary outline + 2px offset), React-parity with `globals.css`. Applies to all MudBlazor apps via the shared stylesheet. Skip-link focus style already existed per-app.
 - [ ] **Focus management** — Focus moves correctly on navigation
   - MudToolbar focus trap in MudDialog
   - (skip-to-content link done)

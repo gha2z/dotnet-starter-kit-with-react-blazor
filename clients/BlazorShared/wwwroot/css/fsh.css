@@ -4,6 +4,13 @@
     --fsh-mono: 'JetBrains Mono', 'Cascadia Mono', 'Consolas', monospace;
 }
 
+/* ---------- focus indicator (React parity: globals.css :focus-visible) ---------- */
+
+:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
 /* ---------- typography ---------- */
 
 .fsh-mono-label {

@@ -5,7 +5,10 @@ namespace FSH.BlazorShared.Theming;
 public static class FshMudTheme
 {
     // Brand parity with the React admin (rose accent, dark-mode default, Outfit display face).
-    private const string LightPrimary = "#E11D48";
+    // Light tones darkened to pass WCAG 2.1 AA (>= 4.5:1) on both surface (#FFFFFF) and
+    // background (#F5F5F7): #E11D48 -> #D11A42 (4.9/5.3:1), #4A7B8C -> #457383 (4.8/5.2:1).
+    private const string LightPrimary = "#D11A42";
+    private const string LightSecondary = "#457383";
     private const string DarkPrimary = "#FB7185";
 
     public static MudTheme CreateAdmin()
@@ -25,7 +28,7 @@ public static class FshMudTheme
             PaletteLight = new PaletteLight
             {
                 Primary = LightPrimary,
-                Secondary = "#4A7B8C",
+                Secondary = LightSecondary,
                 AppbarBackground = "#111113",
                 AppbarText = "#FFFFFF",
                 DrawerBackground = "#FFFFFF",
@@ -43,6 +46,7 @@ public static class FshMudTheme
             PaletteDark = new PaletteDark
             {
                 Primary = DarkPrimary,
+                PrimaryContrastText = "#121216", // dark text on light rose (white on #FB7185 = 2.7:1, fails AA)
                 Secondary = "#6BA3B8",
                 AppbarBackground = "#111113",
                 AppbarText = "#E0E0E6",

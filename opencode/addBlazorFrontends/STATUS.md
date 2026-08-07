@@ -1,6 +1,6 @@
 # Current Status
 
-Last Update: 2026-08-07 13:20, by: opencode (model: deepseek-v4-flash-free).
+Last Update: 2026-08-07 23:40, by: opencode (model: deepseek-v4-flash-free).
 
 ## Progress
 
@@ -12,7 +12,7 @@ Last Update: 2026-08-07 13:20, by: opencode (model: deepseek-v4-flash-free).
 | Phase 3 | ✅ Complete (3.1-3.14 - all dashboard pages, Settings, Impersonation, Command Palette) | dashboard 178/178 |
 | Phase 4 | ✅ Testing — bUnit 178/178 (dashboard) + 155/155 (admin); Playwright E2E 9/9 (admin) + 11/11 (dashboard, 4.9) | both 0 warnings |
 | Phase 5 | 🟨 (5.1–5.9 done; push 5.4 compile-gated — blocked on Firebase setup) | hybrid 12/12 |
-| Phase 6 | 🟡 (waves 4–6 committed: **dashboard + admin lazy loading DONE** — Pages RCLs + `resources.lazyAssembly`; **PWA DONE** — manifest + SW + offline page both apps; remaining: PWA HTTPS-staging check, preload, infinite scroll, root README, migration guide, **6.9 Release-publish blocker** ⚠️) | dashboard bUnit 179/179 + E2E 18/18 · admin bUnit 158/158 |
+| Phase 6 | 🟡 (waves 4–7 committed: **lazy loading DONE** both apps, **PWA DONE** both apps, **6.4 contrast/focus DONE** — WCAG AA palette + `:focus-visible` + contrast guard tests; remaining: preload, infinite scroll, root README, migration guide, **6.9 Release-publish blocker** ⚠️) | dashboard bUnit 181/181 + E2E 18/18 · admin bUnit 158/158 |
 | Phase 7 | 🟨 (parity sprint 1 + hotfixes + page build-out; admin accent/font/density delegated to sess-maui) | both 0 warnings |
 
 ## Active Streams (parallel, git worktrees)
@@ -28,9 +28,9 @@ Last Update: 2026-08-07 13:20, by: opencode (model: deepseek-v4-flash-free).
 
 ## Next Task
 
-**Phase 6 waves 4-6 committed.** Both WASM apps lazy-loaded. Dashboard: `Pages/` + `TerminalLayout` → `FSH.Dashboard.Pages` RCL (20.34 MB, 4.57 gz, 645.8 KB lazy file). Admin: `Pages/` → `FSH.Admin.Pages` RCL (21.17 MB, lazy file 488 KB / 158 KB gz). **PWA both apps**: manifest.json (rose theme), service-worker.js (cache-first `_framework/*`, offline fallback), offline.html, 192/512/maskable icons.
+**Phase 6 waves 4-7 committed.** Both WASM apps lazy-loaded + PWA + 6.4 WCAG AA contrast/focus. Dashboard: `Pages/` + `TerminalLayout` → `FSH.Dashboard.Pages` RCL (20.34 MB, 4.57 gz, 645.8 KB lazy file). Admin: `Pages/` → `FSH.Admin.Pages` RCL (21.17 MB, lazy file 488 KB / 158 KB gz). **PWA both apps**: manifest.json (rose theme), service-worker.js (cache-first `_framework/*`, offline fallback), offline.html, 192/512/maskable icons. **6.4**: Light Primary `#D11A42` / Secondary `#457383` / Dark `PrimaryContrastText #121216` + global `:focus-visible`; `FshMudThemeContrastTests` guards AA (dashboard 181/181, admin 158/158).
 
-⚠️ **6.9 RELEASE-PUBLISH BLOCKER (pre-existing, both WASM apps):** Release publishes crash the Mono interpreter at boot (`LocalizationOptions:.ctor` NIY → `interp.c:4135`; other shapes die silently earlier). Reproduced on clean `a9c78f86` worktree + admin-blazor → NOT caused by lazy/trimming/webcil/jiterpreter. Upstream: dotnet/runtime #121849 (open, milestone 12.0.0), MudBlazor net10 target unshipped. Debug/DevServer (test pipeline) unaffected. Re-test after runtime servicing / MudBlazor net10 / AOT.
+⚠️ **6.9 RELEASE-PUBLISH BLOCKER (pre-existing, both WASM apps):** Release publishes crash the Mono interpreter at boot (`LocalizationOptions:.ctor` NIY → `interp.c:4135`; other shapes die silently earlier). Reproduced on clean `a9c78f86` worktree + admin-blazor → NOT caused by lazy/trimming/webcil/jiterpreter. Upstream: dotnet/runtime #121849 (re-checked 2026-08-07 23:35 — still **open**, milestone **12.0.0**, no servicing fix), MudBlazor net10 target unshipped. Debug/DevServer (test pipeline) unaffected. Re-test after MudBlazor net10 / AOT / .NET 12.
 
 ## Files to Read
 

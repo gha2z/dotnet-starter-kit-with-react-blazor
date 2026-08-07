@@ -1,5 +1,5 @@
 # sess-main
-identity: opencode/deepseek-v4-flash-free (concrete modelID, verified 2026-08-06) | started: 2026-08-06 | state: active | heartbeat: 2026-08-07 13:20
+identity: opencode/deepseek-v4-flash-free (concrete modelID, verified 2026-08-06) | started: 2026-08-06 | state: active | heartbeat: 2026-08-07 23:33
 
 scope: clients/dashboard-blazor/** · clients/BlazorShared/** (Main-only) · clients/admin-blazor/** (Main-owned by default; app-code edits by other sessions need a board sign-off per task) · STATUS.md · 00-Index.md · Phase-02/03/04/06/07 plan files · opencode/addBlazorFrontends coordination docs (readme.md, verify.ps1, coordination.ps1) · implementation summaries
 
@@ -8,13 +8,17 @@ M2 (Phase 6 dashboard polish/perf) — waves 4–6 (lazy loading + PWA, both WAS
 - Waves 1-3 committed (`e5bb0367` trim/splash/a11y, `6b6fa334` publish smoke/AOT-off/deployability, `a9c78f86` READMEs + slow-network E2E).
 - **Wave 4 committed (`5d4eaaca`): dashboard lazy loading** — `Pages/` + `TerminalLayout.razor` → RCL `FSH.Dashboard.Pages`. E2E 18/18 + bUnit 179/179 green. 20.34 MB / 4.57 gz (Pages deferred, 645.8 KB lazy file).
 - **Wave 5 committed (`8bc78500`): admin lazy loading** — `Pages/**` (77 files) → RCL `FSH.Admin.Pages`. bUnit **158/158 green**. Trimmed publish: lazyAssembly confirmed, 21.17 MB total.
-- **Wave 6 in progress: PWA both apps** — manifest.json (rose theme), service-worker.js (v1.0, cache-first `_framework/*`, offline.html fallback), offline.html, 192/512/maskable PNG icons. Both apps build 0 errors; admin 158/158 + dashboard 179/179 green; publish smoke confirms PWA assets emitted.
-Next: commit wave 6, then 6.9 re-test (upstream), 6.4 contrast/focus, 6.6 error handling, 6.7 root README + migration guide (shared zone — coordinate).
+- **Wave 6 committed (`68401ba3`): PWA both apps** — manifest.json (rose theme), service-worker.js (v1.0, cache-first `_framework/*`, offline.html fallback), offline.html, 192/512/maskable PNG icons. Both apps build 0 errors; admin 158/158 + dashboard 179/179 green; publish smoke confirms PWA assets emitted.
+- **6.4 contrast/focus DONE (wave 7, in progress)**: WCAG AA audit → Light Primary `#D11A42` (was #E11D48, 4.31 on bg), Secondary `#457383` (was 4A7B8C, 4.28), Dark PrimaryContrastText `#121216` (white was 2.69 on #FB7185); global `:focus-visible` in fsh.css. Guard: `FshMudThemeContrastTests` (2 new, dashboard 181/181 + admin 158/158).
+Next: commit wave 7, then 6.9 re-test (upstream — re-checked 23:35: #121849 still open, milestone 12.0.0 → still deferred), 6.6 error handling, 6.7 root README + migration guide (shared zone — coordinate).
 
 ## Touched files (uncommitted in repo root — OFF-LIMITS for other sessions)
 - opencode/addBlazorFrontends/live/sess-main.md (this file)
 - opencode/addBlazorFrontends/STATUS.md (Phase 6 row + 6.9 blocker)
-- opencode/addBlazorFrontends/Phase-06-Polish-And-Perf/plan.md (6.1c + 6.3 PWA sections + gotchas)
+- opencode/addBlazorFrontends/Phase-06-Polish-And-Perf/plan.md (6.1c + 6.3 PWA sections + gotchas + 6.4 audit)
+- clients/BlazorShared/Theming/FshMudTheme.cs (6.4: AA palette — Light Primary/Secondary, Dark PrimaryContrastText)
+- clients/BlazorShared/wwwroot/css/fsh.css (6.4: global :focus-visible)
+- clients/dashboard-blazor/FSH.Dashboard.Wasm.Tests/Theming/FshMudThemeContrastTests.cs (new — AA guard)
 - clients/dashboard-blazor/FSH.Dashboard.Wasm/wwwroot/{manifest.json, service-worker.js, offline.html, icon-192.png, icon-512.png, icon-maskable-512.png} (new — PWA)
 - clients/admin-blazor/FSH.Admin.Wasm/wwwroot/{manifest.json, service-worker.js, offline.html, icon-192.png, icon-512.png, icon-maskable-512.png} (new — PWA)
 - clients/dashboard-blazor/FSH.Dashboard.Wasm/wwwroot/index.html (PWA wiring)
