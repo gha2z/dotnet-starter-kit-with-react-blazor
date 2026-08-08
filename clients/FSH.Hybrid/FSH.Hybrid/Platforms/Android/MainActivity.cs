@@ -15,15 +15,15 @@ public class MainActivity : MauiAppCompatActivity
 {
     protected override void OnCreate(Bundle? savedInstanceState)
     {
-        base.OnCreate(savedInstanceState);
-
         // Cold start via a VIEW intent (fsh://...): MAUI's OnAppLinkRequestReceived
-        // is unreliable on Android here, so stash the link for App.CreateWindow to
-        // hand to the Blazor router once the app shell is up.
+        // is unreliable on Android here, and CreateWindow (which drains the stash)
+        // runs inside base.OnCreate — so stash BEFORE the base call.
         if (Intent?.Data?.ToString() is { } coldLink)
         {
             HybridNavigationBridge.InitialAppLink = coldLink;
         }
+
+        base.OnCreate(savedInstanceState);
     }
 
     protected override void OnNewIntent(Intent? intent)
