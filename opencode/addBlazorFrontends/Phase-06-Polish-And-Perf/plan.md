@@ -81,8 +81,9 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
   - **Constraint found**: framework assemblies are content-hashed in `_framework/` (`MudBlazor.xr72q1v0gr.wasm` etc.) — static `rel="preload"` of assemblies is impossible without build-time hash injection; the boot loader itself is the actual fetch bottleneck, not the blazor.boot.json entries. What's statically preloadable: the boot chain (`_framework/blazor.webassembly.js`, `_framework/dotnet.js` — stable names) + `_content/` CSS.
   - Both apps: `<link rel="preconnect" href="https://fonts.googleapis.com">`, `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>`, `<link rel="preload" href="_framework/blazor.webassembly.js" as="script">`, `<link rel="preload" href="_framework/dotnet.js" as="script">`. PWA cache-first covers repeat loads; preload shaves the first-visit chain.
   - **API preconnect**: skipped — API base is runtime `config.json` (`https://localhost:7030` dev), not statically known; preconnect must live in the CDN/hosting config (deployment item below).
-- [ ] **HTTP/2 Server Push** — For deployment behind reverse proxy
-  - Push key assemblies on first request
+- [x] **HTTP/2 Server Push** — For deployment behind reverse proxy (decision, wave 14)
+  - **Not implemented — superseded technology**: HTTP/2 Server Push was removed from Chrome 106+ and never shipped in Firefox; the modern replacements are **103 Early Hints** (reverse-proxy/edge feature) and plain HTTP/2+ multiplexing. The wave-12 preload of the boot chain (`blazor.webassembly.js`, `dotnet.js`) already covers the same first-request win with better cache semantics (preload is cache-aware; push was not).
+  - **Deployment notes for the docs repo**: behind the reverse proxy (deploy/), if desired, add `103 Early Hints` for `_framework/blazor.webassembly.js` + `_framework/dotnet.js` (stable names, so hint lists are static); do NOT hint content-hashed `.wasm` assets (names change per build) and DO NOT use `Link: </file>; rel=preload` push-style hints for them either. Font preconnect lives in the html already. Nothing to change in app code.
 - [x] **PWA** — Progressive Web App support
   - **DONE (wave 6, 2026-08-07)**: both WASM apps (admin + dashboard) are installable + offline-capable.
   - `manifest.json` per app (name, short_name, rose theme `#E11D48`, dark bg `#1B2A2C`, standalone, scope `/`, maskable + any icons).
@@ -202,7 +203,7 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 
 ## Next Up
 
-**Waves 4-13 committed.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7) + 6.6 error handling/resilience (wave 8) + 6.7 docs (wave 9) + **6.8 audit + refresh-race fix (wave 10: dashboard 200/200 + admin 158/158)** + **chat infinite scroll (wave 11: dashboard 204/204)** + **6.3 preload + 6.4 a11y (wave 12: dashboard 204/204 + admin 158/158)** + **6.2 render optimization (wave 13)**. **Wave 14 (uncommitted): 6.3 critical CSS — splash styles inlined into both index.html (first paint never waits on app.css); MudBlazor deferral rejected (parallel with runtime fetch, FOUC risk, zero gain)**. Next: commit wave 14, then last-known-good cache (deferred), 6.9 blocker (upstream), HTTP/2 Server Push (deployment item).
+**Waves 4-14 committed.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7) + 6.6 error handling/resilience (wave 8) + 6.7 docs (wave 9) + **6.8 audit + refresh-race fix (wave 10: dashboard 200/200 + admin 158/158)** + **chat infinite scroll (wave 11: dashboard 204/204)** + **6.3 preload + 6.4 a11y (wave 12: dashboard 204/204 + admin 158/158)** + **6.2 render optimization (wave 13)** + **6.3 critical CSS + HTTP/2 push decision (wave 14)**. **All 6.x code items DONE** except **6.9** (upstream #121849, milestone 12.0.0 → deferred) and last-known-good cache (deferred). Next: 6.9 re-test after runtime servicing; remaining items are deployment-zone (Early Hints) or cross-session (MAUI README).
 
 ## Architecture Decisions
 
