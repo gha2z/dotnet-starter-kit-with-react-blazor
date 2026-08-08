@@ -37,6 +37,8 @@ public sealed class FshOfflineBannerTests : TestSetup
 
         var banner = cut.FindAll(".fsh-offline-banner").ShouldHaveSingleItem();
         banner.TextContent.ShouldContain("You are offline");
+        banner.GetAttribute("role").ShouldBe("alert");
+        cut.FindAll("svg[aria-hidden='true']").ShouldNotBeEmpty();
     }
 
     [Fact]

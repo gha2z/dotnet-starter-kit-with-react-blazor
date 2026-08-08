@@ -1,5 +1,5 @@
 # sess-main
-identity: opencode/deepseek-v4-flash-free (concrete modelID, verified 2026-08-06) | started: 2026-08-06 | state: active | heartbeat: 2026-08-08 02:20
+identity: opencode/deepseek-v4-flash-free (concrete modelID, verified 2026-08-06) | started: 2026-08-06 | state: active | heartbeat: 2026-08-08 03:10
 
 scope: clients/dashboard-blazor/** · clients/BlazorShared/** (Main-only) · clients/admin-blazor/** (Main-owned by default; app-code edits by other sessions need a board sign-off per task) · STATUS.md · 00-Index.md · Phase-02/03/04/06/07 plan files · opencode/addBlazorFrontends coordination docs (readme.md, verify.ps1, coordination.ps1) · implementation summaries
 
@@ -12,20 +12,19 @@ M2 (Phase 6 dashboard polish/perf) — waves 1–7 (lazy loading + PWA + a11y co
 - **Wave 7 committed (`c8b0624f`): 6.4 contrast/focus DONE** — WCAG AA audit → Light Primary `#D11A42` (was #E11D48, 4.31 on bg), Secondary `#457383` (was 4A7B8C, 4.28), Dark PrimaryContrastText `#121216` (white was 2.69 on #FB7185); global `:focus-visible` in fsh.css. Guard: `FshMudThemeContrastTests` (2 new, dashboard 181/181 + admin 158/158).
 - **Wave 9 committed (`0cbbfde3`): 6.7 docs DONE (main zone)** — root README: Blazor WASM run commands + ports (5175/5176) + MAUI run note + repo-layout rows point at the migration guide (board row #5 announcement first — shared zone). New `clients/BlazorShared/MIGRATION-GUIDE.md`: React→Blazor concept map, per-page checklist, conventions, real-time/offline parity. MAUI README row stays sess-maui (idle).
 - **Wave 10 committed (`11c8c3c8`): 6.8 audit + fix** — memory-leak audit — all 17 `+=` subscription sites have matching `-=` in Dispose (verified); `InactivityTimerService` IAsyncDisposable; ChatPage disposes SignalR subs. Edge cases: empty lists (FshEmptyState ×39), long text (fsh-truncate + title ×55), XSS (zero MarkupString in clients/), multi-tab logout (storage events + E2E). **Real bug found + fixed**: `AuthDelegatingHandler` refresh-token rotation race — read refresh token before the lock, second concurrent 401 refreshed with rotated (invalid) token → session killed. Fix: re-read store after lock (double-checked). 4 new `AuthDelegatingHandlerTests` → dashboard **200/200**, admin **158/158**; also fixed pre-existing CS0105 duplicate using in admin LoginPage.razor.
-- **Wave 11 (6.2 chat infinite scroll, UNCOMMITTED)**: scroll-top load-older. New `clients/BlazorShared/wwwroot/js/fshChatScroll.js` ES module (watchScrollTop/unwatchScrollTop with per-ref cleanup map, scrollToBottom, scrollHeight, restoreScrollPosition). ChatPage.razor.cs: cursor `before: _messages[0].Id` via `ListChannelMessagesAsync` (InitialPageSize=100, OlderPageSize=50), `_hasOlder` from full-page return, dedupe vs SignalR arrivals, scroll offset preserved across prepend, `[JSInvokable] OnScrollTopReached` + `_loadingOlder` guard, module invoked via `IJSObjectReference` (never global lookup — module exports are not globals). Activity page: N/A (live SSE ring buffer, no history endpoint — parity with React). 4 new ChatPageTests → dashboard **204/204**. bUnit gotchas: NSubstitute `.Returns(value, Task)` mix rejected — use `_ =>` func form; gate-TCS tests must not await the gated InvokeAsync.
-Next: commit wave 11, then 6.9 re-test (upstream — #121849 still open, milestone 12.0.0 → deferred), last-known-good cache (deferred).
-
-## Touched files (wave 11 uncommitted — OFF-LIMITS for other sessions until next commit)
+- **Wave 11 committed (`c2a67605`): 6.2 chat infinite scroll** — scroll-top load-older. New `clients/BlazorShared/wwwroot/js/fshChatScroll.js` ES module (watchScrollTop/unwatchScrollTop with per-ref cleanup map, scrollToBottom, scrollHeight, restoreScrollPosition). ChatPage.razor.cs: cursor `before: _messages[0].Id` via `ListChannelMessagesAsync` (InitialPageSize=100, OlderPageSize=50), `_hasOlder` from full-page return, dedupe vs SignalR arrivals, scroll offset preserved across prepend, `[JSInvokable] OnScrollTopReached` + `_loadingOlder` guard, module invoked via `IJSObjectReference` (never global lookup — module exports are not globals). Activity page: N/A (live SSE ring buffer, no history endpoint — parity with React). 4 new ChatPageTests → dashboard **204/204**. bUnit gotchas: NSubstitute `.Returns(value, Task)` mix rejected — use `_ =>` func form; gate-TCS tests must not await the gated InvokeAsync.
+- **Wave 12 (6.3 preload + 6.4 a11y, UNCOMMITTED)**: 6.3 preload — boot-JS preload (`_framework/blazor.webassembly.js`, `_framework/dotnet.js` — stable names) + font preconnect (googleapis + gstatic crossorigin) in both apps' index.html. Assembly preload impossible (content-hashed `MudBlazor.xr72q1v0gr.wasm`); API preconnect skipped (runtime config.json). 6.2 image-lazy verified already in code (all `<img loading="lazy">`). 6.4 SR/form/focus/MudBlazor a11y audit DONE — **found MudBlazor 9.7 does NOT emit `role="alert"` on MudAlert** → added to FshOfflineBanner (+guard assertion in FshOfflineBannerTests: role=alert + icon aria-hidden); chat composer `aria-label="Message"`; MudIcon aria-hidden default verified; MudDialog role/dialog native; tables documented (h1-named regions); labeled MudTextFields render proper for/id. Dashboard **204/204**, admin **158/158**.
+Next: commit wave 12, then 6.9 re-test (upstream — #121849 still open, milestone 12.0.0 → deferred), last-known-good cache (deferred), HTTP/2 Server Push (deployment).
+## Touched files (wave 12 uncommitted — OFF-LIMITS for other sessions until next commit)
 - opencode/addBlazorFrontends/live/sess-main.md (this file)
 - opencode/addBlazorFrontends/STATUS.md (Phase 6 row + 6.9 blocker)
-- opencode/addBlazorFrontends/Phase-06-Polish-And-Perf/plan.md (6.1c + 6.3 PWA sections + gotchas + 6.4 audit + 6.6 wave 8 + 6.7 wave 9 + 6.8 wave 10 + 6.2 infinite scroll wave 11)
-- opencode/addBlazorFrontends/live/board.md (rows #5/#6 resolved — shared zone)
-- README.md (root — wave 9: Blazor run commands + ports; shared zone, board row #5)
-- clients/BlazorShared/MIGRATION-GUIDE.md (new — wave 9)
-- clients/BlazorShared/Infrastructure/AuthDelegatingHandler.cs (wave 10 — refresh race fix)
-- clients/dashboard-blazor/FSH.Dashboard.Wasm.Tests/Infrastructure/AuthDelegatingHandlerTests.cs (new — wave 10)
-- clients/admin-blazor/FSH.Admin.Pages/Pages/Auth/LoginPage.razor (wave 10 — CS0105 fix)
-- clients/BlazorShared/wwwroot/js/fshChatScroll.js (new — wave 11 chat infinite scroll)
+- opencode/addBlazorFrontends/Phase-06-Polish-And-Perf/plan.md (6.1c + 6.3 PWA sections + gotchas + 6.4 audit + 6.6 wave 8 + 6.7 wave 9 + 6.8 wave 10 + 6.2 infinite scroll wave 11 + 6.3 preload + 6.4 SR/form/focus wave 12)
+- clients/dashboard-blazor/FSH.Dashboard.Wasm/wwwroot/index.html (wave 12 — preload + font preconnect)
+- clients/admin-blazor/FSH.Admin.Wasm/wwwroot/index.html (wave 12 — preload + font preconnect)
+- clients/BlazorShared/Components/FshOfflineBanner.razor (wave 12 — role="alert")
+- clients/dashboard-blazor/FSH.Dashboard.Pages/Pages/Chat/ChatPage.razor (wave 12 — composer aria-label)
+- clients/dashboard-blazor/FSH.Dashboard.Wasm.Tests/Components/FshOfflineBannerTests.cs (wave 12 — role/aria-hidden guard)
+- clients/BlazorShared/wwwroot/js/fshChatScroll.js (wave 11 — chat infinite scroll)
 - clients/dashboard-blazor/FSH.Dashboard.Pages/Pages/Chat/ChatPage.razor.cs (wave 11 — load-older)
 - clients/dashboard-blazor/FSH.Dashboard.Wasm.Tests/Pages/Chat/ChatPageTests.cs (wave 11 — 4 new tests)
 

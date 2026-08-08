@@ -62,7 +62,7 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
   - `@key` on MudTable rows
   - `StateHasChanged()` only when needed
   - Use `MudComponentBase`'s `ShouldRender()` override in heavy components
-- [ ] **Image lazy loading** — MudImage/thumbnails with `loading="lazy"`
+- [x] **Image lazy loading** — native `loading="lazy"` — already present in code: product thumbs (ProductsPage), brand logos (BrandsPage), product detail gallery (ProductDetailPage) all render `<img loading="lazy" referrerpolicy="no-referrer">`. FilePreviewDialog (dialog, opened on demand) correctly has no lazy. No code change needed — item verified & ticked (wave 12).
 
 ### 6.3 First-Load Performance
 - [x] **Splash screen** — Branded splash replacing bare "Loading..."
@@ -70,9 +70,10 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 - [ ] **Critical CSS** — Inline MudBlazor critical styles in index.html
   - Extract critical CSS for above-the-fold content
   - Defer non-critical MudBlazor CSS
-- [ ] **Preload** — `link rel="preload"` for key assemblies
-  - MudBlazor, Microsoft.AspNetCore.Components.WebAssembly
-  - Preconnect to API endpoint
+- [x] **Preload** — `link rel="preload"` for boot JS + font preconnect (wave 12)
+  - **Constraint found**: framework assemblies are content-hashed in `_framework/` (`MudBlazor.xr72q1v0gr.wasm` etc.) — static `rel="preload"` of assemblies is impossible without build-time hash injection; the boot loader itself is the actual fetch bottleneck, not the blazor.boot.json entries. What's statically preloadable: the boot chain (`_framework/blazor.webassembly.js`, `_framework/dotnet.js` — stable names) + `_content/` CSS.
+  - Both apps: `<link rel="preconnect" href="https://fonts.googleapis.com">`, `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>`, `<link rel="preload" href="_framework/blazor.webassembly.js" as="script">`, `<link rel="preload" href="_framework/dotnet.js" as="script">`. PWA cache-first covers repeat loads; preload shaves the first-visit chain.
+  - **API preconnect**: skipped — API base is runtime `config.json` (`https://localhost:7030` dev), not statically known; preconnect must live in the CDN/hosting config (deployment item below).
 - [ ] **HTTP/2 Server Push** — For deployment behind reverse proxy
   - Push key assemblies on first request
 - [x] **PWA** — Progressive Web App support
@@ -90,12 +91,13 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
   - Sidebar collapse ("Collapse sidebar"), collapsed expand ("Expand sidebar"), drawer trigger ("Open navigation"). Search + Theme already labeled. Nav landmark: `aria-label="Primary"`; `main` landmark present.
   - **Audit pass**: 20 candidate icon buttons reviewed — 17 already labeled (Brands/Categories/Products row edit-delete, Product detail cover/remove, File manager preview/download/delete, Group remove-member, Session revoke/delete, Chat create-channel…). Added labels to the 3 missing: StockDialog "Decrease/Increase stock by 1", Chat "Send message", Audits "View audit detail".
 - [x] **Table/dialog a11y decision** — MudTable has no native `aria-label` splat on the `<table>` element (attributes go to the wrapper div); all tables sit under matching page headings (h1) so the heading names the region. MudBlazor 9 provides `role="dialog"` + Escape-close natively on MudDialog. No code change; documented instead of forcing labels onto wrapper divs.
-- [ ] **Screen reader support** — ARIA labels and roles (continue)
-  - MudTable: `aria-label`, `aria-sort`
-  - MudButton: `aria-label` for icon-only buttons
-  - MudIcon: `aria-hidden="true"` with accessible text nearby
-  - MudAlert: `role="alert"`
-  - MudDialog: `role="dialog"`, `aria-labelledby`
+- [x] **Screen reader support** — ARIA labels and roles (DONE wave 12, 2026-08-08)
+  - MudTable: `aria-label`/`aria-sort` — **decision**: MudTable has no native splat on `<table>` (attrs go to wrapper div); all tables sit under matching h1 headings that name the region (see table/dialog decision row). Documented, not forced.
+  - MudButton/MudIconButton: `aria-label` for icon-only buttons — **done** (wave 7 audit: 20 reviewed, 17 already labeled, 3 added).
+  - MudIcon: renders `aria-hidden="true"` by default in MudBlazor 9 (verified in rendered markup) — no change.
+  - MudAlert: `role="alert"` — **fixed (wave 12)**: MudBlazor 9.7 does NOT emit `role="alert"` by default; added `role="alert"` to `FshOfflineBanner` (the only page-level alert). Guard assertion added to `FshOfflineBannerTests` (`banner.GetAttribute("role") == "alert"` + icon `aria-hidden`).
+  - MudDialog: `role="dialog"` + Escape-close — native MudBlazor 9; `aria-labelledby` not needed (title bar renders the dialog title).
+  - Chat composer got `aria-label="Message"` (placeholder-only field had no accessible name).
 - [x] **Color contrast** — Verify WCAG 2.1 AA compliance (DONE 2026-08-07)
   - **Audit**: computed WCAG ratios for every palette pair (light + dark). Dark passed fully. Light had 2 text violations + 1 button violation:
     - Primary `#E11D48` on Background `#F5F5F7` = **4.31:1** (< 4.5) → **`#D11A42`** (4.9 bg / 5.3 surface / 5.3 white-on)
@@ -104,16 +106,14 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
   - Divider rules (1.3:1 light / 1.2:1 dark) are decorative — headings + hover carry the boundary; documented, not changed.
   - **Guard**: `FshMudThemeContrastTests` (dashboard suite) re-audits both palettes on every run — 2 new tests, dashboard 181/181 + admin 158/158 green.
 - [x] **Focus indicators visible** — global `:focus-visible` rule added to `BlazorShared/wwwroot/css/fsh.css` (2px primary outline + 2px offset), React-parity with `globals.css`. Applies to all MudBlazor apps via the shared stylesheet. Skip-link focus style already existed per-app.
-- [ ] **Focus management** — Focus moves correctly on navigation
-  - MudToolbar focus trap in MudDialog
-  - (skip-to-content link done)
-- [ ] **Form accessibility** — MudForm with proper labels, error announcements
-  - `<label for="...">` or MudInput with `aria-label`
-  - Validation errors with `aria-describedby`
-- [ ] **MudBlazor accessibility props** — Audit all components
-  - `MudButton` `aria-label`
-  - `MudIconButton` `aria-label` required
-  - `MudTextField` with `For` / `Label`
+- [x] **Focus management** — Focus moves correctly on navigation
+  - MudToolbar focus trap in MudDialog — MudBlazor 9 native (MudDialog focus traps + restores focus on close, Escape-close). Skip-to-content link done (wave 7, E2E-verified). No changes required — verified.
+- [x] **Form accessibility** — MudForm with proper labels, error announcements (wave 12 audit)
+  - **Audit**: all labeled `MudTextField`/`MudSelect` render proper `<label for>` via MudBlazor (input id + label pairing); MudForm validation messages are announced on submit. Placeholder-only fields are the only gap: chat composer (fixed — `aria-label="Message"`), search boxes (decorative/utility, adjacent to their function — documented; MudTextField has no splat for aria on the inner input, so leaving placeholder-only is the pragmatic choice).
+  - Validation errors with `aria-describedby` — MudBlazor renders the validation text in the field's helper/error slot (announced); no code change.
+- [x] **MudBlazor accessibility props** — Audit all components (wave 12 audit)
+  - `MudButton`/`MudIconButton` `aria-label` — wave 7 audit complete (all icon-only labeled).
+  - `MudTextField` with `For` / `Label` — all labeled fields use `Label=` (MudBlazor renders the label+id pairing); only deliberate exceptions are the placeholder-only utility fields documented above.
 
 ### 6.5 Feature Parity Audit
 
@@ -195,7 +195,7 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 
 ## Next Up
 
-**Waves 4-11 committed.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7) + 6.6 error handling/resilience (wave 8) + 6.7 docs (wave 9) + **6.8 audit + refresh-race fix (wave 10: dashboard 200/200 + admin 158/158)** + **chat infinite scroll (wave 11: dashboard 204/204)**. Next: last-known-good cache (deferred), 6.9 blocker (upstream), preload (deferred).
+**Waves 4-11 committed.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7) + 6.6 error handling/resilience (wave 8) + 6.7 docs (wave 9) + **6.8 audit + refresh-race fix (wave 10: dashboard 200/200 + admin 158/158)** + **chat infinite scroll (wave 11: dashboard 204/204)**. **Wave 12 (uncommitted): 6.3 preload (boot-JS preload + font preconnect, both apps), 6.2 image-lazy verified, 6.4 SR/form/focus/MudBlazor a11y audit done (MudAlert role=alert fix + chat composer aria-label + guard tests)**. Next: commit wave 12, then last-known-good cache (deferred), 6.9 blocker (upstream), HTTP/2 Server Push (deployment item).
 
 ## Architecture Decisions
 
