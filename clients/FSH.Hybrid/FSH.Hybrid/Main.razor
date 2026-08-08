@@ -37,14 +37,36 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Theme.Changed += OnThemeChanged;
         await Theme.InitializeAsync();
 
         // Consume a deep-linked Blazor route (fsh://<path>) handed in from the native shell.
+        HybridNavigationBridge.BlazorPathReceived += OnBlazorPathReceived;
         var pending = HybridNavigationBridge.PendingPath;
         HybridNavigationBridge.PendingPath = null;
         if (!string.IsNullOrEmpty(pending))
         {
             Nav.NavigateTo(pending);
         }
+    }
+
+    private void OnThemeChanged()
+        => InvokeAsync(StateHasChanged);
+
+    private void OnBlazorPathReceived(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        HybridNavigationBridge.PendingPath = null;
+        Nav.NavigateTo(path);
+    }
+
+    public void Dispose()
+    {
+        Theme.Changed -= OnThemeChanged;
+        HybridNavigationBridge.BlazorPathReceived -= OnBlazorPathReceived;
     }
 }

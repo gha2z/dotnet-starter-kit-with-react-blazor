@@ -40,9 +40,18 @@ public sealed class DeepLinkService : IDeepLinkService
 
 /// <summary>
 /// Carries a deep-linked Blazor route from the native shell into the Blazor router.
-/// The root component (Main.razor) consumes <see cref="PendingPath"/> during init.
+/// The root component (Main.razor) consumes <see cref="PendingPath"/> during init and
+/// subscribes to <see cref="BlazorPathReceived"/> for links arriving while the app is running.
 /// </summary>
 public static class HybridNavigationBridge
 {
     public static string? PendingPath { get; set; }
+
+    public static event Action<string?>? BlazorPathReceived;
+
+    public static void RaiseBlazorPath(string? path)
+    {
+        PendingPath = path;
+        BlazorPathReceived?.Invoke(path);
+    }
 }

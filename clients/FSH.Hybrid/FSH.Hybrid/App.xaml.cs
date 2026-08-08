@@ -32,7 +32,11 @@ public sealed partial class App : Application
     protected override void OnAppLinkRequestReceived(Uri uri)
     {
         base.OnAppLinkRequestReceived(uri);
+        HandleAppLink(uri);
+    }
 
+    public void HandleAppLink(Uri uri)
+    {
         var target = Current?.Handler?.MauiContext?.Services.GetService<IDeepLinkService>()?.Parse(uri);
         if (target is null)
         {
@@ -41,7 +45,7 @@ public sealed partial class App : Application
 
         if (target.BlazorPath is not null)
         {
-            HybridNavigationBridge.PendingPath = target.BlazorPath;
+            HybridNavigationBridge.RaiseBlazorPath(target.BlazorPath);
         }
 
         _ = Shell.Current.GoToAsync($"//{target.ShellRoute}");
