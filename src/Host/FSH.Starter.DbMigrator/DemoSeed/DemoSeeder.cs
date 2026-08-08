@@ -12,6 +12,7 @@ using FSH.Modules.Catalog.Data;
 using FSH.Modules.Catalog.Domain;
 using FSH.Modules.Chat.Data;
 using FSH.Modules.Chat.Domain;
+using FSH.Modules.Files.Contracts.Authorization;
 using FSH.Modules.Identity.Contracts.Authorization;
 using FSH.Modules.Identity.Data;
 using FSH.Modules.Identity.Domain;
@@ -745,7 +746,7 @@ internal sealed class DemoSeeder
     [
         new(
             "Manager",
-            "Operations manager — full catalog + tickets + read-only users.",
+            "Operations manager — full catalog + tickets + files + read-only users.",
             [
                 IdentityPermissions.Users.View,
                 IdentityPermissions.Users.Update,
@@ -770,6 +771,8 @@ internal sealed class DemoSeeder
                 TicketsPermissions.Tickets.Create,
                 TicketsPermissions.Tickets.Update,
                 TicketsPermissions.Tickets.Delete,
+                FilesPermissions.Upload,
+                FilesPermissions.DeleteOwn,
             ]),
 
         new(
