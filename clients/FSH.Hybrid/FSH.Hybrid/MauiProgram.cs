@@ -86,8 +86,8 @@ public static class MauiProgram
             config.SnackbarConfiguration.PreventDuplicates = true;
             config.SnackbarConfiguration.ShowCloseIcon = true;
         });
-        builder.Services.AddSingleton(sp =>
-            new FshThemeService(sp.GetRequiredService<IJSRuntime>(), "fsh.theme", ThemeMode.System));
+        builder.Services.AddSingleton<FshThemeService>(sp =>
+            new SecureThemeService(sp.GetRequiredService<IJSRuntime>()));
 
         // Realtime
         builder.Services.AddScoped<IHubConnectionService, HubConnectionService>();
