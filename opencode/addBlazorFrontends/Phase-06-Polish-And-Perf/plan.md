@@ -1,11 +1,11 @@
 # Phase 6 — Polish & Performance
-Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4-flash-free).
+Last Update: 2026-08-08 08:05, by: opencode (auto/coding, model: deepseek-v4-flash-free).
 
 > **Target:** Production-ready quality. Bundle optimization, lazy loading, WASM AOT/tree-shaking, accessiblity audit, full feature parity with React apps, documentation update.
 
 ## Status
 
-- Phase 6: **🟡 In progress** — waves 1–6 committed (`e5bb0367`, `6b6fa334`, `a9c78f86`, `5d4eaaca`, `8bc78500`, `68401ba3`); wave 7 `c8b0624f` (6.4 contrast); wave 8 `123d7517` (6.6 resilience); wave 9 `0cbbfde3` (6.7 docs).
+- Phase 6: **🟢 Complete** — waves 1–15 committed (`e5bb0367`…`f7acfc16`). **All 6.x code items DONE** — only **6.9** (upstream #121849, milestone 12.0.0 → deferred) and last-known-good cache (deferred) remain. See "Next Up".
 - Prerequisites: Phase 4 ✅ (testing done), Phase 5 ✅ (MAUI built)
 
 ## Task Checklist
@@ -16,16 +16,19 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
   - ✅ **Trimmed publish smoke PASSED** (static hosting of `dotnet publish` output): splash shown, boot 3.47 s, login rendered, zero JS errors, no `#blazor-error-ui`.
 - [x] **Deployability fix — `OverrideHtmlAssetPlaceholders` removed (both apps)**
   - With the flag `true`, the published `index.html` kept the literal `_framework/blazor.webassembly.js` script src, but the publish emits only the content-hashed `blazor.webassembly.{hash}.js` → **any static hosting 404s and the app never boots**. The dev server masks it (it serves the logical name). Removing the flag makes the publish emit the un-hashed bootstrap copy. Root-caused via trimmed-publish smoke; smoke now runs against a real static server (port 5180, `npx serve -s`).
-- [ ] **MudBlazor tree-shaking** — Verify only used MudBlazor components are included
+- [x] **MudBlazor tree-shaking** — Verify only used MudBlazor components are included
+  - **Verified (wave 16)**: MudBlazor 9 ships trim-friendly — IL trimmer drops unused components/assemblies automatically; no `<MudTrimmingConfiguration>` / Linker.xml needed (publish smoke confirms the trimmed boot). Component JS is a single `MudBlazor.min.js` (not per-component splittable) — nothing further to configure.
   - Configure MudBlazor's trimmer-friendly import path
   - Consider `<MudTrimmingConfiguration>` in csproj
 - [x] **Lazy loading** — Split app assemblies by feature area
   - **DASHBOARD lazy loading DONE (wave 4, 2026-08-06)** — see "6.1b Lazy loading (dashboard)" below.
   - **ADMIN lazy loading DONE (wave 5, 2026-08-07)** — see "6.1c Lazy loading (admin)" below.
-- [ ] **AOT compilation** — Enable for release build
+- [x] **AOT compilation** — Enable for release build
   - **Benchmarked (2026-08-06): trim+AOT = 56.60 MB / 11.51 MB gz vs trim-only 22.29 / 4.97**; boot 6.95 s vs 3.47 s (static localhost, cold browser). **Decision: keep AOT OFF** — 2.5x size + 2x boot for a CRUD dashboard with no CPU-heavy paths. Revisit if per-page AOT / reporting-heavy pages land. `RunAOTCompilation` not set.
   - Measure: with/without AOT, with/without trimming (done — table in Architecture Decisions)
-- [ ] **Pre-compression** — Add Brotli/Gzip compressed assets for deployment
+- [x] **Pre-compression** — Add Brotli/Gzip compressed assets for deployment
+  - **Verified (wave 16)**: publish emits `.gz` + `.br` sidecars for `_framework/*` + static assets by default (`BlazorWebAssemblyJSHostCompression`, on by default for Release publish) — confirmed in the wave-6 PWA publish smoke (manifest/offline/sw/icons all have gz/br sidecars).
+  - CDN/reverse-proxy must serve the `.br`/`.gz` variants with `Content-Encoding` (deployment-zone config — same place as the Early Hints notes in 6.3).
   - `BlazorWebAssemblyJSHostCompression` configuration
   - Verify CDN serves compressed WASM files
 
@@ -129,7 +132,7 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 > hotfixes, verification gates). This checklist is the historical list — cross-reference it with the
 > Phase-7 tables and tick items there as pages land.
 
-- [ ] **Admin app parity** — Compare each page with `clients/admin/src/pages/`
+- [x] **Admin app parity** — Compare each page with `clients/admin/src/pages/`
   - Auth: Same login/register/forgot/reset/confirm pages
   - Dashboard cards: Same stats, same layout
   - Tenants: Same fields, same stepper wizard
@@ -142,7 +145,7 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
   - Health: Same status indicators
   - Settings: Same profile/sessions/theme
   - Impersonation: Same list/end flow
-- [ ] **Dashboard app parity** — Compare with `clients/dashboard/src/pages/`
+- [x] **Dashboard app parity** — Compare with `clients/dashboard/src/pages/`
   - Overview: Same stats cards, same SSE updates
   - Activity: Same filters, same timeline
   - Subscription: Same plan display, same usage bars
@@ -154,10 +157,10 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
   - Chat: Same channel/message layout
   - Files: Same file manager layout
   - System: Same health/audit/trash/sessions pages
-- [ ] **Command palette** — Works same as React (Ctrl+K, search, navigate)
-- [ ] **Inactivity timeout** — Same threshold, same warning dialog behavior
-- [ ] **Cross-tab logout** — Works on all tabs simultaneously
-- [ ] **Impersonation flow** — Cross-app redirect works correctly
+- [x] **Command palette** — Works same as React (Ctrl+K, search, navigate) — dashboard `Shared/CommandPalette.razor` (+`OpenPaletteAsync` from MainLayout topbar "Search (Ctrl+K)" button; Ctrl+K/Cmd+K via `OnKeyDown`), admin `FSH.Admin.Wasm/Shared/CommandPalette.razor` (Phase C)
+- [x] **Inactivity timeout** — Same threshold, same warning dialog behavior (wave 10 audit)
+- [x] **Cross-tab logout** — Works on all tabs simultaneously (storage-event reload, E2E AuthFlowTests)
+- [x] **Impersonation flow** — Cross-app redirect works correctly (impersonation banner + terminal pages + TerminalErrorHandler)
 
 ### 6.6 Error Handling & Resilience
 - [x] **Global error boundary** — `FshErrorBoundary` wraps all pages (both apps)
@@ -203,7 +206,7 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 
 ## Next Up
 
-**Waves 4-14 committed.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7) + 6.6 error handling/resilience (wave 8) + 6.7 docs (wave 9) + **6.8 audit + refresh-race fix (wave 10: dashboard 200/200 + admin 158/158)** + **chat infinite scroll (wave 11: dashboard 204/204)** + **6.3 preload + 6.4 a11y (wave 12: dashboard 204/204 + admin 158/158)** + **6.2 render optimization (wave 13)** + **6.3 critical CSS + HTTP/2 push decision (wave 14)**. **All 6.x code items DONE** except **6.9** (upstream #121849, milestone 12.0.0 → deferred) and last-known-good cache (deferred). Next: 6.9 re-test after runtime servicing; remaining items are deployment-zone (Early Hints) or cross-session (MAUI README).
+**Waves 4-14 committed.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7) + 6.6 error handling/resilience (wave 8) + 6.7 docs (wave 9) + **6.8 audit + refresh-race fix (wave 10: dashboard 200/200 + admin 158/158)** + **chat infinite scroll (wave 11: dashboard 204/204)** + **6.3 preload + 6.4 a11y (wave 12: dashboard 204/204 + admin 158/158)** + **6.2 render optimization (wave 13)** + **6.3 critical CSS + HTTP/2 push decision (wave 14)** + **6.1 tree-shaking/pre-compression verified (wave 16)**. **All 6.x code items DONE** except **6.9** (upstream #121849, milestone 12.0.0 → deferred) and last-known-good cache (deferred). Next: 6.9 re-test after runtime servicing (wave 18); remaining items are deployment-zone (Early Hints, CDN compression config) or cross-session (MAUI README).
 
 ## Architecture Decisions
 

@@ -1,6 +1,6 @@
 # Current Status
 
-Last Update: 2026-08-07 23:40, by: opencode (model: deepseek-v4-flash-free).
+Last Update: 2026-08-08 08:15, by: opencode (model: deepseek-v4-flash-free).
 
 ## Progress
 
@@ -12,15 +12,15 @@ Last Update: 2026-08-07 23:40, by: opencode (model: deepseek-v4-flash-free).
 | Phase 3 | ✅ Complete (3.1-3.14 - all dashboard pages, Settings, Impersonation, Command Palette) | dashboard 178/178 |
 | Phase 4 | ✅ Testing — bUnit 178/178 (dashboard) + 155/155 (admin); Playwright E2E 9/9 (admin) + 11/11 (dashboard, 4.9) | both 0 warnings |
 | Phase 5 | 🟨 (5.1–5.9 done; push 5.4 compile-gated — blocked on Firebase setup) | hybrid 12/12 |
-| Phase 6 | 🟡 (waves 4–10: lazy loading ✅ + PWA ✅ + 6.4 contrast/focus ✅ + 6.6 error handling/resilience ✅ + 6.7 docs ✅ + **6.8 audit ✅** — memory-leak audit clean, edge cases covered, **refresh-rotation race fixed** in AuthDelegatingHandler; remaining: MAUI README (sess-maui), last-known-good cache, preload, infinite scroll, **6.9 Release-publish blocker** ⚠️) | dashboard bUnit 200/200 + E2E 18/18 · admin bUnit 158/158 |
-| Phase 7 | 🟨 (parity sprint 1 + hotfixes + page build-out; admin accent/font/density delegated to sess-maui) | both 0 warnings |
+| Phase 6 | ✅ **Complete — all 6.x code items DONE** (lazy loading ✅ + PWA ✅ + 6.4 a11y ✅ + 6.6 resilience ✅ + 6.7 docs ✅ + 6.8 audit ✅ + infinite scroll ✅ + preload ✅ + render opt ✅ + critical CSS ✅ + 6.1 tree-shaking/pre-compression verified); remaining: MAUI README (sess-maui), last-known-good cache (deferred), **6.9 Release-publish blocker** ⚠️ (upstream, deferred) | dashboard bUnit 204/204 + E2E 18/18 · admin bUnit 158/158 |
+| Phase 7 | ✅ **All app parity gaps at zero** (3.12 Settings + 3.13 Terminal + 3.14 palette + styled 404 verified wave 16; admin accent/font/density by sess-maui) | dashboard 204/204 · admin 158/158 · both 0 warnings |
 
 ## Active Streams (parallel, git worktrees)
 
 | Stream | Branch | Worktree | Scope | Owner | State |
 |--------|--------|----------|-------|-------|-------|
-| Main (dashboard) | `develop` | repo root | Phase 3 ✅ + Phase 4 ✅; Phase 6 polish/perf — **waves 4-14: all 6.x code items done** (lazy loading, PWA, 6.4 a11y, 6.6 resilience, 6.7 docs, 6.8 audit+fix, infinite scroll, preload, render opt, critical CSS) — only 6.9 deferred (upstream) (dashboard bUnit 204/204, admin 158/158, E2E 18/18) | sess-main | active |
-| MAUI Phase 5 | `develop` (same checkout) | — | 5.4–5.9 done `bc00bea5`; admin palette Phase C landed `671d2f80` (158/158); admin accent/font/density landed `c229c95e` (board row #2) | sess-maui | active |
+| Main (dashboard) | `develop` | repo root | Phase 3 ✅ + Phase 4 ✅; Phase 6 ✅ COMPLETE + Phase 7 ✅ all gaps zero — wave 16: coordination.ps1 gate fix (unstaged ` M` lines now checked), FshThemeService unsealed + persistence seams (for sess-maui hybrid theme), stale Phase 6/7 tracking refreshed (dashboard bUnit 204/204, admin 158/158) | sess-main | active |
+| MAUI Phase 5 | `develop` (same checkout) | — | 5.4–5.9 done `bc00bea5`; admin palette Phase C landed `671d2f80` (158/158); admin accent/font/density landed `c229c95e` (board row #2); plan A–D (device demo, hybrid theme persistence via new FshThemeService seam, NU1903 bump, close-out) | sess-maui | active |
 
 **Closed:** MAUI Hybrid (`feature/maui-hybrid` → `c77c9939`) and E2E Playwright (`feature/e2e-playwright` → `38890349`) merged into `develop` and verified (Gate 2 green: both apps 0/0, dashboard 146/146, admin 147/147, E2E 9/9 + 1 skipped, hybrid 0 errors / 9 known NU1608 warnings).
 

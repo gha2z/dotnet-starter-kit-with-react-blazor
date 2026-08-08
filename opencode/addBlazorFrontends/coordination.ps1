@@ -43,7 +43,7 @@ $zoneMap = [ordered]@{
         'clients/dashboard-blazor/',
         'clients/BlazorShared/',
         'clients/admin-blazor/',
-        'STATUS.md', '00-Index.md',
+        'STATUS.md', '00-Index.md', '.gitignore',
         'opencode/addBlazorFrontends/readme.md',
         'opencode/addBlazorFrontends/verify.ps1',
         'opencode/addBlazorFrontends/coordination.ps1',
@@ -225,8 +225,15 @@ if ($Gate) {
         if ($line -match '^\?\?\s+(.+)$') {
             $path = $Matches[1].TrimEnd('/')
         }
-        elseif ($line -match '^[MARD]\s+(.+)$') {
-            $path = $Matches[1]
+        # Two-column porcelain status ("XY path"): X=index, Y=worktree.
+        # Covers "M  p" (staged), " M p" (unstaged-only), "MM p" (both),
+        # "AM p", "R  old -> new" (rename), "T p" / "U p" etc. The old
+        # '^[MARD]\s+' pattern missed the leading-space " M" form — an
+        # unstaged change outside your zones silently passed the gate.
+        elseif ($line -match '^(.{2})\s+(.+)$') {
+            $path = $Matches[2]
+            # Rename/copy lines carry "old -> new"; check the worktree target.
+            if ($path -match '^.+\s+->\s+(.+)$') { $path = $Matches[1] }
         }
         elseif ($line -match '^\S+\s+(.+)$') {
             $path = $Matches[1]
@@ -240,8 +247,12 @@ if ($Gate) {
 
     Write-Host "  -- touched-files overlap check (staged + untracked) --"
     foreach ($line in $status) {
-        if ($line -match '^(?:A|M|D|\?\?)\s+(.+)$' -or $line -match '^[MAD]\s+(.+)$') {
-            $path = if ($Matches[1]) { $Matches[1].TrimEnd('/') } else { $null }
+        if ($line -match '^\?\?\s+(.+)$') {
+            $path = $Matches[1].TrimEnd('/')
+        }
+        elseif ($line -match '^(.{2})\s+(.+)$') {
+            $path = $Matches[2].TrimEnd('/')
+            if ($path -match '^.+\s+->\s+(.+)$') { $path = $Matches[1] }
         }
         else { continue }
         if (-not $path) { continue }

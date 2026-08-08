@@ -17,8 +17,11 @@ public enum ThemeMode
 /// <summary>
 /// Dark/light theme state persisted to localStorage (React parity: stored per app,
 /// resolution order storage → prefers-color-scheme → app default).
+/// Non-sealed so non-browser hosts (MAUI Hybrid) can override the persistence
+/// seams (<see cref="ReadStoredAsync"/> / <see cref="WriteStoredAsync"/>) to
+/// back the same state with e.g. SecureStorage.
 /// </summary>
-public sealed class FshThemeService : IAsyncDisposable
+public class FshThemeService : IAsyncDisposable
 {
     private readonly IJSRuntime _js;
     private readonly string _storageKey;
@@ -55,14 +58,14 @@ public sealed class FshThemeService : IAsyncDisposable
         _initialized = true;
         try
         {
-            _module ??= await _js.InvokeAsync<IJSObjectReference>("import", "./_content/FSH.BlazorShared/js/fshTheme.js");
-            var stored = await _module.InvokeAsync<string?>("getTheme", _storageKey);
+            var stored = await ReadStoredAsync();
             var mode = ParseMode(stored, _defaultMode);
             if (mode == ThemeMode.System)
             {
                 // System resolves against the OS preference (React parity); the
                 // result is cached for the lifetime of the app session.
                 _mode = ThemeMode.System;
+                _module ??= await _js.InvokeAsync<IJSObjectReference>("import", "./_content/FSH.BlazorShared/js/fshTheme.js");
                 _isDarkMode = await _module.InvokeAsync<bool>("prefersDark");
             }
             else
@@ -107,13 +110,35 @@ public sealed class FshThemeService : IAsyncDisposable
         ApplyMode(mode);
         try
         {
-            _module ??= await _js.InvokeAsync<IJSObjectReference>("import", "./_content/FSH.BlazorShared/js/fshTheme.js");
-            await _module.InvokeVoidAsync("setTheme", _storageKey, ToStorageValue(mode));
+            await WriteStoredAsync(ToStorageValue(mode));
         }
         catch
         {
             // Persistence is best-effort; the in-memory state still applies.
         }
+    }
+
+    /// <summary>
+    /// Reads the persisted preference (raw storage value: "light" | "dark" | "system",
+    /// or null when nothing is stored). Base implementation reads localStorage via the
+    /// fshTheme.js module; non-browser hosts (MAUI Hybrid) override to use their own
+    /// storage (e.g. SecureStorage).
+    /// </summary>
+    protected virtual async Task<string?> ReadStoredAsync()
+    {
+        _module ??= await _js.InvokeAsync<IJSObjectReference>("import", "./_content/FSH.BlazorShared/js/fshTheme.js");
+        return await _module.InvokeAsync<string?>("getTheme", _storageKey);
+    }
+
+    /// <summary>
+    /// Persists the chosen mode as a raw storage value. Base implementation writes
+    /// localStorage via the fshTheme.js module; non-browser hosts override to use
+    /// their own storage. Best-effort — exceptions are swallowed by the caller.
+    /// </summary>
+    protected virtual async Task WriteStoredAsync(string value)
+    {
+        _module ??= await _js.InvokeAsync<IJSObjectReference>("import", "./_content/FSH.BlazorShared/js/fshTheme.js");
+        await _module.InvokeVoidAsync("setTheme", _storageKey, value);
     }
 
     private void ApplyMode(ThemeMode mode)

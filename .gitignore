@@ -527,3 +527,6 @@ clients/**/.env.local
 #opencode-swarm
 .swarm/
 opencode/Next apps/
+
+# Local AI-tool state — opencode session config + scratch (never tracked).
+.opencode/

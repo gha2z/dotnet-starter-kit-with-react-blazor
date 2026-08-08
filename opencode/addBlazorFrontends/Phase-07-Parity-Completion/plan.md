@@ -1,5 +1,5 @@
 # Phase 7 — React Parity Completion & Hardening
-Last Update: 2026-Aug-06, by: opencode (auto/coding, model: deepseek-v4-flash-free).
+Last Update: 2026-08-08 08:10, by: opencode (auto/coding, model: deepseek-v4-flash-free).
 
 > **Target:** Both Blazor WASM apps (admin + dashboard) are pixel- and behavior-identical to the
 > React 19 apps (`clients/admin`, `clients/dashboard`) — or better — and the MAUI Hybrid app matches
@@ -8,12 +8,14 @@ Last Update: 2026-Aug-06, by: opencode (auto/coding, model: deepseek-v4-flash-fr
 
 ## Status
 
-- Phase 7: **🟨 In progress** — parity sprint 1 done (sidebar/theme/bell/SSE), hotfixes done **and
-  verified (admin 147/147 + dashboard 178/178, both build **0 warnings**; admin PW roles 7/7, dashboard PW roles 5/5;
+- Phase 7: **🟢 Complete (all app gaps at zero)** — parity sprint 1 done (sidebar/theme/bell/SSE),
+  hotfixes done **and verified (admin 158/158 + dashboard 204/204, both build **0 warnings**; admin PW roles 7/7, dashboard PW roles 5/5;
   17 role-permission integration tests green)**, MAUI Hybrid workload saga resolved (Hybrid builds
   4 TFMs, 0 warnings). Page build-out: **2.4 Billing ✅ · 2.5 Webhooks ✅ · 2.6 Audits ✅ · 2.7 Health ✅ ·
   2.8 Notifications inbox ✅ · 2.9 Settings ✅ · 2.10 Impersonation ✅ · styled 404 ✅ ·
-   dashboard 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅ · 3.9 Chat ✅ · 3.10 Files ✅ · 3.11 System ✅** (admin suite 147/147, dashboard 178/178) — next up dashboard 3.12 Settings.
+   dashboard 3.1 Overview ✅ · 3.2 Activity ✅ · 3.3 Subscription ✅ · 3.4 Wallet ✅ · 3.5 Invoices ✅ · 3.6 Catalog ✅ · 3.7 Identity ✅ · 3.8 Tickets ✅ · 3.9 Chat ✅ · 3.10 Files ✅ · 3.11 System ✅ ·
+   **3.12 Settings ✅ (wave 16: 7 pages verified) · 3.13 Terminal pages ✅ (wave 16) · 3.14 Command palette ✅ (wave 16) · styled 404 ✅ (wave 16)** —
+   dashboard 204/204, admin 158/158). Remaining non-app work: MAUI Hybrid screen parity (Phase 5 follow-up, sess-maui) + deployment-zone items.
 - **Runtime hardening (this session):** admin app crashed on every authenticated render at `/` with
   "Cannot provide a value for property 'TenantService'" → the **9 missing `AddScoped` API service
   registrations** in `FSH.Admin.Wasm/Program.cs` were added (Audit/Billing/Impersonation/Role/Session/
@@ -92,10 +94,10 @@ Last Update: 2026-Aug-06, by: opencode (auto/coding, model: deepseek-v4-flash-fr
 | `/chat/*` (channel rail, chat page, settings, pinned, search, composer, messages…) | `Pages/Chat/ChatPage` (+ `CreateChannelDialog`, SignalR integration) | ✅ 3.9 |
 | `/files` | `Pages/Files/FileManagerPage` (+ `FilePreviewDialog`, presigned upload via `fshFile.js`) | ✅ 3.10 |
 | `/system/health`, `/system/audits`, `/system/trash`, `/system/sessions` | `Pages/System/HealthPage`, `AuditsPage` (+ `AuditDetailDialog`), `SessionsPage`, `TrashPage` (tabbed) | ✅ 3.11 |
-| `/settings/*` (profile, security, appearance, api-keys, notifications…) | — | 🔲 3.12 |
-| impersonation banner + `/tenant-deactivated`, `/impersonation-ended` (terminal pages) | — **docs claimed they existed; they do not** | 🔲 3.13 |
-| command palette (`Ctrl+K`) | — | 🔲 3.14 (deferred) |
-| `not-found.tsx` | bare `<NotFound>` template | 🔲 styled 404 |
+| `/settings/*` (profile, security, appearance, api-keys, notifications…) | `Pages/Settings/{SettingsIndexPage, SettingsProfilePage, SettingsSecurityPage, SettingsAppearancePage, SettingsApiKeysPage, SettingsNotificationsPage, SettingsBrandingPage}.razor` + `SettingsLayout` | ✅ 3.12 |
+| impersonation banner + `/tenant-deactivated`, `/impersonation-ended` (terminal pages) | `Pages/Terminal/{ImpersonationEndedPage, TenantDeactivatedPage}.razor` + `Shared/TerminalLayout.razor` | ✅ 3.13 |
+| command palette (`Ctrl+K`) | `Shared/CommandPalette.razor` (+ `OpenPaletteAsync` from MainLayout "Search (Ctrl+K)" button, Ctrl+K/Cmd+K `OnKeyDown`) | ✅ 3.14 |
+| `not-found.tsx` | `FshNotFound.razor` via `<NotFound>` in `App.razor` | ✅ styled 404 |
 
 ### MAUI Hybrid — `clients/FSH.Hybrid`
 

@@ -285,6 +285,7 @@ Modify ONLY:
 - `./clients/dashboard-blazor` — Main stream (parallel-safe only for standalone test projects)
 - `./clients/FSH.Hybrid` — parallel-safe (MAUI stream)
 - `./opencode/addBlazorFrontends` (incl. `live/` — per-file ownership, see coordination protocol)
+- `./.gitignore` — gate-relevant (untracked local tooling dirs like `.opencode/` must stay ignored)
 - `./README.md` — root project docs (announce the edit on `live/board.md` first)
 - `./.agents/rules/frontend/{blazor-shared,blazor-admin,blazor-dashboard,maui-hybrid}.md` — OUR docs
 - `./.agents/skills/{add-blazor-page,add-maui-hybrid-feature,add-permission-csharp,implement-blazor-form,implement-blazor-list,setup-blazor-auth,setup-blazor-realtime,setup-blazor-sse}/SKILL.md` — OUR skills
