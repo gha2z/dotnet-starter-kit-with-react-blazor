@@ -58,7 +58,7 @@ else
         @foreach (var notif in _items)
         {
             var unread = !notif.IsRead;
-            <div class="d-flex align-start gap-3 px-3 py-4 @(unread ? "fsh-notif-unread" : null)">
+            <div @key="notif.Id" class="d-flex align-start gap-3 px-3 py-4 @(unread ? "fsh-notif-unread" : null)">
                 <span aria-hidden class="fsh-notif-dot @(unread ? "fsh-notif-dot-active" : "fsh-notif-dot-read")"></span>
                 <FshStatusPill Text="@notif.Source" Tone="Color.Default" />
                 <div class="min-w-0 flex-grow-1">

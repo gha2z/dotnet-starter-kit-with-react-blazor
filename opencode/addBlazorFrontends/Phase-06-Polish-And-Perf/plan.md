@@ -58,10 +58,15 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
   - Load more items via service call, append to list
 - [x] **Debounced search** — All search MudTextField
   - **Tickets list**: search was `Immediate="true"` with NO reload handler (typing did nothing server-side) — fixed with debounced `OnSearchChangedAsync` (250 ms, CancellationTokenSource, resets to page 1), mirroring `UsersListPage`. bUnit `Reloads_with_search_term_after_debounce` covers it. Users page already had the pattern.
-- [ ] **MudBlazor render optimization** — Audit unnecessary re-renders
-  - `@key` on MudTable rows
-  - `StateHasChanged()` only when needed
-  - Use `MudComponentBase`'s `ShouldRender()` override in heavy components
+- [x] **MudBlazor render optimization** — Audit unnecessary re-renders (DONE wave 13, 2026-08-08)
+  - `@key` on reorder-sensitive rows — **added** (3 sites):
+    - `ChatPage.razor` messages `@key="msg.Id"` — wave-11 prepend shifts every position; keying lets Blazor match by id and insert only the new nodes.
+    - `ChatPage.razor` channels `@key="ch.Id"` (reorder on last-activity).
+    - `SessionsPage.razor` `@key="session.Id"` — list is sorted by `LastActivityAt`; positions shift on activity.
+    - `NotificationsInboxPage.razor` `@key="notif.Id"` — SignalR push does `Insert(0, …)` on a live list.
+    - Stable paginated lists (Audits/Invoices/Topups/Webhooks/Impersonation) deliberately NOT keyed — no reorder, whole-list re-render on filter/page anyway; `@key` adds no diffing win there.
+  - `StateHasChanged()` only when needed — **audited: only 2 sites in both apps**, both event-driven (`OverviewPage.OnSseConnectionChanged` — SSE state; `WebhookCreateDialog.OnDraftChanged` — draft preview). No timer-driven or redundant renders found.
+  - `ShouldRender()` override — **audited: N/A**. No component renders on a timer or receives high-frequency parameter churn; MudBlazor components handle their own `ShouldRender`. Adding overrides would be speculative (no measurable hot path). Documented, no code.
 - [x] **Image lazy loading** — native `loading="lazy"` — already present in code: product thumbs (ProductsPage), brand logos (BrandsPage), product detail gallery (ProductDetailPage) all render `<img loading="lazy" referrerpolicy="no-referrer">`. FilePreviewDialog (dialog, opened on demand) correctly has no lazy. No code change needed — item verified & ticked (wave 12).
 
 ### 6.3 First-Load Performance
@@ -195,7 +200,7 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 
 ## Next Up
 
-**Waves 4-11 committed.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7) + 6.6 error handling/resilience (wave 8) + 6.7 docs (wave 9) + **6.8 audit + refresh-race fix (wave 10: dashboard 200/200 + admin 158/158)** + **chat infinite scroll (wave 11: dashboard 204/204)**. **Wave 12 (uncommitted): 6.3 preload (boot-JS preload + font preconnect, both apps), 6.2 image-lazy verified, 6.4 SR/form/focus/MudBlazor a11y audit done (MudAlert role=alert fix + chat composer aria-label + guard tests)**. Next: commit wave 12, then last-known-good cache (deferred), 6.9 blocker (upstream), HTTP/2 Server Push (deployment item).
+**Waves 4-12 committed.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7) + 6.6 error handling/resilience (wave 8) + 6.7 docs (wave 9) + **6.8 audit + refresh-race fix (wave 10: dashboard 200/200 + admin 158/158)** + **chat infinite scroll (wave 11: dashboard 204/204)** + **6.3 preload + 6.4 a11y (wave 12: dashboard 204/204 + admin 158/158)**. **Wave 13 (uncommitted): 6.2 render optimization — @key on 4 reorder-sensitive lists (chat messages/channels, sessions, notifications), StateHasChanged audit (2 sites, both event-driven), ShouldRender N/A-documented**. Next: commit wave 13, then 6.3 critical CSS (evaluate), last-known-good cache (deferred), 6.9 blocker (upstream), HTTP/2 Server Push (deployment item).
 
 ## Architecture Decisions
 

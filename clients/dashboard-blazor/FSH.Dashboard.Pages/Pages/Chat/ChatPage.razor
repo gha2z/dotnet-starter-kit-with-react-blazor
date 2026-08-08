@@ -35,7 +35,7 @@
                     @foreach (var ch in _channels)
                     {
                         var isActive = ch.Id == _activeChannelId;
-                        <MudListItem T="ChannelDto" Value="ch" OnClick="() => SelectChannel(ch.Id)"
+                        <MudListItem @key="ch.Id" T="ChannelDto" Value="ch" OnClick="() => SelectChannel(ch.Id)"
                                      Class="@ChannelItemClass(isActive)">
                             <div class="d-flex align-center" style="width: 100%;">
                                 <MudIcon Icon="@ChannelIcon(ch.Type)" Size="Size.Small" Class="mr-2"
@@ -107,7 +107,7 @@
                     @foreach (var msg in _messages)
                     {
                         var isOwn = msg.AuthorUserId == _currentUserId;
-                        <div class="fsh-chat-message @(isOwn ? "fsh-chat-message-own" : "fsh-chat-message-other")">
+                        <div @key="msg.Id" class="fsh-chat-message @(isOwn ? "fsh-chat-message-own" : "fsh-chat-message-other")">
                             @if (!isOwn)
                             {
                                 <MudAvatar Size="Size.Small" Color="Color.Primary" Class="mr-2">

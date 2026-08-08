@@ -32,7 +32,7 @@
             {
                 @foreach (var session in _sessions.OrderByDescending(s => s.IsCurrentSession).ThenByDescending(s => s.LastActivityAt))
                 {
-                    <div class="d-flex align-center gap-3 py-2" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                    <div @key="session.Id" class="d-flex align-center gap-3 py-2" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
                         <FshToneIconTile Icon="@DeviceIcon(session.DeviceType)" Tone="Color.Default" TileSize="36px" IconSize="Size.Small" />
                         <div class="flex-grow-1 min-w-0">
                             <div class="d-flex align-center gap-2 flex-wrap">
