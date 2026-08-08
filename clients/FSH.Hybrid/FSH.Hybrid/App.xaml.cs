@@ -14,6 +14,14 @@ public sealed partial class App : Application
     {
         var window = new Window(new AppShell());
 
+        // Cold-start deep link (fsh://...) received before the shell existed.
+        // HandleAppLink sets HybridNavigationBridge.PendingPath, which Main.razor
+        // consumes during initialization.
+        if (HybridNavigationBridge.TakeInitialAppLink() is { } initialLink)
+        {
+            HandleAppLink(new Uri(initialLink));
+        }
+
 #if WINDOWS
         window.HandlerChanged += OnWindowHandlerChanged;
 #endif
@@ -37,7 +45,11 @@ public sealed partial class App : Application
 
     public void HandleAppLink(Uri uri)
     {
-        var target = Current?.Handler?.MauiContext?.Services.GetService<IDeepLinkService>()?.Parse(uri);
+        // During CreateWindow the app handler/shell are not attached yet; fall back to a
+        // bare parser so a cold-start deep link still reaches the Blazor router.
+        var target = Current?.Handler?.MauiContext?.Services.GetService<IDeepLinkService>() is { } svc
+            ? svc.Parse(uri)
+            : new DeepLinkService().Parse(uri);
         if (target is null)
         {
             return;
@@ -48,7 +60,10 @@ public sealed partial class App : Application
             HybridNavigationBridge.RaiseBlazorPath(target.BlazorPath);
         }
 
-        _ = Shell.Current.GoToAsync($"//{target.ShellRoute}");
+        if (Shell.Current is { } shell)
+        {
+            _ = shell.GoToAsync($"//{target.ShellRoute}");
+        }
     }
 
     protected override void OnSleep()

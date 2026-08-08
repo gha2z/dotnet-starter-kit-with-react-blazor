@@ -45,6 +45,10 @@ public sealed class DeepLinkService : IDeepLinkService
 /// </summary>
 public static class HybridNavigationBridge
 {
+    /// <summary>Raw URI received by the cold-started Android activity, drained by App.CreateWindow.</summary>
+    public static string? InitialAppLink { get; set; }
+
+    /// <summary>Last Blazor route raised, consumed by Main.razor during initialization.</summary>
     public static string? PendingPath { get; set; }
 
     public static event Action<string?>? BlazorPathReceived;
@@ -53,5 +57,12 @@ public static class HybridNavigationBridge
     {
         PendingPath = path;
         BlazorPathReceived?.Invoke(path);
+    }
+
+    public static string? TakeInitialAppLink()
+    {
+        var link = InitialAppLink;
+        InitialAppLink = null;
+        return link;
     }
 }
