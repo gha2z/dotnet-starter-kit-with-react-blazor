@@ -72,9 +72,11 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 ### 6.3 First-Load Performance
 - [x] **Splash screen** — Branded splash replacing bare "Loading..."
   - `index.html`: FSH mark tile + spinner + "FullStackHero / Loading your dashboard…", `role="status" aria-live="polite"`. React dashboard has no splash (its bundle renders fast); WASM needs the container pre-boot, so branding was the parity win. Fade-out not needed — Blazor replaces the container on render.
-- [ ] **Critical CSS** — Inline MudBlazor critical styles in index.html
-  - Extract critical CSS for above-the-fold content
-  - Defer non-critical MudBlazor CSS
+- [x] **Critical CSS** — Inline above-the-fold splash styles in index.html (wave 14, 2026-08-08)
+  - **What was inlined**: the splash styles (`.fsh-loading-*` + `fsh-spin` keyframes) moved from `css/app.css` into a `<style>` block in each app's `index.html`. In WASM the splash is the ONLY above-the-fold content pre-boot, so first paint no longer waits on the app.css request. Dashboard kept the rest of app.css (skip-link + route-loading — post-boot only); admin's app.css was 100% splash → inlined and the file+link deleted.
+  - **MudBlazor deferral: rejected** — `MudBlazor.min.css` (~300KB) is fetched in parallel with the ~20MB `_framework/` runtime download, which is the actual boot bottleneck; the CSS arrives long before first interactive render, so `media="print"`-trick deferral would only risk FOUC for zero gain. PWA cache-first covers repeat loads.
+  - **Fonts**: left as render-blocking `<link>` — `display=swap` + wave-12 preconnect already make this non-blocking in effect.
+  - **Gotcha**: `@keyframes fsh-spin` must live in the same `<style>` block as the splash rules (dashboard + admin both have it); admin E2E + bUnit reference splash classes only by visibility, markup untouched — verified green (dashboard 204/204, admin 158/158).
 - [x] **Preload** — `link rel="preload"` for boot JS + font preconnect (wave 12)
   - **Constraint found**: framework assemblies are content-hashed in `_framework/` (`MudBlazor.xr72q1v0gr.wasm` etc.) — static `rel="preload"` of assemblies is impossible without build-time hash injection; the boot loader itself is the actual fetch bottleneck, not the blazor.boot.json entries. What's statically preloadable: the boot chain (`_framework/blazor.webassembly.js`, `_framework/dotnet.js` — stable names) + `_content/` CSS.
   - Both apps: `<link rel="preconnect" href="https://fonts.googleapis.com">`, `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>`, `<link rel="preload" href="_framework/blazor.webassembly.js" as="script">`, `<link rel="preload" href="_framework/dotnet.js" as="script">`. PWA cache-first covers repeat loads; preload shaves the first-visit chain.
@@ -200,7 +202,7 @@ Last Update: 2026-Aug-07 13:20:00, by: opencode (auto/coding, model: deepseek-v4
 
 ## Next Up
 
-**Waves 4-12 committed.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7) + 6.6 error handling/resilience (wave 8) + 6.7 docs (wave 9) + **6.8 audit + refresh-race fix (wave 10: dashboard 200/200 + admin 158/158)** + **chat infinite scroll (wave 11: dashboard 204/204)** + **6.3 preload + 6.4 a11y (wave 12: dashboard 204/204 + admin 158/158)**. **Wave 13 (uncommitted): 6.2 render optimization — @key on 4 reorder-sensitive lists (chat messages/channels, sessions, notifications), StateHasChanged audit (2 sites, both event-driven), ShouldRender N/A-documented**. Next: commit wave 13, then 6.3 critical CSS (evaluate), last-known-good cache (deferred), 6.9 blocker (upstream), HTTP/2 Server Push (deployment item).
+**Waves 4-13 committed.** Both WASM apps lazy-loaded + PWA + 6.4 contrast/focus (wave 7) + 6.6 error handling/resilience (wave 8) + 6.7 docs (wave 9) + **6.8 audit + refresh-race fix (wave 10: dashboard 200/200 + admin 158/158)** + **chat infinite scroll (wave 11: dashboard 204/204)** + **6.3 preload + 6.4 a11y (wave 12: dashboard 204/204 + admin 158/158)** + **6.2 render optimization (wave 13)**. **Wave 14 (uncommitted): 6.3 critical CSS — splash styles inlined into both index.html (first paint never waits on app.css); MudBlazor deferral rejected (parallel with runtime fetch, FOUC risk, zero gain)**. Next: commit wave 14, then last-known-good cache (deferred), 6.9 blocker (upstream), HTTP/2 Server Push (deployment item).
 
 ## Architecture Decisions
 
