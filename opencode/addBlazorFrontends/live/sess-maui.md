@@ -1,5 +1,5 @@
 # sess-maui
-identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-06 13:34
+identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-08 06:13
 
 scope: clients/FSH.Hybrid/** · clients/admin-blazor/** (per amended scope) · root README.md ·
 .agents/rules/frontend/maui-hybrid.md · opencode/addBlazorFrontends/live/sess-maui.md ·
@@ -7,6 +7,14 @@ opencode/addBlazorFrontends/verify-hybrid.ps1 · 00_summary summaries
 
 ## Current task
 Device demo loop (emulator pos-testing): DONE - login + dashboard verified end-to-end. Fixed the cold-start double Blazor.start() (manual poll script removed from index.html; native Android WebKitWebViewClient.OnPageFinished owns startup) and the dashboard FshErrorBoundary (FshPageHeader Subtitle -> Description in OverviewPage + FilesPage). Dashboard renders "Acme Corp / SUBSCRIPTION / Active" from live API on cold boot. Ready to commit.
+
+## Verification round 2 (2026-08-08, emulator pos-testing)
+- Safe area verified on device: body pad 24px top / 32px bottom, fsh-topbar top=48 h=56, innerH 712, dpr 2 (committed 40bede5a; screenshot safearea-check.png deleted at teardown)
+- Deep links FIXED + verified: fsh://files on warm app -> /files (SingleTop + OnNewIntent -> App.HandleAppLink -> HybridNavigationBridge.BlazorPathReceived; committed 5045e07c)
+- Files 403 root cause: acme Manager role lacked Files claims in demo seed. DemoSeeder.cs fixed + seed-demo re-run; fresh token -> 200 (committed 3b12a2fc - OUT OF ZONE, user-approved)
+- Theme toggle FIXED + verified: Main.razor now subscribes Theme.Changed -> MudThemeProvider live re-renders (dark bg rgb(18,18,22) via trusted CDP click; committed 5045e07c). Known nit: localStorage persistence of theme silently no-ops in hybrid webview (service's best-effort catch) - cosmetic.
+- FSH.Hybrid.Tests 12/12 green (lock taken/released). Biometric: emu finger OK (no biometric flow in app - N/A)
+- API pid 23400 stopped at teardown; containers fsh-dev-* left running for sess-main
 
 ## Touched files (update as you go)
 - opencode/addBlazorFrontends/Phase-05-MAUI-Hybrid/plan.md (checklist refresh + Next Up + arch-decision fix)
