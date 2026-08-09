@@ -530,3 +530,6 @@ opencode/Next apps/
 
 # Local AI-tool state — opencode session config + scratch (never tracked).
 .opencode/
+
+# Coordination lock files (transient — created/deleted by coordination.ps1).
+opencode/addBlazorFrontends/live/locks/
