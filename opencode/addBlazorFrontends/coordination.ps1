@@ -44,16 +44,8 @@ $zoneMap = [ordered]@{
         'clients/BlazorShared/',
         'clients/admin-blazor/',
         'STATUS.md', '00-Index.md', '.gitignore',
-        'opencode/addBlazorFrontends/readme.md',
-        'opencode/addBlazorFrontends/verify.ps1',
-        'opencode/addBlazorFrontends/coordination.ps1',
-        'opencode/addBlazorFrontends/live/',
-        'opencode/addBlazorFrontends/00_summary/',
-        'opencode/addBlazorFrontends/Phase-02-Dashboard-Feature-Pages/',
-        'opencode/addBlazorFrontends/Phase-03-Dashboard-Feature-Pages/',
-        'opencode/addBlazorFrontends/Phase-04-E2E/',
-        'opencode/addBlazorFrontends/Phase-06-',
-        'opencode/addBlazorFrontends/Phase-07-'
+        'AGENTS.md', '.agents/workflows/',
+        'opencode/addBlazorFrontends/'
     )
     'sess-maui' = @(
         'clients/FSH.Hybrid/',

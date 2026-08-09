@@ -1,9 +1,10 @@
 # sess-main
-identity: opencode/deepseek-v4-flash-free (concrete modelID, verified 2026-08-06) | started: 2026-08-06 | state: active | heartbeat: 2026-08-09 02:36
+identity: opencode/deepseek-v4-flash-free (concrete modelID, verified 2026-08-06) | started: 2026-08-06 | state: active | heartbeat: 2026-08-09 18:45
 
 scope: clients/dashboard-blazor/** · clients/BlazorShared/** (Main-only) · clients/admin-blazor/** (Main-owned by default; app-code edits by other sessions need a board sign-off per task) · STATUS.md · 00-Index.md · Phase-02/03/04/06/07 plan files · opencode/addBlazorFrontends coordination docs (readme.md, verify.ps1, coordination.ps1) · implementation summaries
 
 ## Current task
+Workflow enhancement (waves 20–21b, user-approved): **wave 20 committed by user (`02154957`)** — board rows #8/#9 resolutions, STATUS.md/00-Index.md 6.9-RESOLVED, waves 16–19 summary. **Wave 21 IN PROGRESS** — coordination.ps1 zone map (+`AGENTS.md`, `.agents/workflows/`, dir-wide `opencode/addBlazorFrontends/`), readme.md Scope Restriction + ritual step 8, board row #10. **Wave 21b** — WORKFLOW-GUIDE.md (new), AGENTS.md enhanced-workflow bullet, feature-scaffolder/code-reviewer plugin-skill refs. Then Q2 (global opencode.jsonc +13 skill paths) + Q2b (awesome-opencode plugins) + verify.
 M2 (Phase 6 polish/perf) — **COMPLETE (all 6.x code items done, waves 1–16 committed)**, Phase 7 gaps at zero; **wave 18 COMPLETE (6.9 re-test on SDK 10.0.302 — artifact documented); wave 19 COMPLETE — 6.9 RESOLVED via clean-publish re-test**.
 - Waves 1-3 committed (`e5bb0367` trim/splash/a11y, `6b6fa334` publish smoke/AOT-off/deployability, `a9c78f86` READMEs + slow-network E2E).
 - **Wave 4 committed (`5d4eaaca`): dashboard lazy loading** — `Pages/` + `TerminalLayout.razor` → RCL `FSH.Dashboard.Pages`. E2E 18/18 + bUnit 179/179 green. 20.34 MB / 4.57 gz (Pages deferred, 645.8 KB lazy file).

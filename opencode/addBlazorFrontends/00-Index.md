@@ -1,9 +1,13 @@
 # Blazor WASM + MAUI — Implementation Roadmap
-Last Update: 2026-Aug-06, by: opencode (auto/coding, model: deepseek-v4-flash-free).
+Last Update: 2026-Aug-09, by: opencode (auto/coding, model: deepseek-v4-flash-free).
 
-> Status: **Phase 0 ✅ | Phase 1 ✅ | Phase 2 ✅ (2.1-2.10 done - admin blazor 147/147) | Phase 3 ✅ (3.1-3.14 done - dashboard 178/178) | Phase 4 🟨 (bUnit suites + admin Playwright E2E 9/9; dashboard PW suite open) | Phase 5 🟨 (5.1-5.9 done - hybrid 12/12; push skeleton Firebase-gated) | Phase 6 🔲 | Phase 7 🟨 (parity - admin palette in flight by sess-maui; accent/font/density deferred)**
+> Status: **Phase 0 ✅ | Phase 1 ✅ | Phase 2 ✅ (2.1-2.10 done - admin blazor 147/147) | Phase 3 ✅ (3.1-3.14 done - dashboard 178/178) | Phase 4 🟨 (bUnit suites + admin Playwright E2E 9/9; dashboard PW suite open) | Phase 5 🟨 (5.1-5.9 done - hybrid 12/12; push skeleton Firebase-gated) | Phase 6 ✅ (all 6.x code items + 6.9 RESOLVED) | Phase 7 🟨 (parity - all app gaps at zero)**
 >
 > **Blazor WASM apps: admin 147/147 tests passing, dashboard 146/146 tests passing.**
+>
+> **6.9 RESOLVED (wave 19):** Release-publish re-verified on clean publish (deleted `obj/Release`) —
+> uncompressed `_framework/*.js` emitted, boot config inlined in `dotnet.js` (.NET 10 design), plain
+> static host boots to login ~4.3 s with zero errors — stale-publish artifact ruled out, no code change.
 >
 > **Parity sprint 1 (React ↔ Blazor, done):** both sidebars rebuilt 1:1 from `nav-items.ts` / `nav-data.ts`
 > (accordion sections, permission-gated, collapse `"true"/"false"`) · dashboard theme = `fsh.theme` +

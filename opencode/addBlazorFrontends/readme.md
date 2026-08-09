@@ -1,5 +1,5 @@
 # AddBlazorFrontends — Session Instructions
-**Last updated: 2026-08-06 03:26, by: sess-main (opencode, model: deepseek-v4-flash-free) — multi-session hardening (verify lock, coordination.ps1 gate, single-source ownership).**
+**Last updated: 2026-08-09 18:50, by: sess-main (opencode, model: deepseek-v4-flash-free) — workflow-enhancement contract update (waves 20–21b, user-approved: zone map + Scope Restriction now allow AGENTS.md + `.agents/workflows/**`).**
 
 ## Commit Policy
 
@@ -37,7 +37,10 @@ On session start:
    `blazor-dashboard.md`, or `maui-hybrid.md` for the target app)
 8. Load any relevant skills from `.agents/skills/` (e.g. `add-blazor-page`, `add-feature`,
    `setup-blazor-auth`, `setup-blazor-realtime`, `implement-blazor-list`, `implement-blazor-form`,
-   `add-permission`) before you start
+   `add-permission`) before you start; for .NET/Blazor/test tasks supplement with the dotnet
+   plugin suite — see the task→skill map in `WORKFLOW-GUIDE.md` (`author-component`,
+   `fetch-and-send-data`, `use-js-interop`, `run-tests`, `optimizing-ef-core-queries`,
+   `test-anti-patterns`, `dotnet-webapi`, dotnet-maui skills, build-perf-*)
 9. Verify builds + tests pass before starting work
 
 ---
@@ -294,6 +297,8 @@ NEVER modify (upstream baseline / React reference):
 
 - `clients/admin` · `clients/dashboard` (React apps — READ-ONLY parity source)
 - `AGENTS.md` · `CLAUDE.md` · `GEMINI.md` · `.github/**` · `deploy/**` · `src/**`
+  - `AGENTS.md` + `.agents/workflows/**`: workflow-enhancement paths (waves 20–21b, user-approved) —
+    additive edits only, require user approval + a board row. All other `.agents/**` remains NEVER.
   - `.github/**` is frozen; the Phase 5.10 MAUI CI workflow is deferred until the user approves
     a change here — the local `verify-hybrid.ps1` covers the gate meanwhile
 - `.agents/rules/**` (all other rule files) · `.agents/skills/*` (all other skills) · `.agents/workflows/**`
