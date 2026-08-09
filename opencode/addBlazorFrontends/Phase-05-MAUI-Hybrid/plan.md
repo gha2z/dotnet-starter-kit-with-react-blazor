@@ -5,7 +5,9 @@ Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-f
 
 ## Status
 
-- Phase 5: **🟨 In progress (sess-maui)** — 5.1–5.3 shell scaffold ✅ (`c77c9939`), 5.5 offline queue ✅ (SQLite, tested 12/12), 5.6 media/camera upload ✅ (FilesPage at `/files`), 5.7 deep links ✅ (`fsh://`), 5.9 splash branding ✅ (all `bc00bea5`); 5.4 push compile-gated (needs Firebase — see `push-setup.md`); **blocked/external:** 5.4 iOS APNs, 5.7 universal/app links, 5.8 IAP, 5.10 signing + CI (`.github/**` frozen); docs refresh 2026-08-06 (maui-hybrid.md, `6a5d84e2`)
+- Phase 5: **🟨 In progress (sess-maui)** — 5.1–5.3 shell scaffold ✅ (`c77c9939`), 5.5 offline queue ✅ (SQLite, tested 12/12), 5.6 media/camera upload ✅ (FilesPage at `/files`), 5.7 deep links ✅ (`fsh://`, cold-start fixed + verified 3/3 `d5d8f88a`), 5.9 splash branding ✅ (all `bc00bea5`); 5.4 push compile-gated (needs Firebase — see `push-setup.md`); **blocked/external:** 5.4 iOS APNs, 5.7 universal/app links, 5.8 IAP, 5.10 signing + CI (`.github/**` frozen); docs refresh 2026-08-06 (maui-hybrid.md, `6a5d84e2`)
+- **Theme persistence ✅ (device-verified 2026-08-08):** `SecureThemeService` (SecureStorage key `fsh.theme`) subclassing `FshThemeService` via sess-main's wave-16 persistence seams (`be50e8ca`); registered as `AddSingleton<FshThemeService>` in `MauiProgram.cs`. Dark mode applied on-device then persisted across force-stop + cold restart (bgVar `rgba(18,18,22,1)` on login page). Commit `a627074e`.
+- **Security (NU1903):** `SQLitePCLRaw.lib.e_sqlite3(.android)` 2.1.11 → GHSA-2m69-gcr7-jv3q (High). **No patched NuGet version exists** (latest 2.1.11). Tracked in `docs/security/SQLitePCLRaw-NU1903-GHSA-2m69-gcr7-jv3q.md`; bump to 2.2.0+ when upstream publishes.
 - Prerequisites: Phase 2 ✅ + Phase 3 ✅ (BlazorShared RCL stable, all pages known)
 - **MAUI workload (resolved Aug 2026):** `dotnet workload install maui` must run **elevated** (UAC). A non-elevated attempt corrupted the workload store (deleted manifest packs under `sdk-manifests\10.0.300\`, breaking every build with `MSB4242`). Recovery recipe: elevated → delete stale `workloadsets\10.0.302` → **recreate the empty folder** (installer requires it) → elevated `dotnet workload install maui`. Full story in `Phase-07-Parity-Completion/hands-on-phase-7.md` §7.6.
 - **Parity note:** Hybrid registers `FshThemeService` as `("fsh.theme", ThemeMode.System)` — same storage contract as the dashboard app (see `MauiProgram.cs`).
@@ -69,6 +71,7 @@ Last Update: 2026-Aug-03 18:45:55, by: opencode (auto/coding, model: mimo-v2.5-f
 - [ ] **Universal Links** (iOS) / **App Links** (Android) — **blocked/external**: needs a hosted domain with `.well-known/assetlinks.json` + `apple-app-site-association`
 - [x] **Deep link handler** — `IDeepLinkService.Parse` (fsh://home|settings|about → shell; other paths → `HybridNavigationBridge.PendingPath` → Blazor router) — `bc00bea5`
   - `fsh://login?token=...` autologin / `fsh://ticket/123` → covered generically (any non-shell path lands in the Blazor router; explicit param parsing is future work)
+- [x] **Cold-start deep links (hardening, device-verified 3/3)** — `MainActivity.OnCreate` stashes `Intent.Data` into `HybridNavigationBridge.InitialAppLink` **before** `base.OnCreate` (empirically `CreateWindow` runs inside `base.OnCreate`); `App.CreateWindow` drains it via `TakeInitialAppLink()` → `HandleAppLink` — `586f1388`/`d5d8f88a`. Warm links unchanged (`OnNewIntent`). `HandleAppLink` hardened with bare `new DeepLinkService().Parse` fallback + null-safe `Shell.Current`.
 
 ### 5.8 In-App Purchases
 - [ ] **Blocked/external** — platform billing (Google Billing / StoreKit / Store) + server-side receipt validation: no backend IAP endpoints exist in FSH, no Apple/Google billing accounts on this machine. Revisit after backend IAP support lands; then wrap as a compile-gated skeleton like 5.4 push.
@@ -100,6 +103,7 @@ All in-zone MAUI work is delivered (5.1–5.3 `c77c9939`, 5.4–5.7 + 5.9 `bc00b
 |---|---|---|
 | MAUI version | .NET 10 MAUI | Matches project target; latest stable |
 | Token storage | SecureStorage (not localStorage) | Native encrypted storage; no JS interop needed |
+| Theme persistence | SecureStorage-backed `SecureThemeService` (`fsh.theme`) | Survives webview restarts; the hybrid webview's localStorage write silently no-ops |
 | Auth method | Biometric + SecureStorage | Face ID / Fingerprint unlock before showing token |
 | Offline DB | SQLite (sqlite-net-pcl 1.9.172 + SQLitePCLRaw.bundle_green 2.1.11) | Lightweight, works on all platforms, no EF needed for simple queue |
 | Push notifications | Firebase (Android) + APNs (iOS) | Standard; CommunityToolkit.Maui has helpers for both |

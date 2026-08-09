@@ -1,5 +1,5 @@
 # sess-maui
-identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-08 06:40
+identity: opencode/deepseek-v4-flash-free | started: 2026-08-06 02:43 | state: active | heartbeat: 2026-08-09 19:00
 
 scope: clients/FSH.Hybrid/** · clients/admin-blazor/** (per amended scope) · root README.md ·
 .agents/rules/frontend/maui-hybrid.md · opencode/addBlazorFrontends/live/sess-maui.md ·
@@ -8,27 +8,24 @@ opencode/addBlazorFrontends/verify-hybrid.ps1 · 00_summary summaries
 ## Current task
 Device demo loop (emulator pos-testing): DONE - login + dashboard verified end-to-end. Fixed the cold-start double Blazor.start() (manual poll script removed from index.html; native Android WebKitWebViewClient.OnPageFinished owns startup) and the dashboard FshErrorBoundary (FshPageHeader Subtitle -> Description in OverviewPage + FilesPage). Dashboard renders "Acme Corp / SUBSCRIPTION / Active" from live API on cold boot. Ready to commit.
 
-## Verification round 3 (2026-08-08, emulator pos-testing)
-- Cold-start deep links FIXED + verified 3/3: fsh://files cold VIEW -> /files (MainActivity.OnCreate stash -> base.OnCreate -> CreateWindow drain -> HandleAppLink; commits 586f1388, d5d8f88a)
-- Theme persistence FIXED + verified: SecureStorage-backed FshThemeService persists theme across cold restarts (SecureStorage key "fsh.theme"; verified dark mode persisted via bgVar rgba(18,18,22,1); commit pending)
+## Verification round 3 (2026-08-08/09, emulator pos-testing)
+- Cold-start deep links FIXED + verified 3/3: fsh://files cold VIEW -> /files (MainActivity.OnCreate stash BEFORE base.OnCreate -> CreateWindow drain -> HandleAppLink; commits 586f1388, d5d8f88a)
+- Theme persistence FIXED + verified: SecureThemeService (SecureStorage key "fsh.theme") subclassing FshThemeService via wave-16 seams; dark mode persisted across force-stop + cold restart (bgVar rgba(18,18,22,1) on login page; commit a627074e)
 - FilesPage A3 verified to scriptable boundary: PICK A FILE launches SAF picker, BACK resumes MainActivity (actual selection requires human)
 - FSH.Hybrid.Tests 12/12 green (post-theme fix; suite doesn't cover MauiProgram DI)
+- verify-hybrid.ps1 under lock: windows 0 errors/33 warns, android 0 errors/77 warns, tests 12/12 (2026-08-09)
 - API pid 15224 on 5030, log C:\Users\user\AppData\Local\Temp\opencode\api5.log
 - Emulator emulator-5554 (AVD pos-testing)
 
 ## Touched files (update as you go)
-- clients/FSH.Hybrid/FSH.Hybrid/App.xaml.cs (CreateWindow drains InitialAppLink; HandleAppLink hardened — fallback parser + null-safe Shell)
-- clients/FSH.Hybrid/FSH.Hybrid/Services/DeepLinkService.cs (HybridNavigationBridge: InitialAppLink + TakeInitialAppLink)
-- clients/FSH.Hybrid/FSH.Hybrid/Platforms/Android/MainActivity.cs (OnCreate stashes cold-start VIEW intent link; +using FSH.Hybrid.Services)
-- clients/FSH.Hybrid/FSH.Hybrid/Services/SecureThemeService.cs (NEW: SecureStorage-backed theme persistence, key "fsh.theme")
-- clients/FSH.Hybrid/FSH.Hybrid/MauiProgram.cs (DI fix: AddSingleton<FshThemeService>(sp => new SecureThemeService(...)))
+- ALL round-3 changes COMMITTED: a627074e (SecureThemeService.cs + MauiProgram.cs DI + sess-maui.md), 586f1388/d5d8f88a (cold-start deep links), 8a23ed73 (docs/security advisory + board row 9)
 - NOTE: cdp.ps1 untracked at repo root — temp CDP debug helper, NOT committed, deleted at teardown
 
 ## Blockers / requests to other sessions
 - [x] Admin palette (Phase C) parked until sess-main's 3.14 lands + verify gate passes → board row #1
 - [x] 5.4 push: blocked on Firebase project + google-services.json + backend sender — compile-gated + push-setup.md written
 - [ ] Demo interactivity: needs human on emulator (login) — first-run device loop otherwise complete
-- [ ] SQLitePCLRaw NU1903 bump (GHSA-2m69-gcr7-jv3q): blocked awaiting upstream fix (latest 2.1.11 vulnerable; fix in 2.2.0+ not yet published)
+- [ ] SQLitePCLRaw NU1903 bump (GHSA-2m69-gcr7-jv3q): blocked awaiting upstream fix (latest 2.1.11 vulnerable; fix in 2.2.0+ not yet published) — docs/security/SQLitePCLRaw-NU1903-GHSA-2m69-gcr7-jv3q.md
 
 ## Device demo state (live, 2026-08-08)
 - DEMO LOOP COMPLETE: login -> dashboard verified on emulator-5554 (cold boot -> Overview "Acme Corp / SUBSCRIPTION / Active", no FshErrorBoundary); fixes committed 78606f20
@@ -51,10 +48,10 @@ Device demo loop (emulator pos-testing): DONE - login + dashboard verified end-t
 - [x] Phase C admin palette (committed e4b3dcb7, 155/155)
 - [x] Phase D docs (maui-hybrid.md refresh, committed 6a5d84e2; verify-hybrid 12/12 + admin 155/155 re-run green)
 - [x] Board row #2: admin accent/font/density settings (AppearancePage parity, committed 2026-08-06 04:47)
-- [x] Phase-05 plan-state refresh (5.1–5.7/5.9 � ✅ + blocked/external annotations) + board row #3
+- [x] Phase-05 plan-state refresh (5.1–5.7/5.9 ✅ + blocked/external annotations) + board row #3
 - [x] Device demo loop: login -> dashboard verified on emulator; fixed cold-start double Blazor.start() + FshPageHeader Subtitle bug (pending commit)
 - [x] refresh summary + explicit-path staging
-- [ ] SQLItePCLRaw vulnerability documentation (C)
-- [ ] Board row for 3b12a2fc + verify-hybrid under lock (D)
-- [ ] Implementation summary + Phase-05 plan/STATUS updates (D)
+- [x] SQLItePCLRaw vulnerability documentation (C) — docs/security advisory, committed 8a23ed73
+- [x] Board row for 3b12a2fc + verify-hybrid under lock (D) — board row 9 + 18ba94a2 (emoji repair)
+- [x] Implementation summary + Phase-05 plan/STATUS updates (D) — implementation-summary-20260809-190000-sess-maui.md
 - [ ] Teardown (Delete cdp.ps1, adb emu kill) (D)
