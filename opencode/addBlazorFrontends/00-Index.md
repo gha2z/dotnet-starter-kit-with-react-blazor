@@ -126,3 +126,4 @@ dotnet test clients/dashboard-blazor/FSH.Dashboard.Wasm.Tests
 - `.agents/skills/add-blazor-page/SKILL.md` — Skill: adding Blazor pages
 - `clients/admin/src/` — React admin reference implementation
 - `clients/dashboard/src/` — React dashboard reference implementation
+- `HUMAN-GUIDE.md` + `opencode/AGENTIC-GUIDE.md` — the workflow guide (repo-local; no standalone template)

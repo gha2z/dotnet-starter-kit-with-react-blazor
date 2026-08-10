@@ -1,84 +1,194 @@
-# Enhanced Development Workflow — Task→Skill Map (FSH + dotnet plugin suite)
+# Enhanced Workflow Guide — Task→Skill Map + Two-Mode Orchestration
 
-**Last updated: 2026-08-09 18:55, by: opencode (model: deepseek-v4-flash-free).**
-Applies to: FSH Blazor WASM + MAUI frontends AND incoming SaaS apps (React + .NET). This is the
-executable guide the session ritual points to (readme step 8). Canonical sources: `AGENTS.md`
-(project map + golden rules) + `.agents/rules/**` (conventions) — this guide only resolves
-WHICH skill to load WHEN.
+> This guide maps **every common task** to the right skill/tool, and explains the **two orchestration modes**:
+> 1. **Swarm mode** (opencode-swarm plugin) — multi-agent parallel with authority rules + gates
+> 2. **Manual multi-session mode** (this protocol) — single agent, live docs, Kanban board, handoff
 
-## 1. Skill sources (all loaded)
+Read `readme.md` first for protocol overview. This file is the detailed task→tool reference + new-project bootstrap.
 
-| Source | Location | What |
-|--------|----------|------|
-| FSH recipes | `.agents/skills/*/SKILL.md` (repo) | FSH-owned workflows: `add-feature`, `add-entity`, `add-module`, `add-full-slice`, `add-react-page`, `add-blazor-page`, `create-migration`, `add-integration-event`, `add-permission`, `add-permission-csharp`, `setup-blazor-auth`, `setup-blazor-realtime`, `setup-blazor-sse`, `implement-blazor-form`, `implement-blazor-list`, `mediator-reference`, `query-patterns`, `testing-guide`, `add-maui-hybrid-feature` |
-| Plugin suite | `~/.config/opencode/dotnet-skills/plugins/*/skills` (global config) | Whole plugins: dotnet-msbuild, dotnet-diag, dotnet-maui. Curated: dotnet (`setup-local-sdk`), dotnet-aspnetcore (`dotnet-webapi`, `configuring-opentelemetry-dotnet`, `minimal-api-file-upload`), dotnet-blazor (`author-component`, `collect-user-input`, `coordinate-components`, `fetch-and-send-data`, `plan-ui-change`, `support-prerendering`, `use-js-interop`), dotnet-data (`optimizing-ef-core-queries`), dotnet-test (`run-tests`, `test-anti-patterns`, `assertion-quality`, `test-gap-analysis`, `test-smell-detection`, `coverage-analysis`, `crap-score`, `grade-tests`, `find-untested-sources`, `detect-static-dependencies`, `generate-testability-wrappers`, `migrate-static-to-wrapper`, `test-tagging`, `filter-syntax`, `platform-detection`, `test-analysis-extensions`), dotnet-nuget (`convert-to-cpm`), dotnet-upgrade (`migrate-dotnet8-to-dotnet9`, `migrate-dotnet9-to-dotnet10`, `migrate-dotnet10-to-dotnet11`, `migrate-nullable-references`, `thread-abort-migration`, `dotnet-aot-compat`), dotnet-template-engine (`template-authoring`, `template-comparison`, `template-discovery`, `template-instantiation`, `template-smart-defaults`, `template-validation`) |
+---
 
-**Rules:** FSH recipe wins on overlap (FSH owns its conventions). Plugin skills fill gaps.
-Intentional exclusions in global config: `configure-auth`/`create-blazor-project` (FSH owns),
-`create-datadriven-aspnetcore` (competes with `add-feature`), `code-testing-agent`/
-`writing-mstest-tests`/`mtp-hot-reload` (FSH is xUnit — use `testing-guide`).
+## 1. Task → Skill Map (FSH-flavored)
 
-## 2. Task→Skill map
+| Task | Skill | When to use |
+|---|---|---|
+| **Add API endpoint / business op** | `add-feature` | Vertical slice in existing module: command/query + handler + validator + endpoint |
+| **Add DB entity / table** | `add-entity` | New domain entity with EF config + migration in existing module |
+| **Add whole module (bounded context)** | `add-module` | New `Modules.{Name}` + `.Contracts` + `IModule` + DbContext + permissions + migrations |
+| **Add React page (list+create)** | `add-react-page` | API module → page → lazy route → (admin) permission gate → Playwright test |
+| **Add Blazor page (list+detail+create)** | `add-blazor-page` | Service → page → route → (admin) permission gate → bunit test |
+| **Add full slice (backend + React)** | `add-full-slice` | Composes `add-feature` + `add-react-page` |
+| **Add Blazor form (create/edit)** | `implement-blazor-form` | MudForm with validation on Blazor WASM page |
+| **Add Blazor list (paged/filterable/sortable)** | `implement-blazor-list` | MudTable list page |
+| **Create EF migration** | `create-migration` | After changing entities/EF config — central Migrations project |
+| **Publish cross-module event** | `add-integration-event` | Outbox + idempotent handler in another module |
+| **Add permission end-to-end** | `add-permission` | Server constant + endpoint gate + (admin) catalog + route guard |
+| **Mirror permission to C# + policy** | `add-permission-csharp` | Backend adds endpoint permission → C# constant + policy |
+| **Add MAUI native feature** | `add-maui-hybrid-feature` | Push, biometric, camera, offline queue, deep linking |
+| **Write tests** | `testing-guide` | xUnit + Shouldly + NSubstitute + AutoFixture, AAA naming |
+| **Implement read queries** | `query-patterns` | Paginated lists, search/filter/sort, single-entity fetches (DbContext LINQ) |
+| **Setup Blazor JWT auth** | `setup-blazor-auth` | ITokenStore (localStorage) + AuthStateProvider + DelegatingHandler + Permissions |
+| **Setup Blazor SignalR** | `setup-blazor-realtime` | HubConnection, notifications, chat |
+| **Setup Dashboard SSE** | `setup-blazor-sse` | Server-Sent Events for dashboard-blazor only |
 
-| Task | Load FIRST (FSH) | Supplement (plugin) |
-|------|------------------|---------------------|
-| New Blazor page | `add-blazor-page` | `plan-ui-change` → `author-component` |
-| Blazor form | `implement-blazor-form` | `collect-user-input` |
-| Blazor list | `implement-blazor-list` | `fetch-and-send-data` |
-| JS interop | — | `use-js-interop` |
-| Prerender / shared state | — | `support-prerendering`, `coordinate-components` |
-| Blazor auth / realtime / SSE | `setup-blazor-auth` / `setup-blazor-realtime` / `setup-blazor-sse` | — |
-| MAUI feature | `add-maui-hybrid-feature` | dotnet-maui skills (`maui-shell-navigation`, `maui-data-binding`, `maui-dependency-injection`, `maui-theming`, `maui-app-lifecycle`, `maui-collectionview`, `maui-safe-area`), `dotnet-maui-doctor` |
-| Backend feature / endpoint | `add-feature`, `query-patterns`, `mediator-reference` | `dotnet-webapi` |
-| Entity + migration | `add-entity` → `create-migration` | `optimizing-ef-core-queries` |
-| Module | `add-module` | — |
-| Cross-module event | `add-integration-event` | — |
-| Permission | `add-permission` / `add-permission-csharp` | — |
-| Write tests | `testing-guide` | `run-tests` (exact command + filter syntax) |
-| Review tests | — | `test-anti-patterns`, `assertion-quality`, `test-gap-analysis`, `test-smell-detection`, `grade-tests` |
-| Coverage | — | `coverage-analysis`, `crap-score`, `find-untested-sources` |
-| Testability refactor | — | `detect-static-dependencies`, `generate-testability-wrappers`, `migrate-static-to-wrapper` |
-| Slow build | — | `build-perf-baseline` → `build-perf-diagnostics` (`binlog-generation` / `binlog-failure-analysis`) |
-| Crash / dump triage | — | `dotnet-trace-collect`, `dump-collect`, `android-tombstone-symbolication`, `apple-crash-symbolication` |
-| Perf audit | — | `analyzing-dotnet-performance`, `microbenchmarking` |
-| SDK / workload issues | — | `setup-local-sdk`, `dotnet-maui-doctor` |
-| CPM (new SaaS) | — | `convert-to-cpm` |
-| .NET version upgrade | — | `migrate-dotnet10-to-dotnet11` (etc.), `dotnet-aot-compat` |
-| Scaffold new SaaS repo | — | `template-instantiation`, `template-validation` |
+---
 
-## 3. Session ritual v2 (supersedes readme step 8)
+## 2. Two Orchestration Modes
 
-1. `git status` → confirm clean/expected state
-2. Session id from user; model identity verified fresh (never from memory — readme convention)
-3. Read STATUS.md + all `live/*.md` (fresh) + latest `00_summary/`
-4. Read the relevant `.agents/rules/frontend/*.md`
-5. Load task skills per the map above (FSH recipe first, plugin supplements)
-6. Heartbeat + coordination gate before any staging/build
-7. Run `verify.ps1` (lock first) / `verify-hybrid.ps1` per cadence
-8. Close-out: implementation summary + board rows + commit approval cycle
+### A. Swarm Mode (opencode-swarm plugin)
 
-## 4. QA gates (quality minimums)
+**Requirements**: `.opencode/opencode-swarm.json` with `parallelization_enabled: true` + plugins installed.
 
-- **Backend:** `dotnet build src/FSH.Starter.slnx` 0 warnings (TreatWarningsAsErrors) →
-  targeted suite → `architecture-guard`; use `run-tests` for exact commands
-- **Blazor:** build target 0 warnings → bUnit suite → `verify.ps1` (clean obj/bin) at handoff
-- **Review gate:** `code-reviewer` workflow + audit skills (`test-anti-patterns`,
-  `assertion-quality`) before commit; `coverage-analysis` for coverage claims
-- **Handoff:** paste verification block from verify.ps1 output
+```bash
+# Phase flow
+/swarm epic 1              # Decide phase 1 (promote/demote based on coupling)
+/swarm wave 1              # Dispatch wave 1 (parallel, one coder per disjoint task)
+/swarm wave 2              # ... subsequent waves
+/swarm review 1            # reviewer + test_engineer gate (or full 5-member council)
+/swarm complete 1          # Phase complete: drift verify + evidence write
+```
 
-## 5. SaaS bootstrap recipe (incoming apps)
+**Agent roster (lean default)**: architect, coder, explorer, reviewer, test_engineer  
+**Disabled by default**: sme, critic, docs, designer — enable in config if needed.
 
-1. Scaffold repo (`dotnet new` template / `template-instantiation`)
-2. Wire `Directory.Packages.props` via `convert-to-cpm` (Central Package Management)
-3. Copy this repo's `.agents/**` structure (rules + skills) + AGENTS.md conventions
-4. Copy the global opencode.jsonc skills block (Section 1) + plugin install commands
-5. Set up coordination docs (STATUS.md, board, session files) if multi-session
-6. OpenCode swarm (`opencode-swarm.json`, user-level "mega") is OPTIONAL/experimental —
-   subagents bypass the coordination gate/lock protocol; use in isolated worktrees only.
-   The repo's `.opencode/opencode-swarm.json` stays `{}`.
+**Authority rules** (in `.opencode/opencode-swarm.json`):
+- coder: write-scoped to `src/Modules/**`, `clients/**`, `opencode/**`, `.agents/**`, `deploy/**`
+- coder: DENY `src/BuildingBlocks/**`, `src/Host/**` (architect-only)
 
-## 6. Notes / known limits
+**Gates** (ordered):
+1. Build + typecheck (`dotnet build` / `dotnet test --no-build`)
+2. Lint (`dotnet format --verify-no-changes` + project linters)
+3. SAST (Semgrep + built-in)
+4. Mutation test (80% kill rate — opt-in via QA profile)
+5. Drift verify (`critic_drift_verifier` agent)
+6. Review council (`reviewer` + `test_engineer` minimum)
 
-- Plugin skills are machine-level (global config) — not committed; document in repo setup docs
-- No FSH↔plugin skill-name collisions exist (verified 2026-08-09)
-- opencode config merges: global skills paths apply in every repo; project configs may add, not remove
+---
+
+### B. Manual Multi-Session Mode (this protocol)
+
+**No plugin required**. Single opencode session, state in `live/` + `board.md` + `00-Index.md`.
+
+| Step | Command / Action | Artifact updated |
+|---|---|---|
+| **Start** | `opencode` → read `00-Index.md`, `live/README.md`, `STATUS.md` | Context loaded |
+| **Plan** | Decompose → add tasks to `board.md` (Backlog) + `00-Index.md` | Plan visible |
+| **Execute** | Work one task → update `board.md` (Doing→Review→Done) → append to `live/sess-*.md` | Trace captured |
+| **Sync** | `git commit -m "feat: ..."` (conventional) | History immutable |
+| **Handoff** | Write `STATUS.md` (one line) + `board.md` next-task pointers | Zero-loss transfer |
+
+**Session log template** (`live/_template.md`):
+```markdown
+## Session N — YYYY-MM-DD — <title>
+
+### Context
+- Branch: `feature/xyz`
+- Base: `main` @ <sha>
+- Goal: <one sentence>
+
+### Work
+- [ ] Task 1.1 — <desc> — <status>
+- [ ] Task 1.2 — <desc> — <status>
+
+### Decisions
+- <decision> — <rationale>
+
+### Blockers / Follow-ups
+- <blocker> → <action>
+
+### Next session
+- Pick up: <task id>
+```
+
+---
+
+## 3. Plugin Roster + Token Policy
+
+### `.opencode/opencode.json` — installed plugins
+
+| Plugin | Version | Purpose |
+|---|---|---|
+| `opencode-autotitle` | 0.1.3 | Auto session titles from first user message |
+| `opencode-notify` | 0.3.1 | Desktop notifications on completion / input wait |
+| `envsitter-guard` | 0.0.4 | Blocks secret leaks in `.env` / config |
+| `@gotgenes/opencode-agent-identity` | 3.1.1 | Persistent agent identity across sessions |
+| `opencode-context-analysis-plugin` | local | `/context` command — blast radius, dependency graph |
+
+### Model allocation
+
+| Tier | Models | Agents | Max tokens/session |
+|---|---|---|---|
+| **Reasoning** | nemotron-3-ultra (this session) | architect, critic | 200k |
+| **Standard** | nemotron-3-ultra | coder, reviewer, test_engineer, explorer | 128k |
+| **Lite** | gemini-flash / gpt-4o-mini | docs, summarization, grep | 64k |
+
+Configure in `.opencode/opencode-swarm.json` → `agents.<name>.model`.
+
+---
+
+## 4. QA Gates (Enforced)
+
+| Gate | Tool | Trigger | Failure = |
+|---|---|---|---|
+| Build + typecheck | `dotnet build` / `dotnet test --no-build` | Pre-commit / pre-PR | Block commit |
+| Lint | `dotnet format --verify-no-changes` + linters | Pre-commit | Block commit |
+| SAST | `sast_scan` (Semgrep + built-in) | Phase complete | Block phase |
+| Mutation test | `mutation_test` (80% kill) | Phase complete (opt-in) | Warn / Block |
+| Drift verify | `critic_drift_verifier` agent | Phase complete | Block phase |
+| Review council | `reviewer` + `test_engineer` (min) | Phase complete | Block phase |
+
+---
+
+## 5. New SaaS Project (From This Repo — no standalone)
+
+There is **no standalone workflow repository** — it was retired by user decision. To seed a new
+SaaS, use `opencode/init-saas-workflow.ps1`, which clones **this** repo as its source:
+
+```powershell
+pwsh opencode/init-saas-workflow.ps1 -Name AcmeSaaS -WorkDir C:\dev\AcmeSaaS -FromClone C:\repos\dotnet-starter-kit-with-react-blazor-main
+```
+
+What it does (each step prints + can be skipped with a switch):
+
+1. **Clone/copy** the source repo into `-WorkDir` (fresh `.git`, no history baggage).
+2. **Rename ritual** — replacement map over file names, `.csproj`, `.slnx`, namespaces, appsettings,
+   `config.json`, CSS/JS, test names: `FSH.Starter`→`AcmeSaaS.Starter`, `FSH.`→`AcmeSaaS.` (project
+   namespaces), `FSH`→`AcmeSaaS` (remaining identifiers), `FullStackHero`→`AcmeSaaS` (brand). Then a
+   **verification sweep**: grep residual references + full build + `Architecture.Tests` → prints a
+   residual report for manual review.
+3. **Strip** (guided prompts) — `-StripReact`, `-StripMaui`, `-StripModules Catalog,Billing,…`.
+4. **Clean** — remove project-private dirs (`opencode/addBlazorFrontends/`, `.swarm/`, …).
+5. **Wire workflow** — `.opencode/opencode-swarm.json`, `.opencode/skill-routing.yaml`, `.gitignore`
+   entries, slim `AGENTS.md`.
+6. **Restore + build gate** — fails loudly with the fix list if the rename broke something.
+7. **First commit + session bootstrap** — clean-clone commit, `opencode/live/` skeleton + `STATUS.md`.
+8. **Print next steps** — the exact commands to open the first session.
+
+Full detail lives in `opencode/AGENTIC-GUIDE.md` §4 (template + clone paths). The `{{PLACEHOLDERS}}`
+parameterization is replaced by the rename ritual above; the protocol core
+(`AGENTIC-GUIDE.md`, `_tracks-template/`, this workflow) is copied by hand from this repo when needed.
+
+---
+
+## 6. File Inventory (Protocol Core)
+
+| File | Purpose |
+|---|---|
+| `readme.md` | Protocol overview + quick start |
+| `WORKFLOW-GUIDE.md` | **This file** — task→skill, modes, tokens, gates, new-project bootstrap |
+| `coordination.ps1` | Zone map + session commands (board, index, live, status, handoff) |
+| `verify.ps1` | Build + test + smoke publish (FSH defaults) |
+| `verify-hybrid.ps1` | MAUI Hybrid + PWA verification |
+| `live/_template.md` | Session log template |
+| `live/README.md` | Session file index |
+| `live/board.md` | Kanban board template |
+| `live/sess-main.md` | Main session log |
+| `00-Index.md` | Task registry + phase summary |
+| `STATUS.md` | One-line handoff state |
+| `99-Glossary.md` | Project terms |
+| `00-Setup.md` | Environment setup checklist |
+| `AGENTIC-GUIDE.md` | Standalone user guide |
+
+---
+
+*Version: see git tag / `00-Setup.md`. Source: this repo (workflow is repo-local — no standalone).*

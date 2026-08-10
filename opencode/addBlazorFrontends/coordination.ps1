@@ -45,7 +45,9 @@ $zoneMap = [ordered]@{
         'clients/admin-blazor/',
         'STATUS.md', '00-Index.md', '.gitignore',
         'AGENTS.md', '.agents/workflows/',
-        'opencode/addBlazorFrontends/'
+        'opencode/addBlazorFrontends/',
+        'HUMAN-GUIDE.md', 'docs/spec/',
+        'opencode/AGENTIC-GUIDE.md', 'opencode/_tracks-template/'
     )
     'sess-maui' = @(
         'clients/FSH.Hybrid/',

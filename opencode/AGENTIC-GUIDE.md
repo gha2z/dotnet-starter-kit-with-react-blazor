@@ -6,6 +6,24 @@ The single source of truth for driving agentic coding on this repo **and** for b
 future SaaS projects from it. Read this before starting any session; the per-project protocol
 details live in `opencode/addBlazorFrontends/readme.md` (session ritual, coordination rules).
 
+**Requirements live in `docs/spec/`** — one file per app/stream, authored by the human. Plans trace
+to `FR-###` ids from those files. Never invent requirements in a session; read the spec.
+
+---
+
+## 0. Tracks — how this workflow scales
+
+A **track** is a work-stream with its own owner, disjoint zone, roadmap (`00-Index.md`), status
+(`STATUS.md`), live session state, and spec (`docs/spec/NNN-<name>.md`). The active track today is
+`opencode/addBlazorFrontends/` (React→Blazor→MAUI parity to zero gaps). Future tracks (erp, pos,
+consumer, operator) start from `opencode/_tracks-template/`.
+
+> **New track = new owner + disjoint zone + (spec | index | status | live).** If any of those isn't
+> real, it's a **phase**, not a track.
+
+One session = one feature (or one planning pass), never a whole phase. See `HUMAN-GUIDE.md` for the
+six-verb driving loop from the human's side.
+
 ---
 
 ## 1. Mental model — two operating modes
@@ -244,5 +262,8 @@ Golden Rules), FSH wins. dotnet-skills may inform *how* (query shape, test comma
 
 - User-facing changes (feature, endpoint, config, infra, breaking change) require the separate
   docs repo (`github.com/fullstackhero/docs`) update + changelog entry (Golden Rule 10).
+- Requirements are authored **only** in `docs/spec/`; plans trace `FR-###` ids 1:1 from there.
 - Keep this file, `STATUS.md`, `00-Index.md`, phase plans, and `.agents/rules/frontend/*` in sync
   with the code — docs travel with the change.
+- Workflow-authoring edits (this file, `_tracks-template/`, `docs/spec/`,
+  `HUMAN-GUIDE.md`) are sess-main zone, additive, user-approved — see readme.md "Scope Restriction".

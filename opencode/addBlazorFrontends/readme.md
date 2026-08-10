@@ -292,6 +292,7 @@ Modify ONLY:
 - `./README.md` — root project docs (announce the edit on `live/board.md` first)
 - `./.agents/rules/frontend/{blazor-shared,blazor-admin,blazor-dashboard,maui-hybrid}.md` — OUR docs
 - `./.agents/skills/{add-blazor-page,add-maui-hybrid-feature,add-permission-csharp,implement-blazor-form,implement-blazor-list,setup-blazor-auth,setup-blazor-realtime,setup-blazor-sse}/SKILL.md` — OUR skills
+- `./opencode/AGENTIC-GUIDE.md` · `./opencode/_tracks-template/` · `./docs/spec/` · `./HUMAN-GUIDE.md` — workflow-authoring paths (track model + requirements home, user-approved); additive edits only, board-announced. Workflow is **repo-local** — the standalone `workflow/` publish/sync machinery was retired (user-approved)
 
 NEVER modify (upstream baseline / React reference):
 
