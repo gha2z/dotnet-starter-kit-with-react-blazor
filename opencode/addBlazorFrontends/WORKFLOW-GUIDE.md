@@ -99,6 +99,26 @@ Read `readme.md` first for protocol overview. This file is the detailed task→t
 ### Next session
 - Pick up: <task id>
 ```
+```
+
+**Wave DAG + Critical Path** (every new build phase `plan.md` opens with a wave block):
+
+```markdown
+## Wave DAG
+Nodes = task IDs · edges = `depends` · waves = topological partitions (serial by convention)
+mermaid:
+  flowchart LR
+    t1.1 --> t1.3 --> t1.5
+    t1.2 --> t1.3
+    t1.4 --> t1.6
+Waves: W1 [t1.1,t1.2,t1.4] → W2 [t1.3] → W3 [t1.5,t1.6]
+Critical path: t1.1 → t1.3 → t1.5   (longest dependency chain — gate here first)
+```
+
+- "Parallel-safe" requires **disjoint owned files** per the `coordination.ps1` overlap check — never
+  inferred from the DAG alone.
+- The critical path is where gate risk concentrates: if a wave on it slips, downstream waves absorb
+  the delay. Check the critical-path task (`-Gate` + per-unit verify) before parallel satellites.
 
 ---
 
@@ -136,6 +156,7 @@ Configure in `.opencode/opencode-swarm.json` → `agents.<name>.model`.
 | Mutation test | `mutation_test` (80% kill) | Phase complete (opt-in) | Warn / Block |
 | Drift verify | `critic_drift_verifier` agent | Phase complete | Block phase |
 | Review council | `reviewer` + `test_engineer` (min) | Phase complete | Block phase |
+| **Summary close-out** | `coordination.ps1 -CloseOut` (manual mode) | Wave/phase complete | Block commit |
 
 ---
 
@@ -184,6 +205,7 @@ parameterization is replaced by the rename ritual above; the protocol core
 | `live/board.md` | Kanban board template |
 | `live/sess-main.md` | Main session log |
 | `00-Index.md` | Task registry + phase summary |
+| `00_summary/_template.md` | Wave summary template (incl. `## Lessons / Process Improvements`) |
 | `STATUS.md` | One-line handoff state |
 | `99-Glossary.md` | Project terms |
 | `00-Setup.md` | Environment setup checklist |

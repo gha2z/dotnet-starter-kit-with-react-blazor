@@ -9,6 +9,8 @@
 #   pwsh coordination.ps1 -Session <sid> -LockVerify     # create live/locks/verify.lock (fail if exists)
 #   pwsh coordination.ps1 -Session <sid> -UnlockVerify   # remove live/locks/verify.lock
 #   pwsh coordination.ps1 -Session <sid> -LockCheck      # report lock state only
+#   pwsh coordination.ps1 -Session <sid> -CloseOut       # stage-A wave close-out gate (verifies summary
+#                                                          + Lessons section + STATUS.md refresh)
 #
 # Exit code 1 on any violation. Run from the repo root.
 
@@ -21,6 +23,7 @@ param(
     [switch]$LockVerify,
     [switch]$UnlockVerify,
     [switch]$LockCheck,
+    [switch]$CloseOut,
     [int]$StaleHours = 12
 )
 
@@ -31,6 +34,8 @@ $liveDir = Join-Path $root 'opencode\addBlazorFrontends\live'
 $locksDir = Join-Path $liveDir 'locks'
 $lockFile = Join-Path $locksDir 'verify.lock'
 $sessionFile = Join-Path $liveDir "sess-$Session.md"
+$summaryDir = Join-Path $root 'opencode\addBlazorFrontends\00_summary'
+$statusFile = Join-Path $root 'opencode\addBlazorFrontends\STATUS.md'
 $failures = @()
 
 # ---------------------------------------------------------------------------
@@ -78,6 +83,18 @@ function Stamp-Heartbeat([string]$file) {
     }
     Set-Content -Path $file -Value $content -Encoding UTF8 -NoNewline
     Write-Host "  heartbeat stamped: $now (in sess-$Session.md)"
+}
+
+function Get-LastUpdate([string]$file) {
+    if (-not (Test-Path $file)) { return $null }
+    $line = Get-Content $file | Where-Object { $_ -match '^Last Update:|\*Last Update:' } | Select-Object -First 1
+    if (-not $line) { return $null }
+    $m = [regex]::Match($line, '([0-9]{4}-[0-9]{2}-[0-9]{2}(?:\s+[0-9]{2}:[0-9]{2})?)')
+    if (-not $m.Success) { return $null }
+    if ($m.Groups[1].Value.Length -gt 10) {
+        return [datetime]::ParseExact($m.Groups[1].Value.Trim(), 'yyyy-MM-dd HH:mm', $null)
+    }
+    return [datetime]::ParseExact($m.Groups[1].Value.Trim(), 'yyyy-MM-dd', $null)
 }
 
 function Test-OwnsPath([string]$path) {
@@ -262,4 +279,66 @@ if ($Gate) {
         exit 1
     }
     Write-Host "`nGATE PASSED - safe to stage/proceed." -ForegroundColor Green
+}
+
+if ($CloseOut) {
+    Write-Host "=== coordination: wave close-out gate ($Session) ==="
+
+    # 1. Summary exists for this session (newest implementation-summary-*).
+    $mySummaries = @()
+    if (Test-Path $summaryDir) {
+        $mySummaries = Get-ChildItem $summaryDir -Filter "implementation-summary-*-$Session.md" -File |
+            Sort-Object Name -Descending
+    }
+    if ($mySummaries.Count -eq 0) {
+        $myName = "implementation-summary-$(Get-Date -Format 'yyyy-MM-dd-HH-mm-ss')-$Session.md"
+        $failures += "no summary for session '$Session' - write 00_summary/$myName per _template.md (with ## Lessons section) before committing"
+    }
+    else {
+        $newestSummary = $mySummaries[0]
+        Write-Host "  newest summary: $($newestSummary.Name)"
+
+        # 2. Lessons section present + bullet count scoped to that section only.
+        $sumText = Get-Content $newestSummary.FullName -Raw -Encoding UTF8
+        $heading = [regex]::Match($sumText, '(?im)^##\s+Lessons\s+/')
+        if (-not $heading.Success) {
+            $failures += "newest summary lacks '## Lessons / Process Improvements' section - add it per _template.md"
+        }
+        else {
+            # Slice from the Lessons heading to the next "## " heading (or end of content).
+            $sectionSlice = $sumText.Substring($heading.Index)
+            $nextHeading = [regex]::Match($sectionSlice, '(?m)^##\s+', 1)
+            if ($nextHeading.Success) {
+                $sectionSlice = $sectionSlice.Substring(0, $nextHeading.Index)
+            }
+            [int]$bulletCount = ([regex]::Matches($sectionSlice, '(?m)^\s*-\s+')).Count
+            if ($bulletCount -gt 4) {
+                $failures += "newest summary has $bulletCount bullets in ## Lessons - max 3 (plus optional '- (none)')"
+            }
+        }
+    }
+
+    # 3. STATUS.md refreshed since this session's heartbeat.
+    $hb = Get-Heartbeat $sessionFile
+    $lu = Get-LastUpdate $statusFile
+    if ($null -eq $hb) {
+        $failures += 'session file has no parseable heartbeat - run -Start first'
+    }
+    elseif ($null -eq $lu) {
+        $failures += "STATUS.md has no parseable 'Last Update' line - refresh it this wave"
+    }
+    elseif ($lu -lt $hb) {
+        $failures += "STATUS.md 'Last Update' ($($lu.ToString('yyyy-MM-dd HH:mm'))) is older than the heartbeat ($($hb.ToString('yyyy-MM-dd HH:mm'))) - refresh STATUS.md this wave"
+    }
+    else {
+        Write-Host "  STATUS.md refreshed ($($lu.ToString('yyyy-MM-dd HH:mm')))."
+    }
+
+    if ($failures.Count -gt 0) {
+        Write-Host "`nCLOSE-OUT FAILED:" -ForegroundColor Red
+        $failures | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
+        Write-Host "  Fix the violations, then re-run -CloseOut. Blocking staging until it passes." -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "`nCLOSE-OUT PASSED - summary + Lessons + STATUS.md are current." -ForegroundColor Green
 }

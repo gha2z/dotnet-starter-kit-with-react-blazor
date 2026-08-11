@@ -1,6 +1,6 @@
 # Current Status
 
-Last Update: 2026-08-09 19:00, by: opencode (model: auto/coding, model: omniroute/auto/coding).
+Last Update: 2026-08-11 13:04, by: opencode (model: opencode/deepseek-v4-flash-free).
 
 ## Progress
 
@@ -32,7 +32,7 @@ Last Update: 2026-08-09 19:00, by: opencode (model: auto/coding, model: omnirout
 
 ⚠️ **6.9 RESOLVED (wave 19):** clean-publish re-test reversed the wave-18 finding — uncompressed `blazor.webassembly.js` + `dotnet.js` ARE emitted on Release publish (deleted `obj/Release` first); `blazor.boot.json` absent by .NET 10 design (boot config inlined in `dotnet.js`); plain static host boots to login in ~4.3 s, 0 pageerrors, 0 failed requests, no Mono NIY crash (both apps). **No code change.** Deployment-zone guidance (serve `.br`/`.gz` with `Content-Encoding`, 103 Early Hints) remains CDN config, not required for boot.
 
-**Next: workflow enhancement (waves 20–21b, user-approved)** — enhanced-workflow guide (`WORKFLOW-GUIDE.md`), coordination contract update (zone map + Scope Restriction), plugin-skills wiring (global opencode config). Remaining items: MAUI README (sess-maui), last-known-good cache (deferred), deployment-zone CDN config.
+**Next: Stage A workflow enhancement COMPLETE (wave 22, user-approved items #1/#4/#5)** — summary close-out gate (`coordination.ps1 -CloseOut`), `## Lessons` section in summaries, wave-DAG/critical-path convention documented. sess-main resumes its build-phase tasks using the enhanced workflow (write summary + Lessons + refresh STATUS + run `-CloseOut` before committing each wave). Remaining: MAUI README (sess-maui), last-known-good cache (deferred), deployment-zone CDN config.
 
 ## Files to Read
 

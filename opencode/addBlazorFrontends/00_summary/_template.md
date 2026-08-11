@@ -23,3 +23,8 @@
 ## Known Limitations
 ---
 - ...
+
+## Lessons / Process Improvements
+---
+- <max 3 — a process/technique discovery from this wave, phrased for reuse by future sessions>
+- <if none genuinely: `- (none)`>

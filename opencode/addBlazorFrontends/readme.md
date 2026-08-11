@@ -1,5 +1,5 @@
 # AddBlazorFrontends — Session Instructions
-**Last updated: 2026-08-09 18:50, by: sess-main (opencode, model: deepseek-v4-flash-free) — workflow-enhancement contract update (waves 20–21b, user-approved: zone map + Scope Restriction now allow AGENTS.md + `.agents/workflows/**`).**
+**Last updated: 2026-08-11 12:34, by: opencode (model: opencode/deepseek-v4-flash-free) — Stage A: summary close-out gate (`coordination.ps1 -CloseOut`), `## Lessons` summary section, wave-DAG/critical-path convention.**
 
 ## Commit Policy
 
@@ -162,6 +162,9 @@ pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -UnlockVerify
 
 # stamp heartbeat on every user turn
 pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Heartbeat
+
+# wave close-out (Stage A): summary + ## Lessons section + refreshed STATUS.md (exit code 1 = block commit)
+pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -CloseOut
 ```
 
 The zone→session map lives at the top of the script (keep it in sync with `Scope Restriction`
@@ -255,6 +258,10 @@ Before writing any `.razor` file, read an existing working page in the same proj
 - [ ] Docs written this session use the **freshly-verified** model identity (see Model Identity
       Convention) + actual session timestamp — never a value copied from prior files
 - [ ] Fix any warning you introduce
+- [ ] Session file `live/sess-<id>.md` updated (`## Current task`, `## Touched files`, heartbeat bumped)
+- [ ] Wave close-out: summary written to `00_summary/` per template **with** `## Lessons` section
+- [ ] Wave close-out: `STATUS.md` "Last Update" + phase/next-task line refreshed this wave
+- [ ] Wave close-out: `coordination.ps1 -Session <sid> -CloseOut` passes (fail-closed, blocks staging)
 
 ---
 
@@ -322,6 +329,10 @@ schema** (header, description/creator/duration front-matter, verification block)
 inline templates; fill the verification block from `verify.ps1` output. Same-checkout sessions
 write theirs in the same folder — timestamp + session-id keep filenames unique. Parallel streams
 in worktrees write their own summary inside their worktree's `opencode/addBlazorFrontends/00_summary/`.
+
+**Every summary MUST end with the `## Lessons / Process Improvements` section** (per
+`00_summary/_template.md`). A summary + a refreshed `STATUS.md` are required **before** a wave is
+committed — enforced by `coordination.ps1 -CloseOut` (see "Coordination Gate Script").
 
 ---
 
