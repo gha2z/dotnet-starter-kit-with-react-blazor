@@ -1,7 +1,7 @@
 @using FSH.BlazorShared.Theming
 @using FSH.BlazorShared.Components
 
-<MudThemeProvider Theme="@_theme" IsDarkMode="@Theme.IsDarkMode" IsDarkModeChanged="@OnThemeChanged" />
+<MudThemeProvider Theme="@_theme" IsDarkMode="@Theme.IsDarkMode" IsDarkModeChanged="@OnThemeChanged" ObserveSystemDarkModeChange="false" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />

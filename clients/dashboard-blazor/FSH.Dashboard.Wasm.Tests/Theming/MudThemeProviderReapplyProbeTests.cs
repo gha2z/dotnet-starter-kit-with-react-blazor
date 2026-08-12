@@ -74,8 +74,13 @@ public sealed class MudThemeProviderReapplyProbeTests : TestSetup
             builder.OpenComponent<MudThemeProvider>(0);
             builder.AddAttribute(1, "Theme", _theme);
             builder.AddAttribute(2, "IsDarkMode", Theme.IsDarkMode);
+            builder.AddAttribute(3, "IsDarkModeChanged", EventCallback.Factory.Create<bool>(this, OnDarkModeChanged));
+            builder.AddAttribute(4, "ObserveSystemDarkModeChange", false);
             builder.CloseComponent();
         }
+
+        private async Task OnDarkModeChanged(bool isDarkMode)
+            => await Theme.SetAsync(isDarkMode);
     }
 
     /// <summary>
