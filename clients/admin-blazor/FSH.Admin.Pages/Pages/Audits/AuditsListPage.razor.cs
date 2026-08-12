@@ -171,8 +171,9 @@ public partial class AuditsListPage
         };
         var options = new DialogOptions
         {
-            MaxWidth = MaxWidth.Large,
-            FullWidth = true,
+            Position = DialogPosition.CenterRight,
+            MaxWidth = MaxWidth.Medium,
+            FullHeight = true,
             CloseButton = true,
             BackgroundClass = "fsh-dialog-backdrop",
         };

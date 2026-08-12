@@ -1,25 +1,36 @@
+using FSH.Admin.Wasm.Pages.Impersonation;
+using FSH.BlazorShared.Models.Identity;
 using FSH.BlazorShared.Models.Tenants;
 using FSH.BlazorShared.Services;
 using FSH.BlazorShared.Components;
+using FSH.BlazorShared.Infrastructure;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using MudBlazor;
 
 namespace FSH.Admin.Wasm.Pages.Tenants;
 
-public sealed partial class TenantDetailPage
+public sealed partial class TenantDetailPage : IAsyncDisposable
 {
     [Parameter] public string Id { get; set; } = string.Empty;
 
     [Inject] private ITenantService TenantService { get; set; } = default!;
+    [Inject] private IImpersonationService ImpersonationService { get; set; } = default!;
     [Inject] private IDialogService DialogService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private NavigationManager Nav { get; set; } = default!;
+    [Inject] private IRuntimeConfigService Config { get; set; } = default!;
+    [Inject] private IJSRuntime Js { get; set; } = default!;
 
     private TenantStatusDto? _tenant;
     private TenantProvisioningStatusDto? _provisioning;
     private string? _error;
     private bool _isActivating;
     private bool _isRetrying;
+
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
+    private CancellationTokenSource? _pollCts;
+    private Task? _pollTask;
 
     private string HeaderTitle => _tenant?.Name ?? "Tenant";
 
@@ -47,11 +58,80 @@ public sealed partial class TenantDetailPage
             await Task.WhenAll(statusTask, provisioningTask);
             _tenant = statusTask.Result;
             _provisioning = provisioningTask.Result;
+            StartPollingIfRunning();
         }
         catch (Exception ex)
         {
             _error = $"Failed to load tenant: {ex.Message}";
         }
+    }
+
+    private void StartPollingIfRunning()
+    {
+        if (_provisioning is null ||
+            _provisioning.Status == "Completed" ||
+            _provisioning.Status == "Failed" ||
+            _provisioning.Status == "NotTracked")
+        {
+            return;
+        }
+
+        _pollCts = new CancellationTokenSource();
+        _pollTask = PollLoopAsync(_pollCts.Token);
+    }
+
+    private async Task PollLoopAsync(CancellationToken ct)
+    {
+        using var timer = new PeriodicTimer(PollInterval);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(ct))
+            {
+                _provisioning = await TenantService.GetProvisioningAsync(Id);
+                StateHasChanged();
+                if (_provisioning is null ||
+                    _provisioning.Status == "Completed" ||
+                    _provisioning.Status == "Failed")
+                {
+                    return;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Disposed — stop polling quietly.
+        }
+        catch (Exception)
+        {
+            // Transient polling error — keep the last known state; stop to avoid a hot loop.
+        }
+    }
+
+    private async Task OpenImpersonateDialogAsync()
+    {
+        var parameters = new DialogParameters<ImpersonateDialog>
+        {
+            { x => x.TargetTenantId, _tenant!.Id },
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<ImpersonateDialog>("Impersonate user", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled || result.Data is not ImpersonationResponse response)
+        {
+            return;
+        }
+
+        var url = BuildHandoffUrl(response, _tenant!.Id);
+        await Js.InvokeVoidAsync("openUrl", url);
+        Snackbar.Add("Opened the dashboard as the impersonated user. End impersonation from inside the dashboard tab.", Severity.Info);
+    }
+
+    private string BuildHandoffUrl(ImpersonationResponse response, string tenantId)
+    {
+        var query = $"token={Uri.EscapeDataString(response.AccessToken)}" +
+                    $"&tenant={Uri.EscapeDataString(tenantId)}" +
+                    $"&expiresAt={Uri.EscapeDataString(response.AccessTokenExpiresAt.ToString("o"))}";
+        return $"{Config.DashboardUrl.TrimEnd('/')}/#impersonate?{query}";
     }
 
     private async Task OpenRenewDialogAsync()
@@ -195,5 +275,26 @@ public sealed partial class TenantDetailPage
         }
 
         return $"{(int)elapsed.TotalMinutes}m {elapsed.Seconds}s";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_pollCts is not null)
+        {
+            await _pollCts.CancelAsync();
+            _pollCts.Dispose();
+        }
+
+        if (_pollTask is not null)
+        {
+            try
+            {
+                await _pollTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected — polling was cancelled.
+            }
+        }
     }
 }

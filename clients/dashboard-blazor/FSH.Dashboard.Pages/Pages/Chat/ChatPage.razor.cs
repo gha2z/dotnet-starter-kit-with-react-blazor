@@ -14,11 +14,14 @@ public sealed partial class ChatPage : IAsyncDisposable
     private const int InitialPageSize = 100;
     private const int OlderPageSize = 50;
 
+    [Parameter] public Guid Id { get; set; }
+
     [Inject] private IChatService ChatService { get; set; } = default!;
     [Inject] private IHubConnectionService Hub { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
     [Inject] private IDialogService DialogService { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
 
     private readonly List<ChannelDto> _channels = [];
     private readonly List<MessageDto> _messages = [];
@@ -45,6 +48,39 @@ public sealed partial class ChatPage : IAsyncDisposable
         await LoadChannels();
         await EnsureHubConnected();
         SubscribeToSignalREvents();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await SyncChannelFromRouteAsync();
+    }
+
+    /// <summary>
+    /// Mirrors the React chat route (/chat[:channelId]): a channel id in the URL opens
+    /// that channel; without one, the first channel is auto-selected and the URL replaced.
+    /// </summary>
+    private async Task SyncChannelFromRouteAsync()
+    {
+        if (_loadingChannels || _channels.Count == 0)
+        {
+            return;
+        }
+
+        if (Id == Guid.Empty)
+        {
+            // No id in the route → select the first channel and replace the URL (deep-link parity).
+            if (_activeChannelId is null)
+            {
+                Nav.NavigateTo($"/chat/{_channels[0].Id}", replace: true);
+                await SelectChannel(_channels[0].Id);
+            }
+            return;
+        }
+
+        if (_activeChannelId != Id && _channels.Any(c => c.Id == Id))
+        {
+            await SelectChannel(Id);
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -264,6 +300,7 @@ public sealed partial class ChatPage : IAsyncDisposable
         }
 
         await LoadMessages(channelId);
+        Nav.NavigateTo($"/chat/{channelId}");
     }
 
     private async Task LoadMessages(Guid channelId)

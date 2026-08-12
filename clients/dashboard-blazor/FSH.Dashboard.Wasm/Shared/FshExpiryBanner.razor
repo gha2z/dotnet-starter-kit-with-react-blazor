@@ -1,0 +1,136 @@
+@namespace FSH.Dashboard.Wasm.Shared
+@using FSH.BlazorShared.Formatting
+@using FSH.BlazorShared.Models.Dashboard
+@using FSH.BlazorShared.Services
+@inject IDashboardService DashboardService
+
+@if (_view.Kind != BannerKind.None && (!_dismissed || _view.Kind == BannerKind.Expired))
+{
+    var severity = _view.Kind == BannerKind.Expired ? Severity.Error : _view.Kind == BannerKind.Grace ? Severity.Warning : Severity.Info;
+    var icon = _view.Kind == BannerKind.Nearing ? Icons.Material.Filled.Schedule : Icons.Material.Filled.Warning;
+
+    <MudAlert Severity="@severity" Elevation="0" Dense="true" Style="border-radius: 0; padding: 6px 24px;" role="status" aria-live="polite">
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@icon" Size="Size.Small" aria-hidden="true" />
+            <MudText Typo="Typo.body2" Class="flex-grow-1">@Message</MudText>
+            @if (_view.Kind != BannerKind.Expired)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                               aria-label="Dismiss subscription notice" title="Dismiss"
+                               OnClick="Dismiss" />
+            }
+        </div>
+    </MudAlert>
+}
+
+@code {
+    private const int NearingExpiryDays = 7;
+
+    // React parity: deriveBannerView (expiry-banner.tsx).
+    private enum BannerKind
+    {
+        None,
+        Grace,
+        Expired,
+        Nearing,
+    }
+
+    private sealed record BannerView(BannerKind Kind, int DaysLeft, string? GraceEndsLabel);
+
+    private BannerView _view = new(BannerKind.None, 0, null);
+    private bool _dismissed;
+
+    private string Message => _view.Kind switch
+    {
+        BannerKind.Expired => "Your subscription has expired. Contact your operator to renew and restore full access.",
+        BannerKind.Grace => $"Your subscription expired — {PluralizeDays(_view.DaysLeft)} of grace left (until {_view.GraceEndsLabel ?? "soon"}). Contact your operator to renew.",
+        BannerKind.Nearing => $"Your subscription expires in {PluralizeDays(_view.DaysLeft)}.",
+        _ => string.Empty,
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var status = await DashboardService.GetMyTenantStatusAsync();
+            _view = DeriveView(status);
+        }
+        catch
+        {
+            // Best effort — a failed status lookup must never break the shell.
+            _view = new BannerView(BannerKind.None, 0, null);
+        }
+    }
+
+    private static BannerView DeriveView(TenantStatusDto? status)
+    {
+        if (status is null)
+        {
+            return new BannerView(BannerKind.None, 0, null);
+        }
+
+        if (status.ExpiryState == "InGrace")
+        {
+            var days = DaysUntil(status.GraceEndsUtc);
+            return new BannerView(BannerKind.Grace, days, FormatDate(status.GraceEndsUtc));
+        }
+
+        if (status.ExpiryState == "Expired")
+        {
+            return new BannerView(BannerKind.Expired, 0, null);
+        }
+
+        if (status.ExpiryState == "Active")
+        {
+            var days = DaysUntil(status.ValidUpto);
+            if (days <= NearingExpiryDays)
+            {
+                return new BannerView(BannerKind.Nearing, days, null);
+            }
+        }
+
+        return new BannerView(BannerKind.None, 0, null);
+    }
+
+    /// <summary>
+    /// Whole calendar-ish days from now until the ISO date, never negative.
+    /// Ceil so "23 hours left" still reads as "1 day" (React parity).
+    /// </summary>
+    private static int DaysUntil(string? iso)
+    {
+        if (!DateTime.TryParse(iso, out var target))
+        {
+            return 0;
+        }
+
+        if (target.Kind == DateTimeKind.Unspecified)
+        {
+            target = DateTime.SpecifyKind(target, DateTimeKind.Utc);
+        }
+
+        var diff = target - DateTime.UtcNow;
+        return diff <= TimeSpan.Zero ? 0 : (int)Math.Ceiling(diff.TotalDays);
+    }
+
+    private static string? FormatDate(string? iso)
+    {
+        if (!DateTime.TryParse(iso, out var parsed))
+        {
+            return null;
+        }
+
+        if (parsed.Kind == DateTimeKind.Unspecified)
+        {
+            parsed = DateTime.SpecifyKind(parsed, DateTimeKind.Utc);
+        }
+
+        return FshFormat.DateShort(parsed);
+    }
+
+    private static string PluralizeDays(int days) => $"{days} day{(days == 1 ? "" : "s")}";
+
+    private void Dismiss()
+    {
+        _dismissed = true;
+    }
+}

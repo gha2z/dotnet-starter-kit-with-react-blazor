@@ -1,186 +1,282 @@
 @page "/"
 @attribute [Authorize]
 @implements IDisposable
+@using System.Security.Claims
 
-<FshPageHeader Title="Overview" Description="Your tenant's billing at a glance — plans, invoices, and what's outstanding."
-               Icon="@Icons.Material.Filled.Dashboard">
-</FshPageHeader>
+<style>
+    .fsh-detail-card {
+        border: 1px solid var(--mud-palette-divider);
+        border-radius: 12px;
+        background: var(--mud-palette-surface);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+    }
+    .fsh-detail-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 20px;
+        border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
+    }
+    .fsh-detail-card-body {
+        padding: 20px;
+    }
+    .fsh-greeting-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--mud-palette-text-secondary);
+        border: 1px solid var(--mud-palette-divider);
+        background: transparent;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+        text-decoration: none;
+    }
+    .fsh-greeting-action:hover {
+        background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
+        color: var(--mud-palette-primary);
+        border-color: var(--mud-palette-primary);
+    }
+</style>
+
+<!-- Personalized Greeting Header -->
+<div class="fsh-enter">
+    <div class="d-flex flex-column flex-sm-row align-sm-center justify-space-between gap-3 mb-4">
+        <div>
+            <MudText Typo="Typo.h4" Class="font-weight-semibold" Style="letter-spacing: -0.02em;">
+                @_greeting
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+                @_dateCaption . @_tenantLabel
+            </MudText>
+        </div>
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh"
+                       Disabled="@_refreshing" OnClick="RefreshAllAsync">
+                @(_refreshing ? "Refreshing…" : "Refresh")
+            </MudButton>
+        </div>
+    </div>
+</div>
 
 @if (_tenantError is not null || _subscriptionError is not null)
 {
     <FshErrorBand Message="@((_subscriptionError ?? _tenantError)!)" />
 }
 
-<div class="fsh-enter">
-    <!-- Stats Cards -->
-    <MudGrid>
+<!-- Stat Cards -->
+<div class="fsh-enter fsh-enter-1">
+    <MudGrid Class="mb-4">
         <MudItem xs="12" sm="6" xl="3">
-            <FshStatTile Label="Plans" Value="@FormatNumber(_planTotal)" Hint="@(_planTotal is null ? "loading…" : $"{_activePlans} active")" />
+            <FshStatTile Icon="@Icons.Material.Filled.Folder" Label="Plans" Value="@FormatNumber(_planTotal)"
+                         Hint="@(_planTotal is null ? "loading…" : $"{_activePlans} active")" />
         </MudItem>
         <MudItem xs="12" sm="6" xl="3">
-            <FshStatTile Label="Invoices" Value="@FormatNumber(_invoiceTotal)" Hint="@(_invoiceTotal is null ? "loading…" : $"{_invoiceLedgerTotal} total ledger")" />
+            <FshStatTile Icon="@Icons.Material.Filled.Receipt" Label="Invoices" Value="@FormatNumber(_invoiceTotal)"
+                         Hint="@(_invoiceTotal is null ? "loading…" : $"{_invoiceLedgerTotal} total ledger")" />
         </MudItem>
         <MudItem xs="12" sm="6" xl="3">
-            <FshStatTile Label="Outstanding" Value="@FormatNumber(_outstandingCount)" Hint="issued, awaiting payment"
+            <FshStatTile Icon="@Icons.Material.Filled.Pending" Label="Outstanding" Value="@FormatNumber(_outstandingCount)"
+                         Hint="issued, awaiting payment"
                          Tone="@(_outstandingCount > 0 ? Color.Warning : Color.Inherit)" />
         </MudItem>
         <MudItem xs="12" sm="6" xl="3">
-            <FshStatTile Label="Usage" Value="@FormatNumber(_usageSnapshots.Count)" Hint="tracked resources" />
+            <FshStatTile Icon="@Icons.Material.Filled.Speed" Label="Usage" Value="@FormatNumber(_usageSnapshots.Count)"
+                         Hint="tracked resources" />
         </MudItem>
     </MudGrid>
+</div>
 
-    <!-- Main Widgets -->
-    <MudGrid Class="mt-4">
-        <!-- Tenant Status -->
-        <MudItem xs="12" md="6" xl="3">
-            <MudPaper Elevation="0" Class="d-flex flex-column rounded-xl p-4 h-100"
-                      Style="border: 1px solid var(--mud-palette-divider);">
-                <div class="d-flex align-center justify-space-between mb-3">
-                    <MudText Class="fsh-mono-label">TENANT STATUS</MudText>
-                    <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" Color="Color.Secondary" />
-                </div>
-                @if (_loadingTenant)
-                {
-                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="align-self-center" />
-                }
-                else if (_tenantError is not null)
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Error">@_tenantError</MudText>
-                }
-                else if (_tenantStatus is not null)
-                {
-                    <MudText Typo="Typo.h6" Class="font-weight-medium fsh-truncate">@_tenantStatus.Name</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@_tenantStatus.AdminEmail</MudText>
-                    <div class="mt-3">
-                        <FshStatusPill Text="@GetTenantStatusText()" Tone="@GetTenantStatusColor()" />
+<!-- Main Content: Sidebar + Right Grid -->
+<div class="fsh-enter fsh-enter-2">
+    <MudGrid>
+        <!-- Left Sidebar: Subscription + Tenant Status -->
+        <MudItem xs="12" lg="4" xl="3">
+            <div class="d-flex flex-column gap-4">
+                <!-- Subscription Card -->
+                <div class="fsh-detail-card">
+                    <div class="fsh-detail-card-header">
+                        <MudText Class="fsh-mono-label">SUBSCRIPTION</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.CardMembership" Size="Size.Small" Color="Color.Secondary" />
                     </div>
-                    @if (_tenantStatus.Plan is not null)
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3">Plan: @_tenantStatus.Plan</MudText>
-                    }
-                }
-            </MudPaper>
+                    <div class="fsh-detail-card-body">
+                        @if (_loadingSubscription)
+                        {
+                            <div class="d-flex justify-center py-4">
+                                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                            </div>
+                        }
+                        else if (_subscriptionError is not null)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Error">@_subscriptionError</MudText>
+                        }
+                        else if (_subscription is null)
+                        {
+                            <MudText Typo="Typo.body2" Class="mb-3">No active subscription</MudText>
+                            <MudButton Variant="Variant.Filled" Size="Size.Small" OnClick="NavigateToSubscription">
+                                View plans
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.h6" Class="font-weight-medium">@(_subscription.PlanKey.ToUpper())</MudText>
+                            <div class="mt-1">
+                                <FshStatusPill Text="@GetSubscriptionStatusText()" Tone="@GetSubscriptionStatusColor()" />
+                            </div>
+                            @if (_subscription.EndUtc.HasValue)
+                            {
+                                var daysLeft = (_subscription.EndUtc.Value - DateTime.UtcNow).Days;
+                                <MudText Typo="Typo.caption" Color="@(daysLeft < 7 ? Color.Error : Color.Secondary)" Class="mt-3 d-block">
+                                    Renews @_subscription.EndUtc.Value.ToString("MMM d, yyyy") (@daysLeft days left)
+                                </MudText>
+                            }
+                            <div class="mt-3 d-flex gap-2">
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="NavigateToSubscription">Manage</MudButton>
+                                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="NavigateToBilling">Billing</MudButton>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Tenant Status Card -->
+                <div class="fsh-detail-card">
+                    <div class="fsh-detail-card-header">
+                        <MudText Class="fsh-mono-label">TENANT STATUS</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" Color="Color.Secondary" />
+                    </div>
+                    <div class="fsh-detail-card-body">
+                        @if (_loadingTenant)
+                        {
+                            <div class="d-flex justify-center py-4">
+                                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                            </div>
+                        }
+                        else if (_tenantError is not null)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Error">@_tenantError</MudText>
+                        }
+                        else if (_tenantStatus is not null)
+                        {
+                            <MudText Typo="Typo.h6" Class="font-weight-medium fsh-truncate">@_tenantStatus.Name</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@_tenantStatus.AdminEmail</MudText>
+                            <div class="mt-2">
+                                <FshStatusPill Text="@GetTenantStatusText()" Tone="@GetTenantStatusColor()" />
+                            </div>
+                            @if (_tenantStatus.Plan is not null)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2 d-block">Plan: @_tenantStatus.Plan</MudText>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
         </MudItem>
 
-        <!-- Subscription -->
-        <MudItem xs="12" md="6" xl="3">
-            <MudPaper Elevation="0" Class="d-flex flex-column rounded-xl p-4 h-100"
-                      Style="border: 1px solid var(--mud-palette-divider);">
-                <div class="d-flex align-center justify-space-between mb-3">
-                    <MudText Class="fsh-mono-label">SUBSCRIPTION</MudText>
-                    <MudIcon Icon="@Icons.Material.Filled.CardMembership" Size="Size.Small" Color="Color.Secondary" />
-                </div>
-                @if (_loadingSubscription)
-                {
-                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="align-self-center" />
-                }
-                else if (_subscriptionError is not null)
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Error">@_subscriptionError</MudText>
-                }
-                else if (_subscription is null)
-                {
-                    <MudText Typo="Typo.body2" Class="mb-3">No active subscription</MudText>
-                    <MudButton Variant="Variant.Filled" Size="Size.Small" OnClick="NavigateToSubscription">
-                        View plans
-                    </MudButton>
-                }
-                else
-                {
-                    <MudText Typo="Typo.h6" Class="font-weight-medium">@(_subscription.PlanKey.ToUpper())</MudText>
-                    <div class="mt-1">
-                        <FshStatusPill Text="@GetSubscriptionStatusText()" Tone="@GetSubscriptionStatusColor()" />
-                    </div>
-                    @if (_subscription.EndUtc.HasValue)
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3">
-                            Renews @_subscription.EndUtc.Value.ToString("MMM d, yyyy")
-                            (@((_subscription.EndUtc.Value - DateTime.UtcNow).Days) days left)
-                        </MudText>
-                    }
-                    <div class="mt-3 d-flex gap-2">
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="NavigateToSubscription">Manage</MudButton>
-                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="NavigateToBilling">Billing</MudButton>
-                    </div>
-                }
-            </MudPaper>
-        </MudItem>
-
-        <!-- Usage Summary -->
-        <MudItem xs="12" md="6" xl="3">
-            <MudPaper Elevation="0" Class="d-flex flex-column rounded-xl p-4 h-100"
-                      Style="border: 1px solid var(--mud-palette-divider);">
-                <div class="d-flex align-center justify-space-between mb-3">
-                    <MudText Class="fsh-mono-label">USAGE</MudText>
-                    <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" Color="Color.Secondary" />
-                </div>
-                @if (_loadingUsage)
-                {
-                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="align-self-center" />
-                }
-                else if (_usageError is not null)
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Error">@_usageError</MudText>
-                }
-                else if (!_usageSnapshots.Any())
-                {
-                    <MudText Typo="Typo.body2">No usage data available</MudText>
-                }
-                else
-                {
-                    @foreach (var usage in _usageSnapshots.Take(3))
-                    {
-                        <div class="d-flex align-center justify-space-between py-1">
-                            <MudText Typo="Typo.body2">@usage.Resource</MudText>
-                            <MudText Typo="Typo.body2" Class="font-weight-medium">@usage.UsedUnits / @usage.LimitUnits</MudText>
-                        </div>
-                    }
-                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="mt-auto align-self-start" OnClick="NavigateToUsage">
-                        View details
-                    </MudButton>
-                }
-            </MudPaper>
-        </MudItem>
-
-        <!-- Recent Activity + SSE -->
-        <MudItem xs="12" md="6" xl="3">
-            <MudPaper Elevation="0" Class="d-flex flex-column rounded-xl p-4 h-100"
-                      Style="border: 1px solid var(--mud-palette-divider);">
-                <div class="d-flex align-center justify-space-between mb-3">
-                    <MudText Class="fsh-mono-label">RECENT ACTIVITY</MudText>
-                    @if (_isSseConnected)
-                    {
-                        <MudTooltip Text="Live updates connected">
-                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">LIVE</MudChip>
-                        </MudTooltip>
-                    }
-                </div>
-                @if (_loadingAudits)
-                {
-                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="align-self-center" />
-                }
-                else if (_auditError is not null)
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Error">@_auditError</MudText>
-                }
-                else if (!_recentAudits.Any())
-                {
-                    <MudText Typo="Typo.body2">No recent activity</MudText>
-                }
-                else
-                {
-                    @foreach (var audit in _recentAudits.Take(5))
-                    {
-                        <div class="d-flex align-center gap-2 py-1">
-                            <MudIcon Icon="@GetAuditIcon(audit.EventType)" Size="Size.Small" Color="Color.Secondary" />
-                            <div class="d-flex flex-column flex-grow-1" style="min-width: 0;">
-                                <MudText Typo="Typo.body2" Class="fsh-truncate">@(audit.Source?.Split('.').Last() ?? "Unknown")</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@audit.OccurredAtUtc.ToLocalTime().ToString("MMM d, HH:mm")</MudText>
+        <!-- Right Grid: Usage + Activity -->
+        <MudItem xs="12" lg="8" xl="9">
+            <div class="d-flex flex-column gap-4">
+                <MudGrid>
+                    <!-- Usage Summary -->
+                    <MudItem xs="12" md="6">
+                        <div class="fsh-detail-card h-100">
+                            <div class="fsh-detail-card-header">
+                                <MudText Class="fsh-mono-label">USAGE</MudText>
+                                <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" Color="Color.Secondary" />
+                            </div>
+                            <div class="fsh-detail-card-body">
+                                @if (_loadingUsage)
+                                {
+                                    <div class="d-flex justify-center py-4">
+                                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                                    </div>
+                                }
+                                else if (_usageError is not null)
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Error">@_usageError</MudText>
+                                }
+                                else if (!_usageSnapshots.Any())
+                                {
+                                    <MudText Typo="Typo.body2">No usage data available</MudText>
+                                }
+                                else
+                                {
+                                    @foreach (var usage in _usageSnapshots.Take(3))
+                                    {
+                                        <div class="d-flex align-center justify-space-between py-2"
+                                             style="border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 40%, transparent);">
+                                            <MudText Typo="Typo.body2">@usage.Resource</MudText>
+                                            <div class="d-flex align-center gap-2">
+                                                <MudText Typo="Typo.body2" Class="font-weight-medium"
+                                                         Style="font-variant-numeric: tabular-nums;">
+                                                    @usage.UsedUnits / @usage.LimitUnits
+                                                </MudText>
+                                                @if (usage.LimitUnits > 0)
+                                                {
+                                                    var pct = (int)(usage.UsedUnits * 100 / usage.LimitUnits);
+                                                    <div style="width: 40px; height: 4px; border-radius: 2px; background: var(--mud-palette-lines-default);">
+                                                        <div style="width: @(Math.Min(pct, 100))%; height: 100%; border-radius: 2px; background: @(pct > 90 ? "var(--mud-palette-error)" : pct > 70 ? "var(--mud-palette-warning)" : "var(--mud-palette-success)");"></div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="mt-2 align-self-start"
+                                               OnClick="NavigateToUsage">View details</MudButton>
+                                }
                             </div>
                         </div>
-                    }
-                }
-            </MudPaper>
+                    </MudItem>
+
+                    <!-- Recent Activity -->
+                    <MudItem xs="12" md="6">
+                        <div class="fsh-detail-card h-100">
+                            <div class="fsh-detail-card-header">
+                                <MudText Class="fsh-mono-label">RECENT ACTIVITY</MudText>
+                                @if (_isSseConnected)
+                                {
+                                    <MudTooltip Text="Live updates connected">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">LIVE</MudChip>
+                                    </MudTooltip>
+                                }
+                            </div>
+                            <div class="fsh-detail-card-body">
+                                @if (_loadingAudits)
+                                {
+                                    <div class="d-flex justify-center py-4">
+                                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                                    </div>
+                                }
+                                else if (_auditError is not null)
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Error">@_auditError</MudText>
+                                }
+                                else if (!_recentAudits.Any())
+                                {
+                                    <MudText Typo="Typo.body2">No recent activity</MudText>
+                                }
+                                else
+                                {
+                                    @foreach (var audit in _recentAudits.Take(5))
+                                    {
+                                        <div class="d-flex align-center gap-2 py-2"
+                                             style="border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 40%, transparent);">
+                                            <MudIcon Icon="@GetAuditIcon(audit.EventType)" Size="Size.Small" Color="Color.Secondary" />
+                                            <div class="d-flex flex-column flex-grow-1" style="min-width: 0;">
+                                                <MudText Typo="Typo.body2" Class="fsh-truncate">@(audit.Source?.Split('.').Last() ?? "Unknown")</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@audit.OccurredAtUtc.ToLocalTime().ToString("MMM d, HH:mm")</MudText>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </MudItem>
+                </MudGrid>
+            </div>
         </MudItem>
     </MudGrid>
 </div>

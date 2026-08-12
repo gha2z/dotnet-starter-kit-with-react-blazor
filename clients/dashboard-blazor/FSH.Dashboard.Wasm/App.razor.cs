@@ -1,5 +1,6 @@
 using FSH.BlazorShared.Auth;
 using FSH.BlazorShared.Sse;
+using FSH.BlazorShared.Theming;
 using FSH.Dashboard.Wasm.Auth;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
@@ -18,11 +19,23 @@ public sealed partial class App : IDisposable
     [Inject] private ImpersonationHandoff ImpersonationHandoff { get; set; } = default!;
     [Inject] private LazyAssemblyLoader LazyLoader { get; set; } = default!;
     [Inject] private ILogger<App> Logger { get; set; } = default!;
+    [Inject] private FshThemeService Theme { get; set; } = default!;
 
     private IDisposable? _sseSub;
     private bool _sseStarting;
     private bool _pageAssemblyLoaded;
     private bool _loadingPages;
+
+    protected override void OnInitialized()
+    {
+        Theme.Changed += OnThemeChanged;
+    }
+
+    private void OnThemeChanged()
+    {
+        _theme = FshMudTheme.CreateDashboard(FshAppearanceOptions.ResolveAccent(Theme.AccentId, Theme.CustomAccent));
+        InvokeAsync(StateHasChanged);
+    }
 
     private async Task OnNavigateAsync(NavigationContext context)
     {
@@ -154,6 +167,7 @@ public sealed partial class App : IDisposable
 
     public void Dispose()
     {
+        Theme.Changed -= OnThemeChanged;
         TokenStore.TokensChanged -= OnTokensChanged;
         _sseSub?.Dispose();
     }

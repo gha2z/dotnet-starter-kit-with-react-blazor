@@ -61,6 +61,16 @@
             </div>
         </div>
         <div class="d-flex flex-wrap gap-2">
+            <FshPermissionGate Perms="@(new[] { IdentityPermissions.Users.Impersonate })">
+                @if (_tenant.IsActive)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Filled.SupervisorAccount"
+                               OnClick="OpenImpersonateDialogAsync">
+                        Impersonate user
+                    </MudButton>
+                }
+            </FshPermissionGate>
             <FshPermissionGate Perms="@(new[] { MultitenancyPermissions.Tenants.UpgradeSubscription })">
                 <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.EventRepeat"
                            OnClick="OpenRenewDialogAsync">
@@ -175,4 +185,10 @@
             </MudPaper>
         </MudItem>
     </MudGrid>
+
+    <ActiveGrantsCard TenantId="@Id" />
+
+    <FshPermissionGate Perms="@(new[] { MultitenancyPermissions.Tenants.ViewTheme })">
+        <TenantBrandingCard TenantId="@Id" />
+    </FshPermissionGate>
 }

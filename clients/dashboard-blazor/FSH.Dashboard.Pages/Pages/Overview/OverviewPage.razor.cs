@@ -2,9 +2,11 @@ using FSH.BlazorShared.Models;
 using FSH.BlazorShared.Services;
 using FSH.BlazorShared.Sse;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor;
 using FSH.BlazorShared.Models.Audits;
 using FSH.BlazorShared.Models.Dashboard;
+using System.Security.Claims;
 
 namespace FSH.Dashboard.Wasm.Pages.Overview;
 
@@ -14,6 +16,7 @@ public sealed partial class OverviewPage
     [Inject] private IDashboardService DashboardService { get; set; } = default!;
     [Inject] private ISseService SseService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthProvider { get; set; } = default!;
 
     // Subscription data
     private SubscriptionDto? _subscription;
@@ -27,6 +30,7 @@ public sealed partial class OverviewPage
     private bool _loadingTenant = true;
     private bool _loadingUsage = true;
     private bool _loadingAudits = true;
+    private bool _refreshing;
 
     // Error states
     private string? _subscriptionError;
@@ -41,12 +45,19 @@ public sealed partial class OverviewPage
     private int _invoiceLedgerTotal;
     private int _outstandingCount;
 
+    // Greeting
+    private string _greeting = "Overview";
+    private string _dateCaption = DateTime.Now.ToString("dddd, MMMM d");
+    private string _tenantLabel = string.Empty;
+
     // Event subscription — the App root owns the SSE connection lifecycle
     // (start/stop on login/logout); this page only observes its state.
     protected override async Task OnInitializedAsync()
     {
         SseService.ConnectionChanged += OnSseConnectionChanged;
         _isSseConnected = SseService.IsConnected;
+
+        await BuildGreetingAsync();
 
         // Load all data in parallel
         var loadTasks = new List<Task>
@@ -59,6 +70,28 @@ public sealed partial class OverviewPage
         };
 
         await Task.WhenAll(loadTasks);
+    }
+
+    private async Task BuildGreetingAsync()
+    {
+        try
+        {
+            var authState = await AuthProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var firstName = user.FindFirst(ClaimTypes.GivenName)?.Value
+                            ?? user.Identity?.Name?.Split(' ').FirstOrDefault()
+                            ?? string.Empty;
+
+            var hour = DateTime.Now.Hour;
+            var timeOfDay = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+            _greeting = string.IsNullOrEmpty(firstName) ? $"{timeOfDay}!" : $"{timeOfDay}, {firstName}";
+        }
+        catch
+        {
+            _greeting = "Good day!";
+        }
+
+        _dateCaption = DateTime.Now.ToString("dddd, MMMM d");
     }
 
     private void OnSseConnectionChanged()
@@ -76,6 +109,7 @@ public sealed partial class OverviewPage
         {
             _loadingTenant = true;
             _tenantStatus = await DashboardService.GetMyTenantStatusAsync();
+            _tenantLabel = _tenantStatus?.Name ?? "Tenant";
         }
         catch (Exception ex)
         {
@@ -84,6 +118,28 @@ public sealed partial class OverviewPage
         finally
         {
             _loadingTenant = false;
+        }
+    }
+
+    private async Task RefreshAllAsync()
+    {
+        _refreshing = true;
+        StateHasChanged();
+        try
+        {
+            var loadTasks = new List<Task>
+            {
+                LoadTenantStatusAsync(),
+                LoadSubscriptionAsync(),
+                LoadUsageSnapshotsAsync(),
+                LoadRecentAuditsAsync(),
+                LoadBillingStatsAsync()
+            };
+            await Task.WhenAll(loadTasks);
+        }
+        finally
+        {
+            _refreshing = false;
         }
     }
 

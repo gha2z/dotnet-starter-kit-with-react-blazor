@@ -63,6 +63,16 @@ public abstract class TestSetup : BunitContext, IAsyncLifetime
                 _stored[key2] = value;
             }
 
+            if (identifier == "getPreference" && args?.Length == 1 && args[0] is string prefKey)
+            {
+                return ValueTask.FromResult(GetStored(prefKey) is { } stored ? (TValue)(object)stored : default(TValue)!)!;
+            }
+
+            if (identifier == "setPreference" && args?.Length == 2 && args[0] is string prefKey2 && args[1] is string value2)
+            {
+                _stored[prefKey2] = value2;
+            }
+
             return ValueTask.FromResult(default(TValue))!;
         }
 

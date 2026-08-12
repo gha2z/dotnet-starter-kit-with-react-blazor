@@ -16,10 +16,14 @@ public class TenantDetailPageTests : TestSetup
     private const string TenantId = "acme-corp";
 
     private readonly ITenantService _tenantService = Substitute.For<ITenantService>();
+    private readonly IImpersonationService _impersonationService = Substitute.For<IImpersonationService>();
+    private readonly ITenantThemeService _themeService = Substitute.For<ITenantThemeService>();
 
     public TenantDetailPageTests()
     {
         Services.AddSingleton(_tenantService);
+        Services.AddSingleton(_impersonationService);
+        Services.AddSingleton(_themeService);
     }
 
     private static TenantStatusDto SampleStatus(bool isActive = true, string? plan = "pro", string expiryState = "Active") =>
@@ -179,5 +183,91 @@ public class TenantDetailPageTests : TestSetup
         var cut = RenderPage();
 
         cut.WaitForAssertion(() => cut.Markup.ShouldContain("Failed to load tenant: nope"));
+    }
+
+    [Fact]
+    public void Impersonate_button_visible_with_permission_on_active_tenant()
+    {
+        Authorization.SetAuthorized("admin");
+        Authorization.SetPolicies(IdentityPermissions.Users.Impersonate);
+        StubStatus(SampleStatus());
+        StubProvisioning(null);
+
+        var cut = RenderPage();
+
+        cut.WaitForAssertion(() => cut.Markup.ShouldContain("Impersonate user"));
+    }
+
+    [Fact]
+    public void Impersonate_button_hidden_without_permission()
+    {
+        StubStatus(SampleStatus());
+        StubProvisioning(null);
+
+        var cut = RenderPage();
+
+        cut.WaitForAssertion(() => cut.Markup.ShouldContain("Acme Corp"));
+        cut.FindAll("button").Any(b => b.TextContent.Contains("Impersonate user")).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Impersonate_button_hidden_on_inactive_tenant()
+    {
+        Authorization.SetAuthorized("admin");
+        Authorization.SetPolicies(IdentityPermissions.Users.Impersonate);
+        StubStatus(SampleStatus(isActive: false));
+        StubProvisioning(null);
+
+        var cut = RenderPage();
+
+        cut.WaitForAssertion(() => cut.Markup.ShouldContain("Acme Corp"));
+        cut.FindAll("button").Any(b => b.TextContent.Contains("Impersonate user")).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Branding_card_renders_theme_when_view_theme_permission()
+    {
+        Authorization.SetAuthorized("admin");
+        Authorization.SetPolicies(MultitenancyPermissions.Tenants.ViewTheme);
+        StubStatus(SampleStatus());
+        StubProvisioning(null);
+        _themeService.GetThemeAsync(TenantId, Arg.Any<CancellationToken>())
+            .Returns(new FSH.BlazorShared.Models.Tenants.TenantThemeDto
+            {
+                LightPalette = new FSH.BlazorShared.Models.Tenants.PaletteDto { Primary = "#123456" },
+            });
+
+        var cut = RenderPage();
+
+        cut.WaitForAssertion(() => cut.Markup.ShouldContain("Branding"));
+        cut.WaitForAssertion(() => cut.Markup.ShouldContain("#123456"));
+    }
+
+    [Fact]
+    public void Branding_card_hidden_without_view_theme_permission()
+    {
+        StubStatus(SampleStatus());
+        StubProvisioning(null);
+
+        var cut = RenderPage();
+
+        cut.WaitForAssertion(() => cut.Markup.ShouldContain("Acme Corp"));
+        cut.Markup.ShouldNotContain("Save branding");
+    }
+
+    [Fact]
+    public void Running_provisioning_polls_until_completed()
+    {
+        StubStatus(SampleStatus());
+        var running = SampleProvisioning("Running");
+        var completed = SampleProvisioning("Completed");
+        var calls = 0;
+        _tenantService.GetProvisioningAsync(TenantId, Arg.Any<CancellationToken>())
+            .Returns(_ => Interlocked.Increment(ref calls) == 1 ? running : completed);
+
+        var cut = RenderPage();
+
+        cut.WaitForAssertion(() => cut.Markup.ShouldContain("Completed"));
+        calls.ShouldBeGreaterThanOrEqualTo(2);
     }
 }

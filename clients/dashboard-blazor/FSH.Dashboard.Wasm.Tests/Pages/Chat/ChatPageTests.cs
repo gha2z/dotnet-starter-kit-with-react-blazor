@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using FSH.BlazorShared.Models.Chat;
 using FSH.BlazorShared.Realtime;
 using FSH.BlazorShared.Services;
@@ -28,10 +29,11 @@ public sealed class ChatPageTests : TestSetup
     private static ChannelDto SampleChannel(
         string name = "General",
         ChannelType type = ChannelType.Channel,
-        int unread = 0) =>
+        int unread = 0,
+        DateTime? lastMessageAt = null) =>
         new(Guid.NewGuid(), type, name, name.ToLowerInvariant(), $"Discussion in {name}",
             false, "user-1", DateTime.UtcNow.AddDays(-7), DateTime.UtcNow.AddHours(-2),
-            DateTime.UtcNow.AddMinutes(-30), unread,
+            lastMessageAt ?? DateTime.UtcNow.AddMinutes(-30), unread,
             [new ChannelMemberDto(Guid.NewGuid(), "user-1", ChannelMemberRole.Admin, DateTime.UtcNow.AddDays(-7), null)]);
 
     private static MessageDto SampleMessage(string body = "Hello world", string author = "user-1") =>
@@ -39,22 +41,32 @@ public sealed class ChatPageTests : TestSetup
             DateTime.UtcNow.AddMinutes(-5), [], []);
 
     [Fact]
-    public void Renders_empty_state_when_no_channel_selected()
+    public void Renders_channels_and_auto_selects_first_channel()
     {
+        var first = SampleChannel("General", lastMessageAt: DateTime.UtcNow.AddHours(-1));
+        var second = SampleChannel("Random", ChannelType.Channel, 3, lastMessageAt: DateTime.UtcNow.AddHours(-2));
         _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns([SampleChannel("General"), SampleChannel("Random", ChannelType.Channel, 3)]);
+            .Returns([first, second]);
+        _chat.ListChannelMessagesAsync(first.Id, Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
 
         var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
 
         cut.FindAll(".fsh-chat-channel-item").Count.ShouldBe(2);
-        cut.FindAll(".fsh-chat-channel-active").Count.ShouldBe(0);
+        cut.FindAll(".fsh-chat-channel-active").Count.ShouldBe(1);
+        Services.GetRequiredService<BunitNavigationManager>().Uri.ShouldEndWith($"/chat/{first.Id}");
     }
 
     [Fact]
     public void Displays_channels_with_unread_badge()
     {
         _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns([SampleChannel("General"), SampleChannel("Random", unread: 5)]);
+            .Returns([
+                SampleChannel("General", lastMessageAt: DateTime.UtcNow.AddHours(-1)),
+                SampleChannel("Random", ChannelType.Channel, 5, lastMessageAt: DateTime.UtcNow.AddHours(-2))
+            ]);
+        _chat.ListChannelMessagesAsync(Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
 
         var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
 
@@ -75,10 +87,10 @@ public sealed class ChatPageTests : TestSetup
     }
 
     [Fact]
-    public void Shows_placeholder_when_no_channel_selected()
+    public void Shows_placeholder_when_no_channels_to_auto_select()
     {
         _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns([SampleChannel("General")]);
+            .Returns([]);
 
         var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
 
@@ -102,6 +114,55 @@ public sealed class ChatPageTests : TestSetup
 
         cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 2, timeout: TimeSpan.FromSeconds(5));
         cut.FindAll(".fsh-chat-message").Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Deep_link_with_channel_id_opens_that_channel()
+    {
+        var first = SampleChannel("General");
+        var second = SampleChannel("Random", ChannelType.Channel, 3);
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([first, second]);
+        _chat.ListChannelMessagesAsync(second.Id, Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([SampleMessage("Deep linked")]);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>(parameters => parameters.Add(p => p.Id, second.Id));
+
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 1, timeout: TimeSpan.FromSeconds(5));
+        var active = cut.Find(".fsh-chat-channel-active");
+        active.TextContent.ShouldContain("Random");
+        Services.GetRequiredService<BunitNavigationManager>().Uri.ShouldEndWith($"/chat/{second.Id}");
+    }
+
+    [Fact]
+    public void Deep_link_with_unknown_channel_id_keeps_placeholder()
+    {
+        var channel = SampleChannel("General");
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([channel]);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>(parameters => parameters.Add(p => p.Id, Guid.NewGuid()));
+
+        cut.Markup.ShouldContain("Select a channel to start chatting");
+        cut.FindAll(".fsh-chat-channel-active").Count.ShouldBe(0);
+    }
+
+    [Fact]
+    public void Clicking_channel_navigates_to_chat_url()
+    {
+        var first = SampleChannel("General", lastMessageAt: DateTime.UtcNow.AddHours(-1));
+        var second = SampleChannel("Random", ChannelType.Channel, 3, lastMessageAt: DateTime.UtcNow.AddHours(-2));
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([first, second]);
+        _chat.ListChannelMessagesAsync(Arg.Any<Guid>(), Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
+
+        cut.FindAll(".fsh-chat-channel-item")[1].Click();
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-channel-active").Count == 1, timeout: TimeSpan.FromSeconds(5));
+
+        Services.GetRequiredService<BunitNavigationManager>().Uri.ShouldEndWith($"/chat/{second.Id}");
     }
 
     [Fact]
@@ -169,8 +230,6 @@ public sealed class ChatPageTests : TestSetup
             .Returns(Task.CompletedTask);
 
         var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
-
-        cut.Find(".fsh-chat-channel-item").Click();
         cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 100, timeout: TimeSpan.FromSeconds(5));
 
         await cut.InvokeAsync(() => cut.Instance.OnScrollTopReached());
@@ -195,8 +254,6 @@ public sealed class ChatPageTests : TestSetup
             .Returns(Task.CompletedTask);
 
         var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
-
-        cut.Find(".fsh-chat-channel-item").Click();
         cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 100, timeout: TimeSpan.FromSeconds(5));
 
         await cut.InvokeAsync(() => cut.Instance.OnScrollTopReached());
@@ -224,8 +281,6 @@ public sealed class ChatPageTests : TestSetup
             .Returns(_ => Task.FromResult(initialPage), _ => gate.Task);
 
         var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
-
-        cut.Find(".fsh-chat-channel-item").Click();
         cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 100, timeout: TimeSpan.FromSeconds(5));
 
         // First scroll-top call starts the gated older-load; second must be ignored while it's in flight.
@@ -242,7 +297,7 @@ public sealed class ChatPageTests : TestSetup
     public async Task Scroll_top_does_nothing_without_an_active_channel()
     {
         _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns([SampleChannel("General")]);
+            .Returns([]);
 
         var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
 

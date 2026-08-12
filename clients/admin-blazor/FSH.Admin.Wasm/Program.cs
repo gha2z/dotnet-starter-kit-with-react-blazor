@@ -128,6 +128,7 @@ builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<ITenantThemeService, TenantThemeService>();
 builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IWebhookService, WebhookService>();

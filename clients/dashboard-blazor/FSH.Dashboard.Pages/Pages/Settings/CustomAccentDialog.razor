@@ -1,0 +1,67 @@
+@using FSH.BlazorShared.Theming
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+            Adjust the hue and intensity to build your own accent. The preview
+            shows the light and dark tones the dashboard will use.
+        </MudText>
+
+        <div class="d-flex align-center gap-3 mb-2">
+            <div class="fsh-accent-swatch fsh-accent-swatch-lg"
+                 style="@PreviewStyle"></div>
+            <div>
+                <MudText Typo="Typo.h6">@($"Hue {Spec.Hue:0}°")</MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    Chroma @($"{Spec.Chroma:0.###}") · @PreviewHex
+                </MudText>
+            </div>
+        </div>
+
+        <MudText Typo="Typo.body2" Class="mt-2">Hue</MudText>
+        <MudSlider T="double" Value="Spec.Hue" ValueChanged="OnHueChanged"
+                   Min="0" Max="360" Step="1" Color="Color.Primary" />
+        <MudText Typo="Typo.body2">Intensity</MudText>
+        <MudSlider T="double" Value="Spec.Chroma" ValueChanged="OnChromaChanged"
+                   Min="0.4" Max="1.4" Step="0.05" Color="Color.Primary" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Default" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save">Apply</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudBlazor.IMudDialogInstance? Instance { get; set; }
+
+    [Parameter] public FshCustomAccentSpec InitialSpec { get; set; } = FshCustomAccentSpec.Default;
+
+    private FshCustomAccentSpec Spec { get; set; } = FshCustomAccentSpec.Default;
+
+    private string PreviewHex
+        => FshAppearanceOptions.CreateCustomAccent(Spec).LightPrimary;
+
+    private string PreviewStyle
+    {
+        get
+        {
+            var accent = FshAppearanceOptions.CreateCustomAccent(Spec);
+            return $"background: linear-gradient(135deg, {accent.LightPrimary} 0%, {accent.DarkPrimary} 100%);";
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Spec = InitialSpec;
+    }
+
+    private void OnHueChanged(double hue)
+        => Spec = Spec with { Hue = hue };
+
+    private void OnChromaChanged(double chroma)
+        => Spec = Spec with { Chroma = chroma };
+
+    private void Save() => Instance?.Close(DialogResult.Ok(Spec));
+
+    private void Cancel() => Instance?.Close(DialogResult.Cancel());
+}

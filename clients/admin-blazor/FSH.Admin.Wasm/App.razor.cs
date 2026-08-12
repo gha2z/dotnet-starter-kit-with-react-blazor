@@ -1,4 +1,5 @@
 using FSH.BlazorShared.Auth;
+using FSH.BlazorShared.Theming;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
@@ -9,6 +10,12 @@ public sealed partial class App : IDisposable
     [Inject] private ITokenStore TokenStore { get; set; } = default!;
     [Inject] private NavigationManager Nav { get; set; } = default!;
     [Inject] private IJSRuntime Js { get; set; } = default!;
+    [Inject] private FshThemeService Theme { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        Theme.Changed += OnThemeChanged;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -24,6 +31,11 @@ public sealed partial class App : IDisposable
         }
     }
 
+    private void OnThemeChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
     private void OnTokensChanged()
     {
         InvokeAsync(StateHasChanged);
@@ -31,6 +43,7 @@ public sealed partial class App : IDisposable
 
     public void Dispose()
     {
+        Theme.Changed -= OnThemeChanged;
         TokenStore.TokensChanged -= OnTokensChanged;
     }
 

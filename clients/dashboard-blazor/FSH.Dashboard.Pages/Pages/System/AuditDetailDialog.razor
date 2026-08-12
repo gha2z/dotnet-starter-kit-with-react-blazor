@@ -1,58 +1,127 @@
 @namespace FSH.Dashboard.Wasm.Pages.SystemPages
 @using FSH.BlazorShared.Models.Audits
+@using FSH.BlazorShared.Services
+@using Microsoft.JSInterop
 
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">Audit detail</MudText>
     </TitleContent>
     <DialogContent>
-        @if (AuditDetail is not null)
+        @if (_detail is not null)
         {
             <MudGrid Spacing="2">
                 <MudItem xs="12" sm="6">
                     <div class="fsh-mono-label mb-1">EVENT TYPE</div>
-                    <div class="fsh-mono-medium">@AuditDetail.EventType</div>
+                    <div class="fsh-mono-medium">@_detail.EventType</div>
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <div class="fsh-mono-label mb-1">SEVERITY</div>
-                    <div class="fsh-mono-medium">@AuditDetail.Severity</div>
+                    <div class="fsh-mono-medium">@_detail.Severity</div>
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <div class="fsh-mono-label mb-1">OCCURRED AT (UTC)</div>
-                    <div class="fsh-mono-medium">@AuditDetail.OccurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss.fff")</div>
+                    <div class="fsh-mono-medium">@_detail.OccurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss.fff")</div>
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <div class="fsh-mono-label mb-1">SOURCE</div>
-                    <div class="fsh-mono-medium">@(AuditDetail.Source ?? "—")</div>
+                    <div class="fsh-mono-medium">@(_detail.Source ?? "—")</div>
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <div class="fsh-mono-label mb-1">USER</div>
-                    <div class="fsh-mono-medium">@(AuditDetail.UserName ?? AuditDetail.UserId ?? "—")</div>
+                    <div class="fsh-mono-medium">@(_detail.UserName ?? _detail.UserId ?? "—")</div>
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <div class="fsh-mono-label mb-1">CORRELATION ID</div>
-                    <div class="fsh-mono-medium" style="font-size: 11px;">@(AuditDetail.CorrelationId ?? "—")</div>
+                    <div class="fsh-mono-medium" style="font-size: 11px;">@(_detail.CorrelationId ?? "—")</div>
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <div class="fsh-mono-label mb-1">TRACE ID</div>
-                    <div class="fsh-mono-medium" style="font-size: 11px;">@(AuditDetail.TraceId ?? "—")</div>
+                    <div class="fsh-mono-medium" style="font-size: 11px;">@(_detail.TraceId ?? "—")</div>
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <div class="fsh-mono-label mb-1">TENANT</div>
-                    <div class="fsh-mono-medium">@(AuditDetail.TenantId ?? "—")</div>
+                    <div class="fsh-mono-medium">@(_detail.TenantId ?? "—")</div>
                 </MudItem>
-                @if (AuditDetail.Tags != AuditTag.None)
+                @if (_detail.Tags != AuditTag.None)
                 {
                     <MudItem xs="12">
                         <div class="fsh-mono-label mb-1">TAGS</div>
-                        <div class="fsh-mono-medium">@AuditDetail.Tags</div>
+                        <div class="fsh-mono-medium">@_detail.Tags</div>
                     </MudItem>
                 }
+
+                @if (!string.IsNullOrEmpty(_detail.CorrelationId))
+                {
+                    <MudItem xs="12">
+                        <div class="d-flex align-center justify-space-between mt-2 mb-1">
+                            <div class="fsh-mono-label mb-0">RELATED EVENTS</div>
+                            @if (_relatedLoaded)
+                            {
+                                <span class="fsh-mono-muted" style="font-size: 11px;">@_related.Count on this correlation</span>
+                            }
+                        </div>
+                        @if (_relatedLoading)
+                        {
+                            <div class="d-flex justify-center py-4">
+                                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                            </div>
+                        }
+                        else if (_related.Count == 0)
+                        {
+                            <div class="fsh-mono-muted" style="font-size: 12px;">
+                                No other events share this correlation. The full lifecycle of this request is contained in the payload below.
+                            </div>
+                        }
+                        else
+                        {
+                            <ol class="fsh-timeline" style="margin: 0; padding-left: 1.25rem; position: relative;">
+                                @foreach (var row in _related)
+                                {
+                                    var isCurrent = row.Id == _detail.Id;
+                                    var deltaLabel = DeltaLabel(row.OccurredAtUtc, _detail.OccurredAtUtc, isCurrent);
+                                    <li style="position: relative; padding-left: 1rem; padding-bottom: 0.5rem; list-style: none;">
+                                        <span style="position: absolute; left: -1.05rem; top: 0.4rem; width: 0.625rem; height: 0.625rem; border-radius: 50%; background: @(isCurrent ? "var(--mud-palette-primary)" : SeverityColor(row.Severity));"></span>
+                                        <button type="button"
+                                                class="@(isCurrent ? "fsh-related-row fsh-related-row-current" : "fsh-related-row")"
+                                                disabled="@isCurrent"
+                                                style="width: 100%; text-align: left; border: none; background: none; padding: 0.35rem 0.5rem; border-radius: 0.375rem; cursor: @(isCurrent ? "default" : "pointer"); @(isCurrent ? "background: var(--mud-palette-primary-hover);" : "")"
+                                                @onclick="() => JumpAsync(row.Id)">
+                                            <span class="fsh-mono-medium" style="font-size: 12px;">@(row.Source ?? row.EventType.ToString())</span>
+                                            <span class="fsh-mono-muted" style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;"> · @row.Severity</span>
+                                            <div class="fsh-mono-muted" style="font-size: 11px;">
+                                                @row.OccurredAtUtc.ToString("HH:mm:ss.fff") · @deltaLabel
+                                            </div>
+                                        </button>
+                                    </li>
+                                }
+                            </ol>
+                        }
+                    </MudItem>
+                }
+
                 <MudItem xs="12">
-                    <div class="fsh-mono-label mb-1">PAYLOAD</div>
-                    <pre class="fsh-code-chip" style="white-space: pre-wrap; max-height: 400px; overflow: auto; font-size: 11px;">@(AuditDetail.Payload.GetRawText())</pre>
+                    <div class="d-flex align-center justify-space-between mb-1 mt-2">
+                        <div class="fsh-mono-label mb-0">PAYLOAD</div>
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Class="pa-0"
+                                   StartIcon="@(_copied ? Icons.Material.Filled.Check : Icons.Material.Filled.ContentCopy)"
+                                   OnClick="OnCopyAsync" Style="font-size: 11px;">
+                            @(_copied ? "Copied" : "Copy")
+                        </MudButton>
+                    </div>
+                    <pre class="fsh-code-chip" style="white-space: pre-wrap; max-height: 400px; overflow: auto; font-size: 11px;">@_json</pre>
                 </MudItem>
             </MudGrid>
+        }
+        else if (_loading)
+        {
+            <div class="d-flex justify-center py-8">
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            </div>
+        }
+        else
+        {
+            <MudText Typo="@Typo.body2" Color="Color.Error">@_error</MudText>
         }
     </DialogContent>
     <DialogActions>
@@ -61,9 +130,129 @@
 </MudDialog>
 
 @code {
+    private const int TimelineCap = 12;
+
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
 
+    [Inject] private IAuditService AuditService { get; set; } = default!;
+
+    [Inject] private IJSRuntime Js { get; set; } = default!;
+
     [Parameter] public AuditDetailDto? AuditDetail { get; set; }
+
+    private AuditDetailDto? _detail;
+    private string? _error;
+    private bool _loading;
+    private string _json = string.Empty;
+    private bool _copied;
+    private List<AuditSummaryDto> _related = [];
+    private bool _relatedLoading;
+    private bool _relatedLoaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _detail = AuditDetail;
+        if (_detail is not null)
+        {
+            _json = System.Text.Json.JsonSerializer.Serialize(_detail.Payload, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            await LoadRelatedAsync();
+        }
+    }
+
+    private async Task LoadRelatedAsync()
+    {
+        if (_detail?.CorrelationId is null)
+        {
+            return;
+        }
+
+        _relatedLoading = true;
+        _relatedLoaded = false;
+        try
+        {
+            var all = await AuditService.GetByCorrelationAsync(_detail.CorrelationId);
+            _related = all
+                .OrderByDescending(e => e.OccurredAtUtc)
+                .Take(TimelineCap)
+                .ToList();
+            _relatedLoaded = true;
+        }
+        catch
+        {
+            _related = [];
+            _relatedLoaded = true;
+        }
+        finally
+        {
+            _relatedLoading = false;
+        }
+    }
+
+    private async Task JumpAsync(Guid id)
+    {
+        if (id == _detail?.Id)
+        {
+            return;
+        }
+
+        try
+        {
+            _loading = true;
+            var detail = await AuditService.GetAsync(id);
+            _detail = detail;
+            _json = System.Text.Json.JsonSerializer.Serialize(detail.Payload, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            await LoadRelatedAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OnCopyAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("fshClipboard.copy", _json);
+            _copied = true;
+            await Task.Delay(1500);
+            _copied = false;
+        }
+        catch
+        {
+            // Clipboard unavailable — leave button in its default state.
+        }
+    }
+
+    private static string DeltaLabel(DateTime other, DateTime current, bool isCurrent)
+    {
+        if (isCurrent)
+        {
+            return "this event";
+        }
+
+        var delta = other - current;
+        if (delta == TimeSpan.Zero)
+        {
+            return "0s";
+        }
+
+        var seconds = (int)Math.Round(delta.TotalSeconds);
+        return seconds > 0 ? $"+{seconds}s" : $"{seconds}s";
+    }
+
+    private static string SeverityColor(AuditSeverity severity) => severity switch
+    {
+        AuditSeverity.Information => "var(--mud-palette-info)",
+        AuditSeverity.Warning => "var(--mud-palette-warning)",
+        AuditSeverity.Error => "var(--mud-palette-error)",
+        AuditSeverity.Critical => "var(--mud-palette-error)",
+        _ => "var(--mud-palette-text-secondary)",
+    };
 
     private void Close() => MudDialog.Cancel();
 }
