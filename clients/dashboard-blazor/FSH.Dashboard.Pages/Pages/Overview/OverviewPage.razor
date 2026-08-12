@@ -21,6 +21,19 @@
     .fsh-detail-card-body {
         padding: 20px;
     }
+    .fsh-sse-pulse {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--mud-palette-success);
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--mud-palette-success) 60%, transparent);
+        animation: fsh-sse-pulse 2s infinite;
+    }
+    @@keyframes fsh-sse-pulse {
+        0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--mud-palette-success) 55%, transparent); }
+        70% { box-shadow: 0 0 0 6px transparent; }
+        100% { box-shadow: 0 0 0 0 transparent; }
+    }
     .fsh-greeting-action {
         display: inline-flex;
         align-items: center;
@@ -41,6 +54,36 @@
         color: var(--mud-palette-primary);
         border-color: var(--mud-palette-primary);
     }
+    .fsh-quick-action-tile {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid var(--mud-palette-divider);
+        border-radius: 10px;
+        background: var(--mud-palette-surface);
+        text-decoration: none;
+        color: inherit;
+        transition: border-color 0.15s ease, background 0.15s ease;
+        height: 100%;
+    }
+    .fsh-quick-action-tile:hover {
+        border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-divider));
+        background: color-mix(in srgb, var(--mud-palette-primary) 5%, transparent);
+    }
+    .fsh-overview-icon {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        border-radius: 7px;
+        display: grid;
+        place-items: center;
+        font-size: 14px;
+    }
+    .fsh-overview-row:hover {
+        background: color-mix(in srgb, var(--mud-palette-primary) 5%, transparent);
+        border-radius: 8px;
+    }
 </style>
 
 <!-- Personalized Greeting Header -->
@@ -54,11 +97,15 @@
                 @_dateCaption . @_tenantLabel
             </MudText>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh"
                        Disabled="@_refreshing" OnClick="RefreshAllAsync">
                 @(_refreshing ? "Refreshing…" : "Refresh")
             </MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.Sensors"
+                       OnClick="NavigateToActivity">View activity</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.Article"
+                       OnClick="NavigateToAudits">View audits</MudButton>
         </div>
     </div>
 </div>
@@ -89,6 +136,51 @@
                          Hint="tracked resources" />
         </MudItem>
     </MudGrid>
+</div>
+
+<!-- Quick Actions -->
+<div class="fsh-enter fsh-enter-1" style="animation-delay: 50ms;">
+    <div class="mb-4">
+        <MudText Typo="Typo.caption" Class="fsh-mono-label mb-2" Style="font-size: 11px; letter-spacing: 0.06em;">QUICK ACTIONS</MudText>
+        <MudGrid Spacing="2">
+            <MudItem xs="6" sm="3">
+                <a href="/identity/users" class="fsh-quick-action-tile" style="@TileStyle("var(--mud-palette-info)")">
+                    <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Style="@TileIconStyle("var(--mud-palette-info)")" />
+                    <div>
+                        <div class="fsh-mono-medium" style="font-size: 12px;">Invite users</div>
+                        <div class="fsh-mono-muted" style="font-size: 11px;">Add teammates, assign roles</div>
+                    </div>
+                </a>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <a href="/catalog/products" class="fsh-quick-action-tile" style="@TileStyle("var(--mud-palette-success)")">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" Style="@TileIconStyle("var(--mud-palette-success)")" />
+                    <div>
+                        <div class="fsh-mono-medium" style="font-size: 12px;">Browse catalog</div>
+                        <div class="fsh-mono-muted" style="font-size: 11px;">Products, brands, categories</div>
+                    </div>
+                </a>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <a href="/subscription" class="fsh-quick-action-tile" style="@TileStyle("var(--mud-palette-primary)")">
+                    <MudIcon Icon="@Icons.Material.Filled.CreditCard" Size="Size.Small" Style="@TileIconStyle("var(--mud-palette-primary)")" />
+                    <div>
+                        <div class="fsh-mono-medium" style="font-size: 12px;">Subscription</div>
+                        <div class="fsh-mono-muted" style="font-size: 11px;">Plan, usage, invoices</div>
+                    </div>
+                </a>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <a href="/activity" class="fsh-quick-action-tile" style="@TileStyle("var(--mud-palette-warning)")">
+                    <MudIcon Icon="@Icons.Material.Filled.Insights" Size="Size.Small" Style="@TileIconStyle("var(--mud-palette-warning)")" />
+                    <div>
+                        <div class="fsh-mono-medium" style="font-size: 12px;">Live activity</div>
+                        <div class="fsh-mono-muted" style="font-size: 11px;">Real-time event stream</div>
+                    </div>
+                </a>
+            </MudItem>
+        </MudGrid>
+    </div>
 </div>
 
 <!-- Main Content: Sidebar + Right Grid -->
@@ -170,6 +262,54 @@
                             {
                                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2 d-block">Plan: @_tenantStatus.Plan</MudText>
                             }
+                        }
+                    </div>
+                </div>
+
+                <!-- System Status / Live Feed Card -->
+                <div class="fsh-detail-card">
+                    <div class="fsh-detail-card-header">
+                        <MudText Class="fsh-mono-label">SYSTEM STATUS</MudText>
+                        @if (_isSseConnected)
+                        {
+                            <MudTooltip Text="Live updates connected">
+                                <span class="d-flex align-center gap-1" style="color: var(--mud-palette-success);">
+                                    <span class="fsh-sse-pulse"></span>
+                                    <MudText Typo="Typo.caption" Color="Color.Success">live</MudText>
+                                </span>
+                            </MudTooltip>
+                        }
+                        else
+                        {
+                            <MudTooltip Text="Stream disconnected">
+                                <span class="d-flex align-center gap-1" style="color: var(--mud-palette-text-disabled);">
+                                    <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Small" />
+                                    <MudText Typo="Typo.caption">offline</MudText>
+                                </span>
+                            </MudTooltip>
+                        }
+                    </div>
+                    <div class="fsh-detail-card-body">
+                        <div class="d-flex align-center gap-2 mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Sensors" Size="Size.Small" Color="Color.Secondary" />
+                            <MudText Typo="Typo.body2">@(_isSseConnected ? "Stream live" : "Not connected")</MudText>
+                        </div>
+                        @if (_liveEvents.Count == 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Listening for activity…</MudText>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-column">
+                                @foreach (var ev in _liveEvents.Take(5))
+                                {
+                                    <div class="d-flex align-center justify-space-between py-1"
+                                         style="border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 40%, transparent);">
+                                        <span class="fsh-mono-medium fsh-truncate" style="font-size: 11px;">@ev.EventType</span>
+                                        <span class="fsh-mono-muted" style="font-size: 10px;">@FormatClock(ev.ReceivedAt)</span>
+                                    </div>
+                                }
+                            </div>
                         }
                     </div>
                 </div>
@@ -262,12 +402,18 @@
                                 {
                                     @foreach (var audit in _recentAudits.Take(5))
                                     {
-                                        <div class="d-flex align-center gap-2 py-2"
-                                             style="border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 40%, transparent);">
-                                            <MudIcon Icon="@GetAuditIcon(audit.EventType)" Size="Size.Small" Color="Color.Secondary" />
+                                        <div class="d-flex align-center gap-2 py-2 fsh-overview-row"
+                                             style="border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 40%, transparent); cursor: pointer;"
+                                             @onclick="NavigateToAudits">
+                                            <span class="d-flex align-center justify-center fsh-overview-icon"
+                                                  style="background: color-mix(in srgb, @AuditSeverityCssColor(audit.Severity) 12%, transparent); color: @AuditSeverityCssColor(audit.Severity);">
+                                                <MudIcon Icon="@GetAuditIcon(audit.EventType)" Size="Size.Small" />
+                                            </span>
                                             <div class="d-flex flex-column flex-grow-1" style="min-width: 0;">
                                                 <MudText Typo="Typo.body2" Class="fsh-truncate">@(audit.Source?.Split('.').Last() ?? "Unknown")</MudText>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">@audit.OccurredAtUtc.ToLocalTime().ToString("MMM d, HH:mm")</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @(audit.UserName ?? audit.UserId?.Split('@')[0] ?? "system") · @FshFormat.DateRelative(audit.OccurredAtUtc)
+                                                </MudText>
                                             </div>
                                         </div>
                                     }

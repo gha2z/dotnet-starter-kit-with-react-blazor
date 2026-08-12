@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FSH.BlazorShared.Models;
 using FSH.BlazorShared.Services;
 using FSH.BlazorShared.Sse;
@@ -10,8 +11,10 @@ using System.Security.Claims;
 
 namespace FSH.Dashboard.Wasm.Pages.Overview;
 
-public sealed partial class OverviewPage
+public sealed partial class OverviewPage : IDisposable
 {
+    private const int LiveFeedCap = 5;
+
     [Inject] private IBillingService BillingService { get; set; } = default!;
     [Inject] private IDashboardService DashboardService { get; set; } = default!;
     [Inject] private ISseService SseService { get; set; } = default!;
@@ -24,6 +27,12 @@ public sealed partial class OverviewPage
     private List<UsageSnapshotDto> _usageSnapshots = new();
     private List<AuditSummaryDto> _recentAudits = new();
     private bool _isSseConnected;
+
+    // Live feed (React parity: latest 5 SSE events with clock + tone badge)
+    private readonly List<LiveEvent> _liveEvents = new();
+    private int _sseEventCount;
+    private IDisposable? _sseSubscription;
+    private bool _disposed;
 
     // Loading states
     private bool _loadingSubscription = true;
@@ -55,6 +64,7 @@ public sealed partial class OverviewPage
     protected override async Task OnInitializedAsync()
     {
         SseService.ConnectionChanged += OnSseConnectionChanged;
+        _sseSubscription = SseService.Messages.Subscribe(new SseObserver(OnSseEvent));
         _isSseConnected = SseService.IsConnected;
 
         await BuildGreetingAsync();
@@ -101,6 +111,19 @@ public sealed partial class OverviewPage
             _isSseConnected = SseService.IsConnected;
             StateHasChanged();
         });
+    }
+
+    private void OnSseEvent(SseEvent message)
+    {
+        _sseEventCount++;
+        _liveEvents.Insert(0, new LiveEvent(message.EventType, DateTime.Now));
+
+        if (_liveEvents.Count > LiveFeedCap)
+        {
+            _liveEvents.RemoveAt(_liveEvents.Count - 1);
+        }
+
+        InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadTenantStatusAsync()
@@ -235,6 +258,30 @@ public sealed partial class OverviewPage
         };
     }
 
+    /// <summary>React parity: severity tint on the audit icon background.</summary>
+    private Color AuditSeverityTone(AuditSeverity severity) => severity switch
+    {
+        AuditSeverity.Critical => Color.Error,
+        AuditSeverity.Error => Color.Error,
+        AuditSeverity.Warning => Color.Warning,
+        _ => Color.Info,
+    };
+
+    private static string FormatClock(DateTime dt) => dt.ToString("HH:mm:ss");
+
+    /// <summary>React parity: severity-tinted icon background for audit rows.</summary>
+    private static string AuditSeverityCssColor(AuditSeverity severity) => severity switch
+    {
+        AuditSeverity.Critical => "var(--mud-palette-error)",
+        AuditSeverity.Error => "var(--mud-palette-error)",
+        AuditSeverity.Warning => "var(--mud-palette-warning)",
+        _ => "var(--mud-palette-info)",
+    };
+
+    private static string TileStyle(string toneColor) => $"border-left: 3px solid {toneColor};";
+
+    private static string TileIconStyle(string toneColor) => $"color: {toneColor}; font-size: 18px;";
+
     private string FormatCurrency(decimal? amount)
     {
         return amount?.ToString("C") ?? "-";
@@ -324,8 +371,30 @@ public sealed partial class OverviewPage
         Navigation.NavigateTo("/settings/profile");
     }
 
+    private void NavigateToUsers() => Navigation.NavigateTo("/identity/users");
+
+    private void NavigateToCatalog() => Navigation.NavigateTo("/catalog/products");
+
+    private void NavigateToActivity() => Navigation.NavigateTo("/activity");
+
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
         SseService.ConnectionChanged -= OnSseConnectionChanged;
+        _sseSubscription?.Dispose();
     }
+
+    private sealed class SseObserver(Action<SseEvent> onNext) : IObserver<SseEvent>
+    {
+        public void OnCompleted() { }
+        public void OnError(Exception error) { }
+        public void OnNext(SseEvent value) => onNext(value);
+    }
+
+    private sealed record LiveEvent(string EventType, DateTime ReceivedAt);
 }
