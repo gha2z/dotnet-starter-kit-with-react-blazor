@@ -14,6 +14,8 @@ Last Update: 2026-08-11 13:04, by: opencode (model: opencode/deepseek-v4-flash-f
 | Phase 5 | 🟨 (5.1–5.9 done + cold-start deep links 3/3 + SecureStorage theme persistence ✅; push 5.4 compile-gated — blocked on Firebase setup; NU1903 SQLitePCLRaw tracked — no patched NuGet yet) | hybrid 12/12 |
 | Phase 6 | ✅ **Complete — all 6.x code items DONE** (lazy loading ✅ + PWA ✅ + 6.4 a11y ✅ + 6.6 resilience ✅ + 6.7 docs ✅ + 6.8 audit ✅ + infinite scroll ✅ + preload ✅ + render opt ✅ + critical CSS ✅ + 6.1 tree-shaking/pre-compression verified + **6.9 ✅ RESOLVED wave 19** — stale-publish artifact; clean publish boots, no NIY crash); remaining: MAUI README (sess-maui), last-known-good cache (deferred) | dashboard bUnit 204/204 + E2E 18/18 · admin bUnit 158/158 |
 | Phase 7 | ✅ **All app parity gaps at zero** (3.12 Settings + 3.13 Terminal + 3.14 palette + styled 404 verified wave 16; admin accent/font/density by sess-maui) | dashboard 204/204 · admin 158/158 · both 0 warnings |
+| Phase 8 | ✅ Read-only parity audit (2026-08-11) — gap table at `Phase-08-Parity-Audit/audit.md` (DRAFT) | bUnit baseline re-confirmed 204/204 + 158/158 |
+| Phase 9 | 🟨 **Zero-Gaps build (W0–W4)** — user-confirmed defects to close: (1) theme light/dark/system switch requires reload (both apps — real defect) (2) dashboard overview 5176 visual polish vs React (3) dashboard settings thin vs admin (= audit D2/Q2). Plan: W0 housekeeping commit · W1 theme fix · W2 dashboard channel (overview polish, D2 appearance, D3 expiry banner, D1 chat deep-link, D4 audits) · W3 admin channel (A2 tenants detail, A1/A3/A4/A5) · W4 Hybrid nav gate (H1 pages deferred by user decision) + zero-delta drive + audit FINAL | baseline 204/204 + 158/158 |
 
 ## Active Streams (parallel, git worktrees)
 
@@ -32,7 +34,7 @@ Last Update: 2026-08-11 13:04, by: opencode (model: opencode/deepseek-v4-flash-f
 
 ⚠️ **6.9 RESOLVED (wave 19):** clean-publish re-test reversed the wave-18 finding — uncompressed `blazor.webassembly.js` + `dotnet.js` ARE emitted on Release publish (deleted `obj/Release` first); `blazor.boot.json` absent by .NET 10 design (boot config inlined in `dotnet.js`); plain static host boots to login in ~4.3 s, 0 pageerrors, 0 failed requests, no Mono NIY crash (both apps). **No code change.** Deployment-zone guidance (serve `.br`/`.gz` with `Content-Encoding`, 103 Early Hints) remains CDN config, not required for boot.
 
-**Next: Stage A workflow enhancement COMPLETE (wave 22, user-approved items #1/#4/#5)** — summary close-out gate (`coordination.ps1 -CloseOut`), `## Lessons` section in summaries, wave-DAG/critical-path convention documented. sess-main resumes its build-phase tasks using the enhanced workflow (write summary + Lessons + refresh STATUS + run `-CloseOut` before committing each wave). Remaining: MAUI README (sess-maui), last-known-good cache (deferred), deployment-zone CDN config.
+**Next: Phase-09 Zero-Gaps build (user-approved, board row #14)** — sess-main executes W0 housekeeping (this commit) → W1 theme instant-switch defect → W2 dashboard channel (overview polish, appearance richness, expiry banner, chat deep-link, audits depth) → W3 admin channel (tenants detail + chrome items) → W4 Hybrid nav gate + zero-delta drive, audit.md DRAFT→FINAL, docs/changelog, per-wave `-CloseOut` commits + summaries. **Known state (do not rediscover):** theme switch needs reload (W1 defect); overview visual polish deferred to W2; dashboard settings thin = audit D2/Q2 (appearance richness, W2); Hybrid H1 pages gated (user decision).
 
 ## Files to Read
 

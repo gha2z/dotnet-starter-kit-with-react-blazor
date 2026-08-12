@@ -1215,7 +1215,7 @@
    "Console" tokens and utility classes, this block keeps them resolving
    against the new palette so nothing renders broken mid-migration. Each entry
    is deleted as its consumers migrate (Phases 2–4). Do not add to this block.
-   See docs/superpowers/specs/2026-05-28-admin-dashboard-design-unification-design.md
+   Design implemented 2026-08 (spec retired with the superpowers workflow).
    ========================================================================== */
 
 :root {

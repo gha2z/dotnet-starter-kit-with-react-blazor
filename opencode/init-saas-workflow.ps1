@@ -1,6 +1,7 @@
 # init-saas-workflow.ps1 — One-command SaaS bootstrap from the FullStackHero .NET Starter Kit.
-# Clone/copy -> rename (FSH.* -> <Name>.*) -> optional strip -> workflow wiring -> build gate ->
-# first commit -> next-steps. Designed so you can focus on the new SaaS's domain, not ceremonies.
+# Clone/copy -> rename (FSH.* -> <Name>.*) -> optional strip -> workflow wiring -> first-track
+# seed (opencode/_tracks-template) -> build gate -> first commit -> next-steps. Designed so you
+# can focus on the new SaaS's domain, not ceremonies.
 #
 # Usage:
 #   pwsh opencode/init-saas-workflow.ps1 -Name AcmeSaaS -WorkDir C:\dev\AcmeSaaS
@@ -355,6 +356,39 @@ if ($gi -notmatch '(?m)^\.swarm/?$') {
 Write-Ok "AGENTS.md + .agents/ carried over from source (rename pass already rewrote references)"
 
 # ---------------------------------------------------------------------------
+# 5b. Seed the first track from _tracks-template
+# ---------------------------------------------------------------------------
+Write-Step "5b/7 Seeding first track (opencode/_tracks-template -> opencode/$Name)"
+$tracksTemplate = Join-Path $scriptRoot '_tracks-template'
+$trackDir = Join-Path $WorkDir "opencode\$Name"
+if (Test-Path $tracksTemplate) {
+    if (Test-Path $trackDir) {
+        Write-Warn "opencode/$Name already exists - track seed skipped"
+    } else {
+        New-Item -ItemType Directory -Path $trackDir -Force | Out-Null
+        Copy-Item -Path (Join-Path $tracksTemplate '*') -Destination $trackDir -Recurse -Force
+        Get-ChildItem $trackDir -Filter '*-template.md' -File | ForEach-Object {
+            $realName = $_.Name -replace '-template\.md$', '.md'
+            Move-Item -LiteralPath $_.FullName -Destination (Join-Path $trackDir $realName) -Force
+            Write-Ok "renamed $($_.Name) -> $realName"
+        }
+        $today = (Get-Date).ToString('yyyy-MM-dd')
+        Get-ChildItem $trackDir -Recurse -Filter '*.md' -File | ForEach-Object {
+            $content = Get-Content $_.FullName -Raw
+            $updated = $content -replace '<track-name>', $Name -replace '\{date\}', $today
+            if ($updated -ne $content) {
+                Set-Content -Path $_.FullName -Value $updated -Encoding UTF8
+                Write-Ok "filled placeholders in $($_.Name)"
+            }
+        }
+        New-Item -ItemType Directory -Path (Join-Path $trackDir 'live\locks') -Force | Out-Null
+        Write-Ok "first track seeded: opencode/$Name/ (00-Index.md, STATUS.md, readme.md, zones.md, plan.md, live/, 00_summary/)"
+    }
+} else {
+    Write-Warn "opencode/_tracks-template not found - first track must be created manually"
+}
+
+# ---------------------------------------------------------------------------
 # 6. Restore + build gate
 # ---------------------------------------------------------------------------
 if (-not $SkipBuild) {
@@ -414,6 +448,8 @@ Write-Host @"
     # 2. Open your first agentic session:
     #    opencode   # then: "Read AGENTS.md + opencode/AGENTIC-GUIDE.md, then scaffold the
     #              #  domain module for <your domain> using the add-module skill."
+    #    Track skeleton ready at opencode/$Name/ (00-Index.md, STATUS.md, readme.md, zones.md,
+    #    live/, 00_summary/) - read those first; fill zones.md + STATUS.md before claiming work.
     # 3. Run the stack: dotnet run --project src/Host/$Name.AppHost
     # 4. Future re-runs: pwsh opencode/init-saas-workflow.ps1 -Name $Name -WorkDir $WorkDir -SkipClone -SkipBuild
 
@@ -421,6 +457,7 @@ Write-Host @"
     .agents/skills/  (add-module, add-feature, add-blazor-page, create-migration, ...)
     .agents/workflows/ + .opencode/  (Swarm + skill routing)
     opencode/init-saas-workflow.ps1 + opencode/AGENTIC-GUIDE.md  (origin tooling - reusable)
+    opencode/_tracks-template/ + opencode/$Name/  (track harness + first seeded track)
     AGENTS.md (renamed, still the canonical guide)
 "@
 exit 0

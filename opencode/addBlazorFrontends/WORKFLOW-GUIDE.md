@@ -138,8 +138,8 @@ Critical path: t1.1 → t1.3 → t1.5   (longest dependency chain — gate here 
 
 | Tier | Models | Agents | Max tokens/session |
 |---|---|---|---|
-| **Reasoning** | nemotron-3-ultra (this session) | architect, critic | 200k |
-| **Standard** | nemotron-3-ultra | coder, reviewer, test_engineer, explorer | 128k |
+| **Reasoning** | "opencode/deepseek-v4-flash-free" (this session) | architect, critic | 200k |
+| **Standard** | "opencode/deepseek-v4-flash-free" | coder, reviewer, test_engineer, explorer | 128k |
 | **Lite** | gemini-flash / gpt-4o-mini | docs, summarization, grep | 64k |
 
 Configure in `.opencode/opencode-swarm.json` → `agents.<name>.model`.

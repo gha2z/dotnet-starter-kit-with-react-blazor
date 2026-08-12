@@ -1,6 +1,6 @@
 # Agentic Workflow Guide — FullStackHero .NET Starter Kit
 
-**Last updated: 2026-08-07, by: opencode (model: deepseek-v4-flash-free).**
+**Last updated: 2026-08-12, by: opencode (model: deepseek-v4-flash-free).**
 
 The single source of truth for driving agentic coding on this repo **and** for bootstrapping
 future SaaS projects from it. Read this before starting any session; the per-project protocol
@@ -61,6 +61,12 @@ pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Start   # manu
 - **Model identity:** never guess/copy. Read the raw-message JSON for `modelID`/`providerID`.
   `auto/*` combos resolve through the omniroute gateway logs — if unverifiable, write
   `model: <modelID> (unresolved)`. See `readme.md` → "Model Identity Convention".
+- **AI memory & knowledge tools:** this stack keeps cross-session state in three places — (1)
+  magic-context project memory: `ctx_memory` (durable facts), `ctx_search` (history/git recall) —
+  (2) swarm knowledge base: `knowledge_recall` / `knowledge_query` (semantic + filtered lookup),
+  `knowledge_add` (new lessons), stored locally in `.swarm/knowledge.jsonl` (gitignored, never
+  committed) — (3) session notes: `ctx_note`. Before re-asking the user something that may already
+  be known, search these. They are agent-side state; docs and specs remain the human-side truth.
 - **Read-fresh ceremony:** re-read `STATUS.md`, all `live/*.md`, and the phase plan **fresh**
   every session — never from memory. State moves fast in this repo.
 
@@ -73,10 +79,10 @@ pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Start   # manu
 | Area | State |
 |---|---|
 | Admin Blazor (5175) | Suite green (158/158 bUnit), 0 warnings |
-| Dashboard Blazor (5176) | Suite green (179/179 bUnit + 18/18 E2E), 0 warnings |
+| Dashboard Blazor (5176) | Suite green (204/204 bUnit + 18/18 E2E), 0 warnings |
 | MAUI Hybrid | 5.1–5.9 in-zone delivered (`bc00bea5`), hybrid 12/12; blocked/external: push (Firebase/APNs 5.4), IAP (5.8), signing/CI (5.10) |
 | Lazy loading + PWA | Done both apps (Pages RCLs + `resources.lazyAssembly`, manifest + SW + offline page) |
-| ⚠️ Release-publish blocker | Mono interpreter crash at boot on Release publishes — upstream dotnet/runtime #121849, MudBlazor net10 unshipped. Debug/DevServer unaffected. Re-test after runtime servicing. |
+| ✅ Release-publish | **RESOLVED (wave 19, 2026-08-09)** — the Mono boot crash was a stale-publish artifact; clean publish (delete `obj/Release` first) boots to login ~4.3 s, 0 errors, no code change. Deployment-zone CDN config (`.br`/`.gz` + 103 Early Hints) remains guidance only. |
 
 ### 3.2 Remaining work items — session recipes
 
@@ -124,7 +130,8 @@ pwsh opencode/addBlazorFrontends/verify-hybrid.ps1    # MAUI: 4 TFMs build, 0 wa
 dotnet build src/FSH.Starter.slnx                     # full solution at phase end
 ```
 
-Expected baselines: dashboard bUnit 179/179 + E2E 18/18 · admin bUnit 158/158 · hybrid 12/12 ·
+Expected baselines (**live numbers in `opencode/addBlazorFrontends/STATUS.md` — refresh there, not
+here**): dashboard bUnit 204/204 + E2E 18/18 · admin bUnit 158/158 · hybrid 12/12 ·
 backend build 0 warnings · Architecture.Tests 51/51 · 17 role-permission integration tests.
 
 ---
@@ -135,8 +142,8 @@ backend build 0 warnings · Architecture.Tests 51/51 · 17 role-permission integ
 
 | Path | Command | Result | Use when |
 |---|---|---|---|
-| **Template** (recommended) | `fsh new MySaaS` (workflow layer included by default via the `workflow` symbol) | Renamed, workflow-included project | Brand-new SaaS — safest rename via `sourceName` symbol machinery |
-| **Clone** | `git clone <this repo> <dir>` → `pwsh opencode/init-saas-workflow.ps1 -Name MySaaS` | Full fork incl. current front-end state | Forking this exact repo, keeping Blazor front-end work as a base |
+| **Clone** (supported/recommended) | `git clone <this repo> <dir>` → `pwsh opencode/init-saas-workflow.ps1 -Name MySaaS` | Full fork incl. current front-end state, workflow wired, first track seeded | Any new SaaS — the one supported bootstrap |
+| **Template** | `fsh new MySaaS` (workflow layer included by default via the `workflow` symbol) | Renamed, workflow-included project | Brand-new SaaS — fastest scaffold; see §4.2 |
 
 ### 4.2 Template path (`dotnet new fsh` / `fsh new`)
 
@@ -144,7 +151,7 @@ This repo is a `dotnet new` template (`shortName: fsh`) with an `fsh` CLI (Spect
 it. The template's `sourceName: FSH.Starter` drives renames (solution, namespaces, folders) with
 derived symbols (kebab/underscore/display forms) — the safest rename machinery that exists.
 
-**Workflow layer:** the template now ships a `workflow` symbol (default `true`) — generated projects
+**Workflow layer:** the template ships a `workflow` symbol (default `true`) — generated projects
 carry `.agents/` (skills + rules), `AGENTS.md`, `.opencode/` (swarm config + skill routing), and the
 `opencode/` workflow scripts (`AGENTIC-GUIDE.md`, `init-saas-workflow.ps1`). Project-private dirs
 (`opencode/addBlazorFrontends/`, `opencode/Next apps`, `opencode/other`, `opencode/temp`) are
@@ -156,6 +163,9 @@ fsh new MySaaS -o ./MySaaS                        # scaffold + rename + workflow
 pwsh opencode/init-saas-workflow.ps1 -Name MySaaS -WorkDir ./MySaaS -SkipClone   # post-scaffold wiring
 ```
 
+The pack lives at `.template.config/` + `templates/` in this repo and is guarded by the
+`template-smoke.yml` CI workflow — keep it green when touching either path.
+
 ### 4.3 Clone path — `init-saas-workflow.ps1` (one command, minimal ceremony)
 
 ```powershell
@@ -164,11 +174,12 @@ pwsh opencode/init-saas-workflow.ps1 -Name AcmeSaaS -WorkDir C:\dev\AcmeSaaS -Fr
 
 What it does (each step prints + can be skipped with a switch):
 
-1. **Clone/copy** the source repo into `-WorkDir` (fresh `.git`, no history baggage).
+1. **Clone/copy** the source repo into `-WorkDir` (fresh `.git`, no history baggage; excludes
+   `.git`, `bin/obj`, `node_modules`, `.swarm`).
 2. **Rename ritual** — replacement map over file names, `.csproj`, `.slnx`, namespaces,
    appsettings, `config.json`, CSS/JS, test names: `FSH.Starter`→`AcmeSaaS.Starter`,
    `FSH.`→`AcmeSaaS.` (project namespaces), `FSH`→`AcmeSaaS` (remaining identifiers),
-   `FullStackHero`→`AcmeSaaS` (brand). Then a **verification sweep**: grep residual references
+   `FullStackHero`→`AcmeSaaS` (brand). Then a **verification sweep** (`2b`): grep residual references
    + full build + `Architecture.Tests` → prints a residual report for manual review.
 3. **Strip** (guided prompts) — `-StripReact` (drop `clients/admin`, `clients/dashboard`),
    `-StripMaui`, `-StripModules Catalog,Billing,…`. A module strip is thorough: deletes the
@@ -181,15 +192,21 @@ What it does (each step prints + can be skipped with a switch):
    Api + DbMigrator `Program.cs`), and dangling `<Folder Include>` items. Default: keep everything.
 4. **Clean** — remove project-private dirs (`opencode/addBlazorFrontends/`, `opencode/Next apps`,
    `opencode/other`, `opencode/temp`, `.swarm/`, `superpowers/` origin planning docs,
-   `templates/` dotnet-new pack project), phase docs, `live/` session state.
+   `templates/` dotnet-new pack project), phase docs, `live/` session state. Kept:
+   `init-saas-workflow.ps1`, `AGENTIC-GUIDE.md`, `.opencode/`, `.agents/`.
 5. **Wire workflow** — ensure `.opencode/opencode-swarm.json`, `.opencode/skill-routing.yaml`,
-   `.gitignore` entries (`.swarm/`, `opencode/…`), slim `AGENTS.md` (strip FSH-specific
-   instructions, keep Golden Rules + rules index).
-6. **Restore + build gate** — `dotnet restore`, backend build 0-warning, optional `npm install`
-   when React kept. Fails loudly with the fix list if the rename broke something.
-7. **First commit + session bootstrap** — `git add -A` (clean clone — safe), initial commit,
-   creates `opencode/live/` skeleton + `STATUS.md` so the first agentic session starts clean.
-8. **Print next steps** — the exact commands to open the first session (see §4.4).
+   `.gitignore` entries (`.swarm/`, `opencode/temp/`, `opencode/live/`). `AGENTS.md` + `.agents/`
+   are **carried over as-is** from the source (no slimming) — the rename pass already rewrote
+   references.
+5b. **Seed the first track** — copies `opencode/_tracks-template/` → `opencode/<Name>/` with
+   `*-template.md` files renamed to their real names (`00-Index.md`, `STATUS.md`, `readme.md`,
+   `zones.md`, `plan.md`), plus `live/` skeleton (`board.md`, `locks/`, session stubs) and a
+   starter `STATUS.md` — so the first agentic session starts clean. No phase docs yet.
+6. **Restore + build gate** — `dotnet restore`, backend build 0-warning (0-error is a hard fail;
+   warnings printed for manual review), optional `npm install` when React kept. Fails loudly with
+   the fix list if the rename broke something.
+7. **First commit + next steps** — `git add -A` (clean clone — safe), initial commit, then prints
+   the exact commands to open the first session (see §4.4).
 
 ### 4.4 First sessions on the new SaaS
 
@@ -233,9 +250,10 @@ Golden Rules), FSH wins. dotnet-skills may inform *how* (query shape, test comma
 | Start a manual-mode session | `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Start` |
 | Stamp heartbeat (every turn) | `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Heartbeat` |
 | Pre-stage gate | `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Gate` |
+| Close out a wave (summary + Lessons + STATUS refresh; blocks commit) | `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -CloseOut` |
 | Verify both WASM apps | `pwsh opencode/addBlazorFrontends/verify.ps1` |
 | Verify MAUI | `pwsh opencode/addBlazorFrontends/verify-hybrid.ps1` |
-| Scaffold a new SaaS | `fsh new <Name>` (template, workflow included) or `pwsh opencode/init-saas-workflow.ps1 -Name <Name>` (clone) |
+| Scaffold a new SaaS | `pwsh opencode/init-saas-workflow.ps1 -Name <Name>` (clone — recommended) or `fsh new <Name>` (template, workflow included) |
 | Build everything | `dotnet build src/FSH.Starter.slnx` |
 | Run the stack | `dotnet run --project src/Host/FSH.Starter.AppHost` |
 
@@ -251,7 +269,9 @@ Golden Rules), FSH wins. dotnet-skills may inform *how* (query shape, test comma
   (`IndexHtmlGuardTests` enforces it).
 - **Razor source-gen cache stale** — verify.ps1 deletes obj/bin before building (that's the point).
 - **verify.lock exists** — someone is verifying; wait or check heartbeat (>12h stale → board.md + remove).
-- **Release publish crashes Mono at boot** — known upstream blocker #121849; Debug/DevServer fine.
+- **Release publish crashed Mono at boot** — RESOLVED (wave 19): stale-publish artifact; delete
+  `obj/Release`, re-publish, boots fine (~4.3 s to login). If it regresses, re-open upstream
+  dotnet/runtime #121849.
 - **Swarm session drifts out of zone** — the coder's scope is declared per task; if it touched
   files outside, unstage by explicit path and re-route through the zone owner.
 - **Model identity wrong in a doc** — re-verify fresh (never copy from an older doc); fix header only.

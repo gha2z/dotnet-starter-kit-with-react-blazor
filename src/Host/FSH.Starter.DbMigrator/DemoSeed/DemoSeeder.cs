@@ -43,7 +43,7 @@ namespace FSH.Starter.DbMigrator.DemoSeed;
 /// Naming: pre-2026-05-17 this lived in the API as <c>DevDataSeeder</c>
 /// (a hosted service) — moved here so the API no longer mutates data on
 /// startup, matching the same principle that pulled migrations out into
-/// this project. See <c>docs/superpowers/specs/2026-05-14-remove-api-auto-migration-design.md</c>.
+/// this project.
 /// </summary>
 internal sealed class DemoSeeder
 {

@@ -18,7 +18,7 @@ disjoint, verification gates must exist, an owner must be named.
 ## How to create one
 
 1. **Copy the protocol core** from a working track:
-   `copy-item opencode/addBlazorFrontends/<readme.md, coordination.ps1, verify*.ps1, board.md> opencode/<name>/`
+   `copy-item opencode/addBlazorFrontends/<readme.md, coordination.ps1, verify*.ps1, board.md, 00_summary> opencode/<name>/`
    — or, if a bare skeleton is enough, copy the templates in this folder.
 2. **Rename** `*-template.md` files to their real names (`00-Index.md`, `STATUS.md`, `plan.md`,
    `zones.md`, `readme.md`) and fill the `{…}` fields.

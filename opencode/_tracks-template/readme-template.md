@@ -24,8 +24,9 @@
 | `00-Index.md` | Roadmap: phases + feature index (the tracking list). |
 | `STATUS.md` | Current state — done now next, gates, baselines. Read fresh every session. |
 | `readme.md` | Protocol core (session ritual, scope restriction, model identity) — learn it once, reuse per track. |
-| `coordination.ps1` | Heartbeat / lock / gate / zone checks (fails closed). |
+| `coordination.ps1` | Heartbeat / lock / gate / zone checks + **close-out** (summary + Lessons + STATUS refresh, blocks commit) — fails closed. |
 | `verify.ps1`, `verify-hybrid.ps1` | Scripted verification gates non-negotiable. |
+| `00_summary/` | Per-wave summaries + `## Lessons` (close-out convention) — the handoff surface between sessions. |
 | `live/` | Session state: `board.md`, session files, `locks/`. |
 | `zones.md` | Which code areas this track may touch; what it may never touch. |
 | `Phase-NN-*/plan.md` | Per-phase: `FR-###` feature list mapped from the spec. |
@@ -46,3 +47,10 @@
 1. Read `00-Index.md` + `STATUS.md` + all of `live/` **fresh**.
 2. Open the spec `docs/spec/NNN-<name>.md`, confirm the next `FR-###` set is bounded.
 3. Plan → get approval → coder → reviewer/test_engineer → verify → stage for approval.
+4. End a wave with the **close-out**: `coordination.ps1 -Session <sid> -CloseOut` (summary into
+   `00_summary/` + `## Lessons` + STATUS refresh) before staging the commit.
+
+> **AI memory & knowledge tools:** `ctx_memory` / `ctx_search` (durable facts, history recall) and
+> `knowledge_recall` / `knowledge_query` / `knowledge_add` (swarm KB, local `.swarm/knowledge.jsonl`,
+> gitignored) hold cross-session agent state. Search before re-asking; docs/spec stay the
+> human-side truth.

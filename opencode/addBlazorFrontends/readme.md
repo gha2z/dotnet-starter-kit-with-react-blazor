@@ -170,6 +170,20 @@ pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -CloseOut
 The zone→session map lives at the top of the script (keep it in sync with `Scope Restriction`
 below — the script fails closed: any path outside your zones blocks staging).
 
+## AI Memory & Knowledge Tools (API reference)
+
+The three stores are often conflated — use the exact tool for each:
+
+| Store | Tool(s) | Actions / usage |
+|---|---|---|
+| **Project memory** (per-session durable facts, visible as `<project-memory>`) | `ctx_memory` | `write` · `update` · `archive` · `merge` · `get (ids)` · `list` — id-based CRUD only |
+| **Conversation & doc recall** (full session history, indexed git commits) | `ctx_search` | semantic search across memories, git commits, message history; expand hits via `ctx_expand(start, end)` |
+| **Swarm knowledge base** (`.swarm/knowledge.jsonl`) | `knowledge_recall` / `knowledge_query` | semantic (`recall`) or filter-based (`query`) retrieval across swarm/hive tiers |
+
+There is **no** `ctx_memory(action="query"/"recall")` — those verbs live on `knowledge_*` and
+`ctx_search`. A session that answers "where is project memory?" correctly: `ctx_memory` for
+facts, `ctx_search` for history, `knowledge_recall` for the swarm KB.
+
 ## Subagent Dispatch Protocol
 
 Dispatch a subagent into a worktree only for work confined to **one independent project**.
