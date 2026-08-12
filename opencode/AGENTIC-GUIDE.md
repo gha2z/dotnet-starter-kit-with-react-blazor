@@ -1,6 +1,6 @@
 # Agentic Workflow Guide — FullStackHero .NET Starter Kit
 
-**Last updated: 2026-08-12, by: opencode (model: deepseek-v4-flash-free).**
+**Last updated: 2026-08-12, by: opencode (model: auto/coding — unresolved).**
 
 The single source of truth for driving agentic coding on this repo **and** for bootstrapping
 future SaaS projects from it. Read this before starting any session; the per-project protocol
@@ -70,6 +70,43 @@ pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Start   # manu
 - **Read-fresh ceremony:** re-read `STATUS.md`, all `live/*.md`, and the phase plan **fresh**
   every session — never from memory. State moves fast in this repo.
 
+### 2.1 Self-starting session ritual — run this automatically on every task
+
+**When you receive any task prompt, do the following BEFORE starting work. No human reminder needed.**
+
+```
+1. READ FRESH (whole files, no offset-tunneling)
+   AGENTS.md → opencode/AGENTIC-GUIDE.md (this file) → opencode/addBlazorFrontends/readme.md
+   → opencode/addBlazorFrontends/STATUS.md → all opencode/addBlazorFrontends/live/*.md
+   → latest opencode/addBlazorFrontends/00_summary/implementation-summary-*.md
+
+2. SESSION IDENTITY
+   Record your session id, model identity (verify fresh, never copy), scope, and heartbeat
+   in live/sess-<sid>.md (create from live/_template.md if missing).
+
+3. HEARTBEAT (every user turn, not only task boundaries)
+   pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Heartbeat
+
+4. OVERLAP CHECK
+   Is the task claimed by another session? Does it touch files in another session's zone?
+   If yes → post a request on board.md or take another task.
+
+5. WORK → VERIFY → CLOSE OUT (per wave)
+   a. Build + test: pwsh opencode/addBlazorFrontends/verify.ps1 (with verify lock)
+   b. Write summary file in 00_summary/ (implementation-summary-<ts>-sid.md, with ## Lessons)
+   c. Append one line to STATUS.md (wave + commit + test counts — append-only, never edit in place)
+   d. Update board row status cell only if a board row exists (cross-session work only)
+   e. pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -CloseOut
+   f. Stage by EXPLICIT PATHS (never git add -A), show git diff --cached --stat, wait for approval.
+```
+
+**Key rules baked into this ritual:**
+- Verification numbers in docs ALWAYS come from a real run THIS SESSION — never from memory.
+- Summary file in `00_summary/` is the **single tracking artifact** per wave (carries Lessons, file diff, verification).
+- `STATUS.md` is an **append-only one-line ledger** — never edit existing rows; append one line per wave.
+- `board.md` rows are for **cross-session coordination only** — single-session work does not add rows.
+- Whole-file reads only — no offset-tunneling (causes pattern-escalation stops).
+
 ---
 
 ## 3. Driving the current front-end projects (Blazor WASM + MAUI)
@@ -78,8 +115,8 @@ pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Start   # manu
 
 | Area | State |
 |---|---|
-| Admin Blazor (5175) | Suite green (158/158 bUnit), 0 warnings |
-| Dashboard Blazor (5176) | Suite green (204/204 bUnit + 18/18 E2E), 0 warnings |
+| Admin Blazor (5175) | Suite green (164/164 bUnit), 0 warnings |
+| Dashboard Blazor (5176) | Suite green (233/233 bUnit), 0 warnings |
 | MAUI Hybrid | 5.1–5.9 in-zone delivered (`bc00bea5`), hybrid 12/12; blocked/external: push (Firebase/APNs 5.4), IAP (5.8), signing/CI (5.10) |
 | Lazy loading + PWA | Done both apps (Pages RCLs + `resources.lazyAssembly`, manifest + SW + offline page) |
 | ✅ Release-publish | **RESOLVED (wave 19, 2026-08-09)** — the Mono boot crash was a stale-publish artifact; clean publish (delete `obj/Release` first) boots to login ~4.3 s, 0 errors, no code change. Deployment-zone CDN config (`.br`/`.gz` + 103 Early Hints) remains guidance only. |
@@ -131,7 +168,7 @@ dotnet build src/FSH.Starter.slnx                     # full solution at phase e
 ```
 
 Expected baselines (**live numbers in `opencode/addBlazorFrontends/STATUS.md` — refresh there, not
-here**): dashboard bUnit 204/204 + E2E 18/18 · admin bUnit 158/158 · hybrid 12/12 ·
+here**): dashboard bUnit 233/233 · admin bUnit 164/164 · hybrid 12/12 ·
 backend build 0 warnings · Architecture.Tests 51/51 · 17 role-permission integration tests.
 
 ---

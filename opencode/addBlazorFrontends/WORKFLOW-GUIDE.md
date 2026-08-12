@@ -68,14 +68,16 @@ Read `readme.md` first for protocol overview. This file is the detailed task→t
 ### B. Manual Multi-Session Mode (this protocol)
 
 **No plugin required**. Single opencode session, state in `live/` + `board.md` + `00-Index.md`.
+**Ritual is self-starting** — see `AGENTIC-GUIDE.md` §2.1 and `readme.md` "Self-starting" section.
+The human should never need to say "follow the ritual."
 
 | Step | Command / Action | Artifact updated |
 |---|---|---|
-| **Start** | `opencode` → read `00-Index.md`, `live/README.md`, `STATUS.md` | Context loaded |
-| **Plan** | Decompose → add tasks to `board.md` (Backlog) + `00-Index.md` | Plan visible |
-| **Execute** | Work one task → update `board.md` (Doing→Review→Done) → append to `live/sess-*.md` | Trace captured |
-| **Sync** | `git commit -m "feat: ..."` (conventional) | History immutable |
-| **Handoff** | Write `STATUS.md` (one line) + `board.md` next-task pointers | Zero-loss transfer |
+| **Start** | `coordination.ps1 -Start` → read `STATUS.md` + all `live/*.md` + latest `00_summary/` | Context loaded |
+| **Heartbeat** | `coordination.ps1 -Heartbeat` — **every user turn**, not only task boundaries | Heartbeat stamped |
+| **Work** | Code → build → verify → stage | Working tree |
+| **Close-out** | Write `00_summary/implementation-summary-<ts>-<sid>.md` (with `## Lessons`) + append one line to `STATUS.md` + update board row Status cell | Single tracking artifact + append-only ledger |
+| **Gate** | `coordination.ps1 -CloseOut` → stage explicit paths → show `git diff --cached --stat` → wait for approval | Blocks commit until all artifacts pass |
 
 **Session log template** (`live/_template.md`):
 ```markdown
@@ -138,8 +140,8 @@ Critical path: t1.1 → t1.3 → t1.5   (longest dependency chain — gate here 
 
 | Tier | Models | Agents | Max tokens/session |
 |---|---|---|---|
-| **Reasoning** | "opencode/deepseek-v4-flash-free" (this session) | architect, critic | 200k |
-| **Standard** | "opencode/deepseek-v4-flash-free" | coder, reviewer, test_engineer, explorer | 128k |
+| **Reasoning** | `auto/coding` (omniroute, unresolved — verify fresh per session) | architect, critic | 200k |
+| **Standard** | `auto/coding` (omniroute, unresolved) | coder, reviewer, test_engineer, explorer | 128k |
 | **Lite** | gemini-flash / gpt-4o-mini | docs, summarization, grep | 64k |
 
 Configure in `.opencode/opencode-swarm.json` → `agents.<name>.model`.

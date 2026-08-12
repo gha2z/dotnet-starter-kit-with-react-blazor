@@ -1,5 +1,5 @@
 # AddBlazorFrontends — Session Instructions
-**Last updated: 2026-08-11 12:34, by: opencode (model: opencode/deepseek-v4-flash-free) — Stage A: summary close-out gate (`coordination.ps1 -CloseOut`), `## Lessons` summary section, wave-DAG/critical-path convention.**
+**Last updated: 2026-08-12 14:00, by: opencode (model: auto/coding — unresolved) — W1 theme fix landed; ritual made self-starting (AGENTIC-GUIDE.md §2.1, HUMAN-GUIDE.md §Self-starting ritual, STATUS.md append-only ledger, board cross-session only).**
 
 ## Commit Policy
 
@@ -42,6 +42,26 @@ On session start:
    `fetch-and-send-data`, `use-js-interop`, `run-tests`, `optimizing-ef-core-queries`,
    `test-anti-patterns`, `dotnet-webapi`, dotnet-maui skills, build-perf-*)
 9. Verify builds + tests pass before starting work
+
+### Self-starting — run this automatically on every task (no human reminder needed)
+
+When you receive ANY task in this track, **before starting work** execute the ritual above (steps 1–9).
+This is not optional — it is the protocol. The human should never need to say "follow the ritual."
+
+**During work** (every user turn):
+1. `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Heartbeat`
+2. If the task touches files in another session's zone → stop; post on `board.md`; take another task
+
+**Wave close-out** (after each verified unit of work — the "two-call" ritual):
+1. Write summary to `00_summary/implementation-summary-<ts>-<sid>.md` per `_template.md`
+   (wave DAG + verification block + `## Lessons` section — this is the **single tracking artifact**)
+2. Append one line to `STATUS.md` (timestamp + wave + commit + test counts — **append-only ledger**,
+   never edit existing rows)
+3. If a board row exists for this work, update its Status cell only (**cross-session only** —
+   single-session work does not add board rows)
+4. `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -CloseOut` (fail-closed —
+   blocks staging if summary is missing or STATUS not refreshed)
+5. Stage by explicit paths, show `git diff --cached --stat`, wait for user approval
 
 ---
 

@@ -2,7 +2,7 @@
 
 > This is the people's-eye view of the agentic workflow that runs on this repo.
 > AI agents read `AGENTS.md` + `opencode/AGENTIC-GUIDE.md`. Humans read this.
-> **Last updated: 2026-08-11 (track model + requirements home; standalone `workflow/` machinery retired).**
+> **Last updated: 2026-08-12 (W1 theme fix landed; ritual made self-starting).**
 
 ## What this repo carries besides code
 
@@ -77,6 +77,27 @@ You don't need to learn either to use the repo — the agents do. You need to kn
 - **`git push` is never done by an agent** unless you explicitly direct it.
 - **Verification is scripted and non-negotiable**: `verify.ps1` (both WASM apps), `verify-hybrid.ps1` (MAUI), `dotnet build src/FSH.Starter.slnx` (backend).
 - **Docs travel with the change** — a user-facing change isn't done until the docs repo + changelog are updated (Golden Rule 10).
+
+## The ritual is self-starting — you don't remind agents
+
+The workflow playbooks are written so that an agent that reads them **automatically runs the
+session ritual on its own** — you give it a task and it does the rest, without you having to say
+"follow the ritual" again. If you ever see an agent skipping these steps, point it at the section
+it skipped rather than re-explaining the whole process:
+
+1. **On receiving any task**, the agent reads `AGENTS.md` → `opencode/AGENTIC-GUIDE.md` →
+   `opencode/addBlazorFrontends/readme.md` (Session Start Ritual) → fresh `live/*.md` +
+   `STATUS.md` + latest `00_summary/implementation-summary-*.md` (never from memory).
+2. **Every session turn** the agent stamps its `heartbeat` (`coordination.ps1 -Heartbeat`).
+3. **Before building/staging** it takes the verify lock, runs the gate (`coordination.ps1 -Gate`),
+   stages by explicit path, and shows the cached diff for your approval.
+4. **Wave close-out** is one committed unit: summary file in `00_summary/` (with `## Lessons`) +
+   one STATUS append + board status update + `coordination.ps1 -CloseOut` passing.
+5. **Verification numbers in docs always come from a real run this session** — never copied
+   from memory or older files.
+
+The single source of truth for "what does the ritual say" is `opencode/AGENTIC-GUIDE.md` +
+`opencode/addBlazorFrontends/readme.md`; this file only summarizes it for you.
 
 ## Golden Rules that protect you (and the codebase)
 
