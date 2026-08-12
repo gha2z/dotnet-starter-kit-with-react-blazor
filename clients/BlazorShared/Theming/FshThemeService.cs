@@ -31,6 +31,12 @@ public class FshThemeService : IAsyncDisposable
     private ThemeMode _mode;
     private bool _isDarkMode;
 
+    private string _accentId = FshAppearanceOptions.DefaultAccentId;
+    private string _fontId = FshAppearanceOptions.DefaultFontId;
+    private FshDensityMode _density = FshDensityMode.Comfortable;
+    private bool _reducedMotion;
+    private FshCustomAccentSpec _customAccent = FshCustomAccentSpec.Default;
+
     public FshThemeService(IJSRuntime js, string storageKey, ThemeMode defaultMode = ThemeMode.Dark)
     {
         _js = js;
@@ -45,6 +51,21 @@ public class FshThemeService : IAsyncDisposable
 
     /// <summary>Stored preference: Light, Dark or System.</summary>
     public ThemeMode Mode => _mode;
+
+    /// <summary>Selected accent id (React parity: <c>fsh.accent</c>, default <c>rose</c>).</summary>
+    public string AccentId => _accentId;
+
+    /// <summary>Selected font id (React parity: <c>fsh.font</c>, default <c>figtree</c>).</summary>
+    public string FontId => _fontId;
+
+    /// <summary>UI density (React parity: <c>fsh.density</c>, default comfortable).</summary>
+    public FshDensityMode Density => _density;
+
+    /// <summary>Forces reduced motion regardless of the OS setting (React parity: <c>fsh.reduce-motion</c>).</summary>
+    public bool ReducedMotion => _reducedMotion;
+
+    /// <summary>Custom accent hue/chroma spec (React parity: <c>fsh.accent.custom</c>).</summary>
+    public FshCustomAccentSpec CustomAccent => _customAccent;
 
     public event Action? Changed;
 
@@ -73,6 +94,8 @@ public class FshThemeService : IAsyncDisposable
                 _mode = mode;
                 _isDarkMode = mode == ThemeMode.Dark;
             }
+
+            await LoadAppearanceAsync();
         }
         catch
         {
@@ -169,6 +192,119 @@ public class FshThemeService : IAsyncDisposable
             ThemeMode.Light => "light",
             _ => "system",
         };
+
+    public async Task SetAccentAsync(string accentId)
+    {
+        if (string.IsNullOrEmpty(accentId) || accentId == _accentId)
+        {
+            return;
+        }
+
+        _accentId = accentId;
+        Changed?.Invoke();
+        await WritePreferenceAsync(FshAppearanceOptions.AccentStorageKey, accentId);
+    }
+
+    /// <summary>
+    /// Activates the custom accent and persists its hue/chroma spec
+    /// (React parity: setCustomAccent + setAccent("custom")).
+    /// </summary>
+    public async Task SetCustomAccentAsync(FshCustomAccentSpec spec)
+    {
+        _customAccent = spec;
+        if (_accentId != FshAppearanceOptions.CustomAccentId)
+        {
+            _accentId = FshAppearanceOptions.CustomAccentId;
+            Changed?.Invoke();
+        }
+
+        await WritePreferenceAsync(FshAppearanceOptions.AccentCustomStorageKey, spec.ToStorage());
+        await WritePreferenceAsync(FshAppearanceOptions.AccentStorageKey, FshAppearanceOptions.CustomAccentId);
+    }
+
+    public async Task SetFontAsync(string fontId)
+    {
+        if (string.IsNullOrEmpty(fontId) || fontId == _fontId)
+        {
+            return;
+        }
+
+        _fontId = fontId;
+        Changed?.Invoke();
+        await WritePreferenceAsync(FshAppearanceOptions.FontStorageKey, fontId);
+    }
+
+    public async Task SetDensityAsync(FshDensityMode density)
+    {
+        if (density == _density)
+        {
+            return;
+        }
+
+        _density = density;
+        Changed?.Invoke();
+        await WritePreferenceAsync(FshAppearanceOptions.DensityStorageKey, density == FshDensityMode.Compact ? "compact" : "comfortable");
+    }
+
+    public async Task SetReducedMotionAsync(bool reducedMotion)
+    {
+        if (reducedMotion == _reducedMotion)
+        {
+            return;
+        }
+
+        _reducedMotion = reducedMotion;
+        Changed?.Invoke();
+        await WritePreferenceAsync(FshAppearanceOptions.ReduceMotionStorageKey, reducedMotion ? "true" : "false");
+    }
+
+    private async Task LoadAppearanceAsync()
+    {
+        var storedAccent = ParseStoredPreference(await ReadPreferenceAsync(FshAppearanceOptions.AccentStorageKey));
+        _accentId = storedAccent is { Length: > 0 }
+            ? (storedAccent == FshAppearanceOptions.CustomAccentId
+                ? FshAppearanceOptions.CustomAccentId
+                : FshAppearanceOptions.GetAccent(storedAccent).Id)
+            : FshAppearanceOptions.DefaultAccentId;
+
+        if (_accentId == FshAppearanceOptions.CustomAccentId)
+        {
+            _customAccent = FshCustomAccentSpec.Parse(
+                ParseStoredPreference(await ReadPreferenceAsync(FshAppearanceOptions.AccentCustomStorageKey)));
+        }
+
+        _fontId = ParseStoredPreference(await ReadPreferenceAsync(FshAppearanceOptions.FontStorageKey)) ?? FshAppearanceOptions.DefaultFontId;
+
+        var storedDensity = ParseStoredPreference(await ReadPreferenceAsync(FshAppearanceOptions.DensityStorageKey));
+        _density = storedDensity == "compact" ? FshDensityMode.Compact : FshDensityMode.Comfortable;
+
+        _reducedMotion = ParseStoredPreference(await ReadPreferenceAsync(FshAppearanceOptions.ReduceMotionStorageKey)) == "true";
+    }
+
+    private static string? ParseStoredPreference(string? stored)
+        => string.IsNullOrWhiteSpace(stored) ? null : stored;
+
+    /// <summary>
+    /// Reads a persisted appearance preference (accent/font/density/motion). Base
+    /// implementation reads localStorage via the fshTheme.js module; non-browser
+    /// hosts (MAUI Hybrid) override to use their own storage.
+    /// </summary>
+    protected virtual async Task<string?> ReadPreferenceAsync(string key)
+    {
+        _module ??= await _js.InvokeAsync<IJSObjectReference>("import", "./_content/FSH.BlazorShared/js/fshTheme.js");
+        return await _module.InvokeAsync<string?>("getPreference", key);
+    }
+
+    /// <summary>
+    /// Persists an appearance preference as a raw storage value. Base implementation
+    /// writes localStorage via the fshTheme.js module; non-browser hosts override to
+    /// use their own storage. Best-effort — exceptions are swallowed by the caller.
+    /// </summary>
+    protected virtual async Task WritePreferenceAsync(string key, string value)
+    {
+        _module ??= await _js.InvokeAsync<IJSObjectReference>("import", "./_content/FSH.BlazorShared/js/fshTheme.js");
+        await _module.InvokeVoidAsync("setPreference", key, value);
+    }
 
     public ValueTask DisposeAsync()
     {

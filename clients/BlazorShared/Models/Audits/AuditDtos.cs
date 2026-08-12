@@ -93,7 +93,15 @@ public sealed class ListAuditsRequest
     public string? TenantId { get; set; }
     public string? UserId { get; set; }
     public AuditEventType? EventType { get; set; }
+
+    /// <summary>Hide a single event type (e.g. Activity to drop system-level HTTP noise).</summary>
+    public AuditEventType? ExcludeEventType { get; set; }
+
     public AuditSeverity? Severity { get; set; }
+
+    /// <summary>Bitmask of <see cref="AuditTag"/> values.</summary>
+    public AuditTag? Tags { get; set; }
+
     public string? Source { get; set; }
     public string? CorrelationId { get; set; }
     public string? TraceId { get; set; }

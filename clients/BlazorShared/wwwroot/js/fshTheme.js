@@ -13,3 +13,11 @@ export function setTheme(key, value) {
 export function prefersDark() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
+
+export function getPreference(key) {
+    return localStorage.getItem(key);
+}
+
+export function setPreference(key, value) {
+    localStorage.setItem(key, value);
+}

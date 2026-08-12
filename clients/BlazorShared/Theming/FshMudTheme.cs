@@ -71,10 +71,13 @@ public static class FshMudTheme
     }
 
     public static MudTheme CreateDashboard()
+        => CreateDashboard(FshAppearanceOptions.GetAccent(FshAppearanceOptions.DefaultAccentId));
+
+    public static MudTheme CreateDashboard(FshAccentOption accent)
     {
         var theme = CreateAdmin();
-        theme.PaletteLight.Primary = LightPrimary;
-        theme.PaletteDark.Primary = DarkPrimary;
+        theme.PaletteLight.Primary = accent.LightPrimary;
+        theme.PaletteDark.Primary = accent.DarkPrimary;
         return theme;
     }
 }

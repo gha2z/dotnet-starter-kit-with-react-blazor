@@ -43,6 +43,35 @@ public sealed class AuditService(HttpClient http) : IAuditService
         return summary;
     }
 
+    public async Task<IReadOnlyList<AuditSummaryDto>> GetByCorrelationAsync(
+        string correlationId,
+        DateTime? fromUtc = null,
+        DateTime? toUtc = null,
+        CancellationToken ct = default)
+    {
+        var parts = new List<string>();
+        if (fromUtc is not null)
+        {
+            parts.Add($"FromUtc={Uri.EscapeDataString(fromUtc.Value.ToString("O"))}");
+        }
+
+        if (toUtc is not null)
+        {
+            parts.Add($"ToUtc={Uri.EscapeDataString(toUtc.Value.ToString("O"))}");
+        }
+
+        var query = parts.Count == 0 ? string.Empty : $"?{string.Join("&", parts)}";
+        var items = await http.GetFromJsonAsync<List<AuditSummaryDto>>(
+                $"{AuditsBase}/by-correlation/{Uri.EscapeDataString(correlationId)}{query}", ct)
+            ?? [];
+        foreach (var item in items)
+        {
+            Normalize(item);
+        }
+
+        return items;
+    }
+
     private static void Normalize(AuditSummaryDto dto)
     {
         // Defensive: if the JSON used integer-backed string keys (e.g. tags), ensure the
@@ -114,9 +143,20 @@ public sealed class AuditService(HttpClient http) : IAuditService
             parts.Add($"EventType={request.EventType}");
         }
 
+        if (request.ExcludeEventType is not null)
+        {
+            parts.Add($"ExcludeEventType={request.ExcludeEventType}");
+        }
+
         if (request.Severity is not null)
         {
             parts.Add($"Severity={request.Severity}");
+        }
+
+        if (request.Tags is not null && request.Tags.Value != AuditTag.None)
+        {
+            // The backend binds the flags enum as a numeric bitmask (React parity).
+            parts.Add($"Tags={(int)request.Tags.Value}");
         }
 
         return string.Join("&", parts);
