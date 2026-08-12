@@ -46,7 +46,7 @@ public class UserCreateDialogTests : TestSetup
     {
         var (provider, reference) = await ShowDialogAsync();
 
-        provider.FindAll("button").First(b => b.TextContent.Contains("Create user")).Click();
+        provider.FindAll("button").First(b => b.TextContent.Contains("Create account")).Click();
 
         provider.WaitForAssertion(() => provider.Markup.ShouldContain("First name is required."));
         provider.Markup.ShouldContain("Last name is required.");
@@ -67,7 +67,7 @@ public class UserCreateDialogTests : TestSetup
 
         FillValidForm(provider.FindAll("input"));
 
-        provider.FindAll("button").First(b => b.TextContent.Contains("Create user")).Click();
+        provider.FindAll("button").First(b => b.TextContent.Contains("Create account")).Click();
 
         await _userService.Received(1).CreateAsync(
             Arg.Is<RegisterUserRequest>(r =>
@@ -98,7 +98,7 @@ public class UserCreateDialogTests : TestSetup
         inputs[5].Change("Str0ng!Pass");
         inputs[6].Change("Different!");
 
-        provider.FindAll("button").First(b => b.TextContent.Contains("Create user")).Click();
+        provider.FindAll("button").First(b => b.TextContent.Contains("Create account")).Click();
 
         provider.WaitForAssertion(() => provider.Markup.ShouldContain("Passwords do not match."));
         await _userService.DidNotReceive().CreateAsync(Arg.Any<RegisterUserRequest>(), Arg.Any<CancellationToken>());
@@ -114,10 +114,10 @@ public class UserCreateDialogTests : TestSetup
 
         FillValidForm(provider.FindAll("input"));
 
-        provider.FindAll("button").First(b => b.TextContent.Contains("Create user")).Click();
+        provider.FindAll("button").First(b => b.TextContent.Contains("Create account")).Click();
 
         await Task.Delay(100);
         reference.Result.IsCompleted.ShouldBeFalse();
-        provider.Markup.ShouldContain("Create user");
+        provider.Markup.ShouldContain("Create account");
     }
 }

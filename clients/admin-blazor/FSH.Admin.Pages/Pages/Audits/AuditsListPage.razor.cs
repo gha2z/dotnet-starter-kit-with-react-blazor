@@ -173,7 +173,6 @@ public partial class AuditsListPage
         {
             Position = DialogPosition.CenterRight,
             MaxWidth = MaxWidth.Medium,
-            FullHeight = true,
             CloseButton = true,
             BackgroundClass = "fsh-dialog-backdrop",
         };
