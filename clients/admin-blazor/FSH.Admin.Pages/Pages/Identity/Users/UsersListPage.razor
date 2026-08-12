@@ -34,29 +34,23 @@
                   Margin="Margin.Dense"
                   Style="max-width: 360px; flex: 1;" />
 
-    <MudSelect T="string"
-               Value="@ActiveFilterValue"
-               ValueChanged="@OnActiveFilterChanged"
-               Label="Status"
-               Clearable="true"
-               Variant="Variant.Outlined"
-               Margin="Margin.Dense"
-               Style="min-width: 140px;">
-        <MudSelectItem Value="@ActiveOption">Active</MudSelectItem>
-        <MudSelectItem Value="@DisabledOption">Disabled</MudSelectItem>
-    </MudSelect>
+    <div class="fsh-segmented">
+        <span id="seg-status">Status</span>
+        <div class="fsh-segmented-group" role="group" aria-labelledby="seg-status">
+            <button type="button" class="fsh-segmented-btn" aria-pressed="@(_activeFilter == Tri.Any)" @onclick="@(() => OnActiveFilterChanged(string.Empty))">Any</button>
+            <button type="button" class="fsh-segmented-btn" aria-pressed="@(_activeFilter == Tri.Yes)" @onclick="@(() => OnActiveFilterChanged("Active"))">Active</button>
+            <button type="button" class="fsh-segmented-btn" aria-pressed="@(_activeFilter == Tri.No)" @onclick="@(() => OnActiveFilterChanged("Disabled"))">Disabled</button>
+        </div>
+    </div>
 
-    <MudSelect T="string"
-               Value="@ConfirmedFilterValue"
-               ValueChanged="@OnConfirmedFilterChanged"
-               Label="Email"
-               Clearable="true"
-               Variant="Variant.Outlined"
-               Margin="Margin.Dense"
-               Style="min-width: 140px;">
-        <MudSelectItem Value="@ConfirmedOption">Confirmed</MudSelectItem>
-        <MudSelectItem Value="@PendingOption">Pending</MudSelectItem>
-    </MudSelect>
+    <div class="fsh-segmented">
+        <span id="seg-email">Email</span>
+        <div class="fsh-segmented-group" role="group" aria-labelledby="seg-email">
+            <button type="button" class="fsh-segmented-btn" aria-pressed="@(_confirmedFilter == Tri.Any)" @onclick="@(() => OnConfirmedFilterChanged(string.Empty))">Any</button>
+            <button type="button" class="fsh-segmented-btn" aria-pressed="@(_confirmedFilter == Tri.Yes)" @onclick="@(() => OnConfirmedFilterChanged("Confirmed"))">Confirmed</button>
+            <button type="button" class="fsh-segmented-btn" aria-pressed="@(_confirmedFilter == Tri.No)" @onclick="@(() => OnConfirmedFilterChanged("Pending"))">Pending</button>
+        </div>
+    </div>
 
     <MudSelect T="string"
                Value="@_roleId"
@@ -77,41 +71,39 @@
           ServerData="LoadDataAsync"
           RowsPerPage="12"
           Hover="true"
-          Elevation="1"
+          Elevation="0"
+          Class="fsh-list-card"
           RowClassFunc="@RowClassFunc"
           OnRowClick="@((TableRowClickEventArgs<UserDto> e) => RowClickAsync(e))">
     <HeaderContent>
         <MudTh><MudTableSortLabel T="UserDto" SortLabel="firstname">Name</MudTableSortLabel></MudTh>
         <MudTh><MudTableSortLabel T="UserDto" SortLabel="username">Username</MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel T="UserDto" SortLabel="email">Email</MudTableSortLabel></MudTh>
-        <MudTh><MudTableSortLabel T="UserDto" SortLabel="isactive">Status</MudTableSortLabel></MudTh>
+        <MudTh Class="d-none d-lg-table-cell"><MudTableSortLabel T="UserDto" SortLabel="isactive">Status</MudTableSortLabel></MudTh>
+        <MudTh Style="width: 36px;"></MudTh>
     </HeaderContent>
     <RowTemplate>
         <MudTd>
             <div class="d-flex align-center gap-3">
                 <FshMonogram Seed="@(context.Id ?? context.Email)" Name="@DisplayName(context)" AvatarSize="Size.Medium" />
-                <div>
-                    <MudText Typo="Typo.body2" Style="margin: 0;">@DisplayName(context)</MudText>
-                    @if (!string.IsNullOrEmpty(context.PhoneNumber))
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">@context.PhoneNumber</MudText>
-                    }
+                <div class="min-w-0">
+                    <MudText Typo="Typo.body2" Class="fsh-row-name font-weight-medium" Style="margin: 0;">@DisplayName(context)</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="truncate" Style="margin: 0;">@context.Email</MudText>
                 </div>
             </div>
         </MudTd>
         <MudTd>
             <MudText Typo="Typo.body2" Class="font-mono" Style="margin: 0;">@(context.UserName is null ? "-" : $"@{context.UserName}")</MudText>
         </MudTd>
-        <MudTd>
-            <MudText Typo="Typo.body2" Style="margin: 0;">@context.Email</MudText>
-        </MudTd>
-        <MudTd>
+        <MudTd Class="d-none d-lg-table-cell">
             <div class="d-flex gap-2">
                 <FshStatusPill Text="@(context.IsActive ? "Active" : "Inactive")"
                                Tone="@(context.IsActive ? Color.Success : Color.Default)" />
                 <FshStatusPill Text="@(context.EmailConfirmed ? "Confirmed" : "Pending")"
                                Tone="@(context.EmailConfirmed ? Color.Info : Color.Warning)" />
             </div>
+        </MudTd>
+        <MudTd>
+            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="fsh-row-chevron" />
         </MudTd>
     </RowTemplate>
     <NoRecordsContent>

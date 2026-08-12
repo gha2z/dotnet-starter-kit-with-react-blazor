@@ -100,9 +100,7 @@ public class UsersListPageTests : TestSetup
         });
         cut.WaitForAssertion(() => _userService.Received(1).SearchAsync(Arg.Any<SearchRequest>(), Arg.Any<CancellationToken>()));
 
-        cut.FindAll("div.mud-input-control.mud-select")[0].TriggerEvent("onmousedown", new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
-        cut.WaitForAssertion(() => cut.Markup.ShouldContain("Active"));
-        cut.FindAll(".mud-list-item").First(i => i.TextContent.Trim() == "Active").Click();
+        cut.FindAll(".fsh-segmented-btn").First(b => b.TextContent.Trim() == "Active").Click();
 
         cut.WaitForAssertion(
             () => _userService.Received().SearchAsync(

@@ -21,19 +21,21 @@
           RowsPerPage="12"
           Hover="true"
           Elevation="0"
+          Class="fsh-list-card"
           RowClassFunc="@RowClassFunc"
           OnRowClick="@((TableRowClickEventArgs<TenantDto> e) => RowClickAsync(e))">
     <HeaderContent>
         <MudTh>Tenant</MudTh>
         <MudTh>Admin email</MudTh>
         <MudTh>Status</MudTh>
+        <MudTh Style="width: 36px;"></MudTh>
     </HeaderContent>
     <RowTemplate>
         <MudTd>
             <div class="d-flex align-center gap-3">
                 <FshMonogram Seed="@context.Id" Name="@context.Name" AvatarSize="Size.Medium" />
                 <div>
-                    <MudText Typo="Typo.body2" Style="margin: 0;">@context.Name</MudText>
+                    <MudText Typo="Typo.body2" Class="fsh-row-name font-weight-medium" Style="margin: 0;">@context.Name</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="font-mono" Style="margin: 0;">
                         @context.Id · valid @FormatDate(context.ValidUpto)
                     </MudText>
@@ -46,6 +48,9 @@
         <MudTd>
             <FshStatusPill Text="@(context.IsActive ? "Active" : "Inactive")"
                            Tone="@(context.IsActive ? Color.Success : Color.Default)" />
+        </MudTd>
+        <MudTd>
+            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="fsh-row-chevron" />
         </MudTd>
     </RowTemplate>
     <NoRecordsContent>
