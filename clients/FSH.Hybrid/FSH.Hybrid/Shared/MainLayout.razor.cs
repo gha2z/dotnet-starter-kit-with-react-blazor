@@ -1,10 +1,10 @@
 using System.Security.Claims;
 using FSH.BlazorShared.Auth;
-using FSH.BlazorShared.Components;
 using FSH.BlazorShared.Theming;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 using MudBlazor;
 
 namespace FSH.Hybrid.Shared;
@@ -15,14 +15,17 @@ public sealed partial class MainLayout : IDisposable
     [Inject] private AuthenticationStateProvider Auth { get; set; } = default!;
     [Inject] private FshThemeService Theme { get; set; } = default!;
     [Inject] private IDialogService DialogService { get; set; } = default!;
+    [Inject] private IJSRuntime Js { get; set; } = default!;
 
     private string _userName = string.Empty;
     private string _userEmail = string.Empty;
     private string _tenantName = string.Empty;
+    private readonly HashSet<string> _permissions = new(StringComparer.Ordinal);
 
     protected override void OnInitialized()
     {
         Auth.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        Nav.LocationChanged += OnLocationChanged;
     }
 
     protected override async Task OnInitializedAsync()
@@ -33,12 +36,25 @@ public sealed partial class MainLayout : IDisposable
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
         => await EvaluateUserAsync(task);
 
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        // Location sync is handled in the .razor @code block via _currentUri
+        // This subscription ensures StateHasChanged is invoked
+        InvokeAsync(StateHasChanged);
+    }
+
     private async Task EvaluateUserAsync(Task<AuthenticationState> task)
     {
         try
         {
             var state = await task;
             var claims = state.User.Claims.ToList();
+
+            _permissions.Clear();
+            foreach (var claim in claims.Where(c => c.Type == "permission"))
+            {
+                _permissions.Add(claim.Value);
+            }
 
             _userName = state.User.Identity?.IsAuthenticated == true
                 ? claims.FirstOrDefault(c => c.Type == "name")?.Value ?? string.Empty
@@ -106,5 +122,6 @@ public sealed partial class MainLayout : IDisposable
     public void Dispose()
     {
         Auth.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        Nav.LocationChanged -= OnLocationChanged;
     }
 }

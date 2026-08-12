@@ -1,73 +1,159 @@
 @inherits LayoutComponentBase
 @using FSH.BlazorShared.Components
+@using FSH.BlazorShared.Permissions
 @using FSH.BlazorShared.Theming
+@using FSH.Hybrid.Shared
 
 <AuthorizeView>
     <Authorized>
-        <div class="d-flex flex-column" style="height: 100vh; overflow: hidden; background: var(--mud-palette-background);">
-            <header class="fsh-topbar">
-                <a href="/" class="d-flex align-center gap-2 text-decoration-none" @onclick="GoHome" @onclick:preventDefault="true">
-                    <div class="fsh-brand-mark">F</div>
-                    <div class="d-flex flex-column">
-                        <span class="fsh-brand-wordmark">fullstack<span style="color: var(--mud-palette-primary);">hero</span></span>
-                        <span class="fsh-brand-sub">Hybrid</span>
-                    </div>
-                </a>
-                <MudSpacer />
-                <MudMenu Class="fsh-theme-menu" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-                    <ActivatorContent Context="themeMenuActivator">
-                        <MudIconButton Icon="@(Theme.IsDarkMode ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)"
-                                       Size="Size.Medium" aria-label="Theme"
-                                       OnClick="() => themeMenuActivator.ToggleAsync(new MouseEventArgs())" />
-                    </ActivatorContent>
-                    <ChildContent>
-                        <MudMenuItem Icon="@Icons.Material.Filled.LightMode" OnClick="SetThemeLightAsync">Light</MudMenuItem>
-                        <MudMenuItem Icon="@Icons.Material.Filled.DarkMode" OnClick="SetThemeDarkAsync">Dark</MudMenuItem>
-                        <MudMenuItem Icon="@Icons.Material.Filled.BrightnessAuto" OnClick="SetThemeSystemAsync">System</MudMenuItem>
-                    </ChildContent>
-                </MudMenu>
-                <MudMenu Class="fsh-user-menu" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-                    <ActivatorContent Context="userMenuActivator">
-                        <div @onclick="() => userMenuActivator.ToggleAsync(new MouseEventArgs())"
-                             @onclick:preventDefault="true"
-                             @onkeydown="e => HandleUserMenuKey(e, userMenuActivator)"
-                             role="button" tabindex="0"
-                             style="padding: 4px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                            <div class="fsh-user-menu-tile" style="background: color-mix(in srgb, var(--mud-palette-primary) 18%, transparent); color: var(--mud-palette-primary);">
-                                @UserInitials
-                            </div>
-                            @if (!string.IsNullOrEmpty(_userName))
-                            {
-                                <div class="d-none d-md-flex flex-column align-start">
-                                    <span style="font-size: 13px; font-weight: 600; line-height: 1.2; color: var(--mud-palette-text-primary);">@_userName</span>
-                                    @if (!string.IsNullOrEmpty(_tenantName))
-                                    {
-                                        <span style="font-size: 11px; line-height: 1.2; color: var(--mud-palette-text-secondary);">@_tenantName</span>
-                                    }
-                                </div>
-                            }
-                            <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" Color="Color.Secondary" />
-                        </div>
-                    </ActivatorContent>
-                    <ChildContent>
-                        <div class="px-3 py-2">
-                            <div style="font-size: 12px; font-weight: 600; color: var(--mud-palette-text-primary);">@(_userName ?? _userEmail)</div>
-                            @if (!string.IsNullOrEmpty(_userEmail) && !string.IsNullOrEmpty(_userName))
-                            {
-                                <div style="font-size: 10.5px; color: var(--mud-palette-text-secondary); margin-top: 2px;">@_userEmail</div>
-                            }
-                        </div>
-                        <MudDivider Class="my-0" />
-                        <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="ConfirmSignOutAsync" Class="text-danger">
-                            Sign out
-                        </MudMenuItem>
-                    </ChildContent>
-                </MudMenu>
-            </header>
+        <a href="#fsh-main" class="fsh-skip-link" @onclick="OnSkipLinkClick" @onclick:preventDefault="true">Skip to content</a>
+        <div class="d-flex" style="height: 100vh; overflow: hidden; background: var(--mud-palette-background);">
 
-            <main style="flex: 1; overflow: auto; padding: 20px 24px;" id="main-content">
-                @Body
-            </main>
+            @if (_drawerOpen)
+            {
+                <div class="fsh-sidebar-backdrop" @onclick="CloseDrawer"></div>
+            }
+
+            <aside class="fsh-sidebar @(_drawerOpen ? "open" : null) @(_collapsed ? "collapsed" : null)"
+                   style="width: @(_collapsed ? "52px" : "220px"); background: var(--mud-palette-drawer); border-right: 1px solid var(--mud-palette-divider);">
+                <div class="d-flex align-center justify-space-between" style="height: 56px; border-bottom: 1px solid var(--mud-palette-divider); padding: 0 14px;">
+                    <a href="/" class="d-flex align-center gap-2 text-decoration-none" @onclick="GoHome" @onclick:preventDefault="true">
+                        <div class="fsh-brand-mark">F</div>
+                        @if (!_collapsed)
+                        {
+                            <div class="d-flex flex-column">
+                                <span class="fsh-brand-wordmark">fullstack<span style="color: var(--mud-palette-primary);">hero</span></span>
+                                <span class="fsh-brand-sub">Hybrid</span>
+                            </div>
+                        }
+                    </a>
+                    @if (!_collapsed)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.ViewSidebar" Size="Size.Small" aria-label="Collapse sidebar" OnClick="ToggleCollapsed" />
+                    }
+                </div>
+
+                <nav class="flex-grow-1 fsh-nav-scroll" style="overflow-y: auto; overflow-x: clip; padding: 8px 0 16px;" aria-label="Primary">
+                    @foreach (var item in VisibleTopItems)
+                    {
+                        <NavLink href="@item.Href" Match="@MatchFor(item)" class="@NavLinkClass(item)" title="@(_collapsed ? item.Label : null)">
+                            <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                            <span class="fsh-nav-text">@item.Label</span>
+                        </NavLink>
+                    }
+
+                    @foreach (var section in VisibleSections)
+                    {
+                        <FshNavSection SectionId="@section.Id" Caption="@section.Caption" Icon="@section.Icon"
+                                       IsOpen="@(_openSectionId == section.Id)" Collapsed="@_collapsed" OnToggle="ToggleSection">
+                            @foreach (var item in section.Items)
+                            {
+                                <NavLink href="@item.Href" Match="NavLinkMatch.Prefix" class="@NavLinkClass(item)" title="@(_collapsed ? item.Label : null)">
+                                    <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                                    <span class="fsh-nav-text">@item.Label</span>
+                                </NavLink>
+                            }
+                        </FshNavSection>
+                    }
+                </nav>
+
+                <div style="border-top: 1px solid var(--mud-palette-divider); padding: 10px 14px;">
+                    @if (_collapsed)
+                    {
+                        <div class="d-flex justify-center">
+                            <MudIconButton Icon="@Icons.Material.Filled.ViewSidebar" Size="Size.Small" aria-label="Expand sidebar" OnClick="ToggleCollapsed" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="fsh-brand-sub fsh-truncate" style="text-align: center;">v0.1 · hybrid</div>
+                    }
+                </div>
+            </aside>
+
+            <div class="d-flex flex-column" style="flex: 1; min-width: 0;">
+                <header class="fsh-topbar">
+                    <MudIconButton Icon="@Icons.Material.Filled.Menu" Size="Size.Medium" Class="fsh-topbar-menu" aria-label="Open navigation" OnClick="ToggleDrawer" />
+                    <MudSpacer />
+                    <MudMenu Class="fsh-theme-menu" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                        <ActivatorContent Context="themeMenuActivator">
+                            <MudIconButton Icon="@(Theme.IsDarkMode ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)"
+                                           Size="Size.Medium" aria-label="Theme"
+                                           OnClick="() => themeMenuActivator.ToggleAsync(new MouseEventArgs())" />
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem Icon="@Icons.Material.Filled.LightMode" OnClick="SetThemeLightAsync">
+                                <span class="d-flex align-center" style="min-width: 112px;">
+                                    <span>Light</span>
+                                    @if (Theme.Mode == ThemeMode.Light)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Primary" Class="ms-auto" />
+                                    }
+                                </span>
+                            </MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.DarkMode" OnClick="SetThemeDarkAsync">
+                                <span class="d-flex align-center" style="min-width: 112px;">
+                                    <span>Dark</span>
+                                    @if (Theme.Mode == ThemeMode.Dark)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Primary" Class="ms-auto" />
+                                    }
+                                </span>
+                            </MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.BrightnessAuto" OnClick="SetThemeSystemAsync">
+                                <span class="d-flex align-center" style="min-width: 112px;">
+                                    <span>System</span>
+                                    @if (Theme.Mode == ThemeMode.System)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Primary" Class="ms-auto" />
+                                    }
+                                </span>
+                            </MudMenuItem>
+                        </ChildContent>
+                    </MudMenu>
+                    <MudMenu Class="fsh-user-menu" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                        <ActivatorContent Context="userMenuActivator">
+                            <div @onclick="() => userMenuActivator.ToggleAsync(new MouseEventArgs())"
+                                 @onclick:preventDefault="true"
+                                 @onkeydown="e => HandleUserMenuKey(e, userMenuActivator)"
+                                 role="button" tabindex="0"
+                                 style="padding: 4px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <div class="fsh-user-menu-tile" style="background: color-mix(in srgb, var(--mud-palette-primary) 18%, transparent); color: var(--mud-palette-primary);">
+                                    @UserInitials
+                                </div>
+                                @if (!string.IsNullOrEmpty(_userName))
+                                {
+                                    <div class="d-none d-md-flex flex-column align-start">
+                                        <span style="font-size: 13px; font-weight: 600; line-height: 1.2; color: var(--mud-palette-text-primary);">@_userName</span>
+                                        @if (!string.IsNullOrEmpty(_tenantName))
+                                        {
+                                            <span style="font-size: 11px; line-height: 1.2; color: var(--mud-palette-text-secondary);">@_tenantName</span>
+                                        }
+                                    </div>
+                                }
+                                <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" Color="Color.Secondary" />
+                            </div>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <div class="px-3 py-2">
+                                <div style="font-size: 12px; font-weight: 600; color: var(--mud-palette-text-primary);">@(_userName ?? _userEmail)</div>
+                                @if (!string.IsNullOrEmpty(_userEmail) && !string.IsNullOrEmpty(_userName))
+                                {
+                                    <div style="font-size: 10.5px; color: var(--mud-palette-text-secondary); margin-top: 2px;">@_userEmail</div>
+                                }
+                            </div>
+                            <MudDivider Class="my-0" />
+                            <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="ConfirmSignOutAsync" Class="text-danger">
+                                Sign out
+                            </MudMenuItem>
+                        </ChildContent>
+                    </MudMenu>
+                </header>
+
+                <main id="fsh-main" tabindex="-1" style="flex: 1; overflow: auto; padding: 20px 24px;">
+                    @Body
+                </main>
+            </div>
         </div>
     </Authorized>
     <NotAuthorized>
@@ -76,3 +162,87 @@
         </div>
     </NotAuthorized>
 </AuthorizeView>
+
+@code {
+    private const string CollapsedStorageKey = "fsh.sidebar.collapsed";
+
+    private bool _drawerOpen;
+    private bool _collapsed;
+    private string _openSectionId = string.Empty;
+    private string _currentUri = "/";
+
+    private IEnumerable<NavSpec.NavItem> VisibleTopItems => NavSpec.TopItems.Where(CanSee);
+    private IEnumerable<NavSpec.NavSection> VisibleSections => NavSpec.Sections.Where(s => s.Items.Any(CanSee));
+
+    // React parity: the single `Permission` (if any) AND at least one of `AnyPermissions` (if any).
+    private bool CanSee(NavSpec.NavItem item)
+        => (item.Permission is null || _permissions.Contains(item.Permission))
+           && (item.AnyPermissions is null || item.AnyPermissions.Any(_permissions.Contains));
+
+    private Task OnSkipLinkClick()
+        => Js.InvokeVoidAsync("fshSkipLink.focusMain").AsTask();
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        _currentUri = e.Location;
+        // React parity: every navigation re-syncs the open section (best-prefix match).
+        _openSectionId = FindSectionForUri(e.Location);
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string FindSectionForUri(string uri)
+    {
+        string? bestId = null;
+        var bestLen = 0;
+        foreach (var section in VisibleSections)
+        {
+            foreach (var item in section.Items)
+            {
+                if (uri.StartsWith(item.Href, StringComparison.OrdinalIgnoreCase) && item.Href.Length > bestLen)
+                {
+                    bestLen = item.Href.Length;
+                    bestId = section.Id;
+                }
+            }
+        }
+
+        return bestId ?? string.Empty;
+    }
+
+    private void ToggleSection(string id)
+        => _openSectionId = _openSectionId == id ? string.Empty : id;
+
+    private static NavLinkMatch MatchFor(NavSpec.NavItem item)
+        => item.Href == "/" ? NavLinkMatch.All : NavLinkMatch.Prefix;
+
+    private string IsActive(string path)
+        => path == "/"
+            ? (Nav.Uri.TrimEnd('/').Length <= 0 ? "active" : string.Empty)
+            : (_currentUri.StartsWith(path, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty);
+
+    private string NavLinkClass(NavSpec.NavItem item)
+        => $"fsh-nav-link {(_collapsed ? "collapsed" : null)} {IsActive(item.Href)}";
+
+    private void ToggleCollapsed()
+    {
+        _collapsed = !_collapsed;
+        _ = Js.InvokeVoidAsync("localStorage.setItem", CollapsedStorageKey, _collapsed ? "true" : "false");
+    }
+
+    private async Task RestoreCollapsedStateAsync()
+    {
+        try
+        {
+            var stored = await Js.InvokeAsync<string?>("localStorage.getItem", CollapsedStorageKey);
+            _collapsed = stored == "true";
+        }
+        catch
+        {
+            _collapsed = false;
+        }
+    }
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private void CloseDrawer() => _drawerOpen = false;
+}
