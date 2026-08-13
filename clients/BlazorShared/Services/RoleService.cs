@@ -23,7 +23,7 @@ public sealed class RoleService(HttpClient http) : IRoleService
 
     public async Task<RoleDto> GetWithPermissionsAsync(string roleId, CancellationToken ct = default)
     {
-        return await http.GetFromJsonAsync<RoleDto>($"{IdentityBase}/roles/{roleId}/permissions", ct)
+        return await http.GetFromJsonAsync<RoleDto>($"{IdentityBase}/{roleId}/permissions", ct)
             ?? throw new InvalidOperationException("Null role response");
     }
 
@@ -43,7 +43,7 @@ public sealed class RoleService(HttpClient http) : IRoleService
 
     public async Task<string> UpdatePermissionsAsync(UpdateRolePermissionsRequest request, CancellationToken ct = default)
     {
-        var response = await http.PutAsJsonAsync($"{IdentityBase}/roles/{request.RoleId}/permissions", request, ct);
+        var response = await http.PutAsJsonAsync($"{IdentityBase}/{request.RoleId}/permissions", request, ct);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadAsStringAsync(ct);
     }

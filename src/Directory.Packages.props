@@ -66,6 +66,11 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
+    <!-- Pin the transitive SQLitePCLRaw.lib.e_sqlite3 explicitly. EF Core Sqlite floats it at 2.1.11, which
+         carries a HIGH-severity advisory (GHSA-2m69-gcr7-jv3q) that trips NuGetAudit under
+         TreatWarningsAsErrors. 2.1.12 is the patched release (see docs/security/SQLitePCLRaw-NU1903-GHSA-2m69-gcr7-jv3q.md). -->
+    <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.12" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.10" />
@@ -110,6 +115,10 @@
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.10" />
+    <!-- Pin the transitive SSH.NET explicitly. Testcontainers 4.11.0 floats it in at 2025.1.0, which carries
+         a HIGH-severity advisory (GHSA-q939-rpr3-3284) that trips NuGetAudit under TreatWarningsAsErrors.
+         Transitive pinning is enabled, so this entry alone bumps it for the integration test projects. -->
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.11.0" />
     <PackageVersion Include="Testcontainers.Redis" Version="4.11.0" />
     <PackageVersion Include="Testcontainers.Minio" Version="4.11.0" />
