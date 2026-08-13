@@ -15,7 +15,7 @@ backend↔frontend contract, and verification.
 
 ## Phases (delegate each recipe to its skill)
 - **Phase 0 — entity (if new):** follow the **`add-entity`** skill, then **`create-migration`**.
-- **Phase 1 — backend slice:** follow the **`add-feature`** skill (Command/Query in Contracts → handler injecting the `{X}DbContext` → validator → endpoint → wire in `MapEndpoints`). Add a handler/validator test per **`testing-guide`**. Build + test green before moving on.
+- **Phase 1 — backend slice:** follow the **`add-feature`** skill (Command/Query in Contracts → handler injecting the `{X}DbContext` → validator → endpoint → wire in `MapEndpoints`). Supplement with **`dotnet-webapi`** (minimal-API shape, OpenAPI metadata, .http files). Add a handler/validator test per **`testing-guide`**; for the exact `dotnet test` invocation (VSTest vs MTP detection) use **`run-tests`**. Build + test green before moving on.
 - **Phase 2 — frontend (if a UI surface):** lock the contract (route, request shape, **response DTO field names — JSON is camelCase**), then follow the **`add-react-page`** skill for the chosen app. For the whole flow at once, use the **`add-full-slice`** skill.
 - **Phase 3 — permission (if gated):** follow the **`add-permission`** skill (server constant + admin mirror/guard).
 
@@ -24,6 +24,7 @@ backend↔frontend contract, and verification.
 dotnet build src/FSH.Starter.slnx && dotnet test src/Tests/{X}.Tests
 # if a UI surface: cd clients/{app} && npm run lint && npm run test:e2e
 ```
+Use the **`run-tests`** skill for the exact test command/flags (FSH is xUnit on VSTest).
 Then run the **`code-reviewer`** and **`architecture-guard`** workflows before commit.
 
 ## Guardrails (the skills enforce these; confirm them)

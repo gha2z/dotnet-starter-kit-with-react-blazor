@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FSH.Hybrid.Pages.AboutPage"
+             Title="About">
+    <VerticalStackLayout Padding="24" Spacing="16">
+        <VerticalStackLayout Spacing="4">
+            <Label Text="FSH Hybrid" FontSize="24" FontAttributes="Bold" />
+            <Label x:Name="VersionLabel" FontSize="12" TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
+        </VerticalStackLayout>
+
+        <BoxView HeightRequest="1" Color="{AppThemeBinding Light=#E5E7EB, Dark=#374151}" />
+
+        <Label Text="A MAUI Blazor Hybrid client for the FullStackHero starter kit. The native shell (flyout / tabs) handles global navigation; the BlazorWebView hosts the shared MudBlazor shell from the FSH.BlazorShared RCL."
+               FontSize="13" />
+        <Label Text="Stack: .NET 10 MAUI · BlazorWebView · MudBlazor 9.7 · SecureStorage · CommunityToolkit.Maui"
+               FontSize="12" TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
+        <Label Text="Platforms: Android · iOS · Mac Catalyst · Windows"
+               FontSize="12" TextColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}" />
+    </VerticalStackLayout>
+</ContentPage>

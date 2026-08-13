@@ -1,0 +1,43 @@
+@using FSH.BlazorShared.Theming
+@using FSH.BlazorShared.Components
+
+<MudThemeProvider Theme="@_theme" IsDarkMode="@Theme.IsDarkMode" IsDarkModeChanged="@OnThemeChanged" ObserveSystemDarkModeChange="false" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<CascadingAuthenticationState>
+    <FshErrorBoundary>
+        <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="@_lazyAssemblies" OnNavigateAsync="@OnNavigateAsync">
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                    <NotAuthorized>
+                        <RedirectToLogin />
+                    </NotAuthorized>
+                    <Authorizing>
+                        <MudOverlay Visible="true">
+                            <MudProgressCircular Indeterminate="true" />
+                        </MudOverlay>
+                    </Authorizing>
+                </AuthorizeRouteView>
+            </Found>
+            <NotFound>
+                <FshNotFound />
+            </NotFound>
+        </Router>
+        @if (_loadingPages)
+        {
+            <div class="fsh-route-loading" role="status" aria-live="polite">
+                <MudProgressCircular Indeterminate="true" Size="Size.Medium" />
+                <span>Loading page…</span>
+            </div>
+        }
+    </FshErrorBoundary>
+</CascadingAuthenticationState>
+
+@code {
+    private List<System.Reflection.Assembly> _lazyAssemblies = [];
+    private MudBlazor.MudTheme _theme = FshMudTheme.CreateDashboard();
+    private async Task OnThemeChanged(bool isDarkMode)
+        => await Theme.SetAsync(isDarkMode);
+}

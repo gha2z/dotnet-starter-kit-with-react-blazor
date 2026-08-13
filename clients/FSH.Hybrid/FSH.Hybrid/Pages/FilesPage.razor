@@ -1,0 +1,141 @@
+@page "/files"
+@attribute [Authorize]
+@using FSH.BlazorShared.Models.Files
+@inject IMediaPickerService MediaPicker
+@inject IHybridFileUploadService Uploader
+@inject IFileService FileService
+@inject ISnackbar Snackbar
+
+<FshPageHeader Title="My files" Description="Pick a file or capture a photo and upload it to the Files module (native picker + presigned PUT)." />
+
+<MudStack Spacing="3" Class="mb-4">
+    <div class="d-flex align-center gap-2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AttachFile"
+                   Disabled="@_busy" OnClick="PickAndUploadAsync">
+            @(_busy ? "Uploading..." : "Pick a file")
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.PhotoCamera"
+                   Disabled="@_busy" OnClick="CaptureAndUploadAsync">
+            Take photo
+        </MudButton>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" aria-label="Refresh" OnClick="LoadAsync" />
+    </div>
+
+    @if (_uploadError is not null)
+    {
+        <MudAlert Severity="Severity.Error">@_uploadError</MudAlert>
+    }
+</MudStack>
+
+<MudTable Items="@_files" Hover="true" Dense="true" Loading="@_loading" Striped="true">
+    <HeaderContent>
+        <MudTh>Name</MudTh>
+        <MudTh>Type</MudTh>
+        <MudTh>Size</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Uploaded</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd><MudIcon Icon="@Icons.Material.Filled.InsertDriveFile" Size="Size.Small" Class="mr-2" />@context.OriginalFileName</MudTd>
+        <MudTd>@context.ContentType</MudTd>
+        <MudTd>@FormatBytes(context.SizeBytes)</MudTd>
+        <MudTd>
+            <FshStatusPill Text="@context.Status.ToString()" Tone="StatusTone(context.Status)" />
+        </MudTd>
+        <MudTd>@FshFormat.DateShort(context.CreatedAtUtc)</MudTd>    </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No files yet. Pick a file or take a photo to upload.</MudText>
+        </NoRecordsContent>
+</MudTable>
+
+@code {
+    private bool _busy;
+    private bool _loading;
+    private string? _uploadError;
+    private IReadOnlyList<FileAssetDto> _files = [];
+
+    protected override async Task OnInitializedAsync()
+        => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _uploadError = null;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            _files = await FileService.ListMyFilesAsync();
+        }
+        catch (Exception ex)
+        {
+            _uploadError = $"Failed to load files: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task PickAndUploadAsync()
+    {
+        var file = await MediaPicker.PickAsync();
+        if (file is not null)
+        {
+            await UploadAsync(file);
+        }
+    }
+
+    private async Task CaptureAndUploadAsync()
+    {
+        var file = await MediaPicker.CapturePhotoAsync();
+        if (file is not null)
+        {
+            await UploadAsync(file);
+        }
+    }
+
+    private async Task UploadAsync(PickedFile file)
+    {
+        _busy = true;
+        _uploadError = null;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await Uploader.UploadAsync(file);
+            Snackbar.Add($"{file.FileName} uploaded", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _uploadError = $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            await file.Stream.DisposeAsync();
+            _busy = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private static Color StatusTone(FileAssetStatus status) => status switch
+    {
+        FileAssetStatus.Available => Color.Success,
+        FileAssetStatus.PendingUpload => Color.Warning,
+        _ => Color.Info,
+    };
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        var value = (double)bytes;
+        var unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value:0.##} {units[unit]}";
+    }
+}

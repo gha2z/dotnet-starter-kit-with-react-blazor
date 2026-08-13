@@ -1,0 +1,63 @@
+@namespace FSH.BlazorShared.Components
+@using MudBlazor
+
+<MudPaper Elevation="0" Class="d-flex flex-column justify-space-between rounded-xl px-4 py-3"
+          Style="border: 1px solid var(--mud-palette-divider); min-height: 96px; transition: border-color 0.2s ease, box-shadow 0.2s ease; cursor: default;"
+          onmouseenter="this.style.borderColor='var(--mud-palette-text-primary)'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.06)'"
+          onmouseleave="this.style.borderColor=''; this.style.boxShadow=''">
+    <div class="d-flex align-start gap-3">
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <div style="width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, @ToneColor 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, @ToneColor 25%, transparent);">
+                <MudIcon Icon="@Icon" Size="Size.Small" Style="@($"color: {ToneColor};")" />
+            </div>
+        }
+        <div class="flex-grow-1">
+            <MudText Class="fsh-mono-label">@Label</MudText>
+            @if (Value is null)
+            {
+                <div class="fsh-skeleton fsh-skeleton-value mt-2"></div>
+            }
+            else
+            {
+                <MudText Typo="Typo.h4" Class="mt-1 font-weight-bold lh-1"
+                         Style="@($"font-size: 26px; letter-spacing: -0.02em; color: {ValueColor}; font-variant-numeric: tabular-nums;")">
+                    @Value
+                </MudText>
+            }
+        </div>
+    </div>
+    @if (!string.IsNullOrEmpty(Hint))
+    {
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1 fsh-truncate">@Hint</MudText>
+    }
+</MudPaper>
+
+@code {
+    /// <summary>
+    /// Dashboard stat tile (React parity: mono uppercase label, big value, muted hint, skeleton while loading).
+    /// </summary>
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public string? Hint { get; set; }
+    [Parameter] public Color Tone { get; set; } = Color.Inherit;
+    [Parameter] public string? Icon { get; set; }
+
+    private string ToneColor => Tone switch
+    {
+        Color.Warning => "var(--mud-palette-warning)",
+        Color.Error => "var(--mud-palette-error)",
+        Color.Success => "var(--mud-palette-success)",
+        Color.Info => "var(--mud-palette-info)",
+        _ => "var(--mud-palette-primary)",
+    };
+
+    private string ValueColor => Tone switch
+    {
+        Color.Warning => "var(--mud-palette-warning)",
+        Color.Error => "var(--mud-palette-error)",
+        Color.Success => "var(--mud-palette-success)",
+        Color.Info => "var(--mud-palette-info)",
+        _ => "var(--mud-palette-text-primary)",
+    };
+}

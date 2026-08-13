@@ -1,0 +1,101 @@
+@namespace FSH.Admin.Wasm.Pages.Billing
+@using System.ComponentModel.DataAnnotations
+@using FSH.BlazorShared.Models.Billing
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_mudForm" Validation="@(new DataAnnotationsValidator())">
+            <div class="d-flex align-center gap-2 mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.CreditCard" Color="Color.Primary" />
+                <div>
+                    <MudText Typo="Typo.subtitle1" Style="margin: 0;">Plan details</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">
+                        Identity + pricing. The interval sets the term length and how often the tenant is billed.
+                    </MudText>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 col-sm-6">
+                    <MudTextField T="string"
+                                  @bind-Value="_form.Key"
+                                  Label="Key"
+                                  Placeholder="pro"
+                                  Class="font-mono"
+                                  Disabled="@_isEdit"
+                                  Required="true"
+                                  Validation="@(new Func<string, string?>[] { KeyValidator })" />
+                </div>
+                <div class="col-12 col-sm-6">
+                    <MudTextField T="string"
+                                  @bind-Value="_form.Name"
+                                  Label="Display name"
+                                  Placeholder="Pro"
+                                  Required="true" />
+                </div>
+                <div class="col-12 col-sm-6">
+                    <MudTextField T="string"
+                                  @bind-Value="_form.Currency"
+                                  Label="Currency"
+                                  HelperText="ISO 4217. Immutable."
+                                  Placeholder="USD"
+                                  Class="font-mono"
+                                  Disabled="@_isEdit"
+                                  Required="true" />
+                </div>
+                <div class="col-12 col-sm-6">
+                    <MudNumericField T="decimal?"
+                                     @bind-Value="_form.MonthlyBasePrice"
+                                     Label="Monthly base price"
+                                     HelperText="Canonical monthly rate; the term price for monthly plans."
+                                     Placeholder="29.00" />
+                </div>
+                <div class="col-12 col-sm-6">
+                    <MudSelect T="string" @bind-Value="_form.Interval" Label="Billing interval" Required="true">
+                        <MudSelectItem Value="@("Monthly")">Monthly — billed every month</MudSelectItem>
+                        <MudSelectItem Value="@("Yearly")">Yearly — billed every 12 months</MudSelectItem>
+                    </MudSelect>
+                </div>
+                @if (_form.Interval == "Yearly")
+                {
+                    <div class="col-12 col-sm-6">
+                        <MudNumericField T="decimal?"
+                                         @bind-Value="_form.AnnualPrice"
+                                         Label="Annual price"
+                                         HelperText="Per yearly term. Blank → 12× monthly."
+                                         Placeholder="@(_form.MonthlyBasePrice is null ? "290.00" : (_form.MonthlyBasePrice.Value * 12).ToString())" />
+                    </div>
+                }
+            </div>
+
+            <div class="d-flex align-center gap-2 my-3">
+                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Primary" />
+                <div>
+                    <MudText Typo="Typo.subtitle1" Style="margin: 0;">Overage rates</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">
+                        Per-unit price when a tenant exceeds the plan limit. Leave blank to skip a resource.
+                    </MudText>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 col-sm-6">
+                    <MudNumericField T="decimal?" @bind-Value="_form.OverageApiCalls" Label="API calls" Placeholder="0.0010" />
+                </div>
+                <div class="col-12 col-sm-6">
+                    <MudNumericField T="decimal?" @bind-Value="_form.OverageStorageBytes" Label="Storage bytes" Placeholder="0.00000001" />
+                </div>
+                <div class="col-12 col-sm-6">
+                    <MudNumericField T="decimal?" @bind-Value="_form.OverageUsers" Label="Users" Placeholder="5.00" />
+                </div>
+                <div class="col-12 col-sm-6">
+                    <MudNumericField T="decimal?" @bind-Value="_form.OverageActiveFeatureFlags" Label="Feature flags" Placeholder="1.00" />
+                </div>
+            </div>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="_isSubmitting">
+            @(_isSubmitting ? "Saving…" : (_isEdit ? "Save changes" : "Create plan"))
+        </MudButton>
+    </DialogActions>
+</MudDialog>

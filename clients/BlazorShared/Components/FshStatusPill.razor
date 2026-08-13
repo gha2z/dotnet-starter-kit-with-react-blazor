@@ -1,0 +1,36 @@
+@namespace FSH.BlazorShared.Components
+@using MudBlazor
+
+<span class="fsh-pill" style="@PillStyle">
+    @if (!string.IsNullOrEmpty(Icon))
+    {
+        <MudIcon Icon="@Icon" Style="@($"width: 12px; height: 12px; color: {ColorVar};")" />
+    }
+    @Text
+</span>
+
+@code {
+    /// <summary>
+    /// Rounded status pill (React parity: rounded-full, mono uppercase label, tone-tinted).
+    /// </summary>
+    [Parameter] public string Text { get; set; } = string.Empty;
+    [Parameter] public Color Tone { get; set; } = Color.Default;
+    [Parameter] public string? Icon { get; set; }
+
+    private string ToneVar => Tone switch
+    {
+        Color.Success => "success",
+        Color.Warning => "warning",
+        Color.Error => "error",
+        Color.Info => "info",
+        _ => "default",
+    };
+
+    private string ColorVar => ToneVar == "default"
+        ? "var(--mud-palette-text-secondary)"
+        : $"var(--mud-palette-{ToneVar})";
+
+    private string PillStyle => ToneVar == "default"
+        ? "background: color-mix(in srgb, var(--mud-palette-text-secondary) 12%, transparent);"
+        : $"background: color-mix(in srgb, var(--mud-palette-{ToneVar}) 14%, transparent);";
+}

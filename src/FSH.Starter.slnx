@@ -81,6 +81,15 @@
     <Project Path="Tests/Integration.Middleware.Tests/Integration.Middleware.Tests.csproj" />
     <Project Path="Tests/Multitenancy.Tests/Multitenancy.Tests.csproj" Id="985345a2-edb4-4ef9-9a1b-59b704f523b6" />
   </Folder>
+  <Folder Name="/Clients/Blazor/">
+    <Project Path="../clients/BlazorShared/FSH.BlazorShared.csproj" />
+    <Project Path="../clients/admin-blazor/FSH.Admin.Wasm/FSH.Admin.Wasm.csproj" />
+    <Project Path="../clients/admin-blazor/FSH.Admin.Wasm.Tests/FSH.Admin.Wasm.Tests.csproj" />
+    <Project Path="../clients/admin-blazor/FSH.Admin.Pages/FSH.Admin.Pages.csproj" />
+    <Project Path="../clients/dashboard-blazor/FSH.Dashboard.Pages/FSH.Dashboard.Pages.csproj" />
+    <Project Path="../clients/dashboard-blazor/FSH.Dashboard.Wasm/FSH.Dashboard.Wasm.csproj" />
+    <Project Path="../clients/dashboard-blazor/FSH.Dashboard.Wasm.Tests/FSH.Dashboard.Wasm.Tests.csproj" />
+  </Folder>
   <!--#if (includeTools) -->
   <Folder Name="/Tools/">
     <Project Path="Tools/CLI/FSH.CLI.csproj" />

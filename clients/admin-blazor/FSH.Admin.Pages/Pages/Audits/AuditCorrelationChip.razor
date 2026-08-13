@@ -1,0 +1,62 @@
+@namespace FSH.Admin.Wasm.Pages.Audits
+@using FSH.BlazorShared.Models.Audits
+@using Microsoft.JSInterop
+
+<div class="fsh-correlation-chip @(HasValue ? "fsh-clickable" : "fsh-muted")"
+     @onclick="OnClickAsync"
+     role="button"
+     tabindex="@(HasValue ? "0" : "-1")"
+     aria-label="@(HasValue ? $"Copy {Label}" : $"{Label} not available")">
+    <div class="min-w-0 flex-grow-1">
+        <div class="fsh-mono-label">@Label.ToUpperInvariant()</div>
+        <div class="fsh-truncate fsh-mono-medium" style="font-size: 11.5px;">@(HasValue ? Value : "—")</div>
+    </div>
+    @if (HasValue)
+    {
+        <MudIcon Icon="@(_copied ? Icons.Material.Filled.Check : Icons.Material.Filled.ContentCopy)"
+                 Size="Size.Small"
+                 Style="@IconStyle" />
+    }
+</div>
+
+@code {
+    private string IconStyle => _copied
+        ? "color: var(--mud-palette-success); margin-left: 8px;"
+        : "color: var(--mud-palette-text-secondary); margin-left: 8px;";
+    [Inject]
+    private ISnackbar Snackbar { get; set; } = default!;
+
+    [Inject]
+    private IJSRuntime Js { get; set; } = default!;
+
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Value { get; set; }
+
+    private bool HasValue => !string.IsNullOrWhiteSpace(Value) && Value != "—";
+
+    private bool _copied;
+
+    private async Task OnClickAsync()
+    {
+        if (!HasValue)
+        {
+            return;
+        }
+
+        try
+        {
+            await Js.InvokeVoidAsync("fshClipboard.copy", Value);
+            _copied = true;
+            Snackbar.Add($"{Label} copied", Severity.Success);
+            await Task.Delay(1200);
+            _copied = false;
+        }
+        catch
+        {
+            Snackbar.Add("Clipboard unavailable", Severity.Warning);
+        }
+    }
+}

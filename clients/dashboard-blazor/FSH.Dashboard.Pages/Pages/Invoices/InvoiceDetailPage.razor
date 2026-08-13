@@ -1,0 +1,196 @@
+@page "/invoices/{Id}"
+@attribute [Authorize]
+@using FSH.BlazorShared.Formatting
+@using MudBlazor
+
+<MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-2" OnClick="GoBack">
+    Back to invoices
+</MudButton>
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+@if (_loading)
+{
+    <div class="d-flex flex-column gap-3">
+        <div class="fsh-skeleton" style="height: 96px; border-radius: 12px;"></div>
+        <div class="fsh-skeleton" style="height: 256px; border-radius: 12px;"></div>
+    </div>
+}
+else if (_invoice is null)
+{
+    <FshEmptyState Icon="@Icons.Material.Filled.SearchOff"
+                   Title="Invoice not found"
+                   Description="This invoice doesn't exist, or you don't have access to it." />
+}
+else
+{
+    <div class="fsh-enter overflow-hidden rounded-xl border fsh-detail-card">
+        <div class="fsh-detail-accent-bar" aria-hidden="true"></div>
+        <div class="d-flex flex-column gap-4 p-4 fsh-detail-header-row">
+            <div class="d-flex align-center gap-4 min-w-0">
+                <span class="fsh-detail-icon" aria-hidden="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Receipt" Size="Size.Medium" />
+                </span>
+                <div class="min-w-0">
+                    <div class="d-flex flex-wrap align-center gap-2">
+                        <h1 class="fsh-detail-title">@_invoice.InvoiceNumber</h1>
+                        <FshStatusPill Text="@_invoice.Status" Tone="@StatusTone(_invoice.Status)" />
+                        @if (!string.IsNullOrEmpty(_invoice.Purpose))
+                        {
+                            <FshStatusPill Text="@_invoice.Purpose" Tone="Color.Default" />
+                        }
+                    </div>
+                    <p class="fsh-muted-copy mt-1" style="font-size: 12px;">
+                        Period @FormatPeriod(_invoice) ·
+                        <span style="font-weight: 600;">@FshFormat.Money(_invoice.SubtotalAmount, _invoice.Currency)</span>
+                    </p>
+                </div>
+            </div>
+            <div class="d-flex shrink-0 align-center gap-1">
+                <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Download"
+                           Disabled="@_downloading"
+                           OnClick="DownloadPdfAsync">
+                    @(_downloading ? "Preparing…" : "Download PDF")
+                </MudButton>
+            </div>
+        </div>
+    </div>
+
+    <MudGrid Class="mt-4" Spacing="3">
+        <MudItem xs="12" lg="8">
+            <MudPaper Elevation="0" Class="fsh-section-card h-100">
+                <div class="d-flex align-center gap-2 mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Description" Color="Color.Primary" Size="Size.Medium" />
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Line items</MudText>
+                </div>
+
+                @if (_invoice.LineItems.Count == 0)
+                {
+                    <div class="py-8 text-center">
+                        <div class="fsh-fact-value" style="font-size: 13px;">No line items</div>
+                        <p class="fsh-muted-copy">This invoice has no itemized charges.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="fsh-lineitems-grid fsh-line-head">
+                        <span>Description</span>
+                        <span class="text-right">Qty</span>
+                        <span class="text-right">Unit price</span>
+                        <span class="text-right">Amount</span>
+                    </div>
+                    @for (var i = 0; i < _invoice.LineItems.Count; i++)
+                    {
+                        var item = _invoice.LineItems[i];
+                        var isLast = i == _invoice.LineItems.Count - 1;
+                        <div class="fsh-lineitems-grid fsh-line-row @(isLast ? "" : "fsh-line-border")">
+                            <div class="min-w-0">
+                                <div class="d-flex align-center gap-2">
+                                    <span class="fsh-truncate fsh-line-desc">@item.Description</span>
+                                    <FshStatusPill Text="@item.Kind" Tone="Color.Default" />
+                                </div>
+                                @if (!string.IsNullOrEmpty(item.Resource))
+                                {
+                                    <span class="fsh-line-resource">@item.Resource</span>
+                                }
+                            </div>
+                            <span class="text-right fsh-line-muted">@item.Quantity</span>
+                            <span class="text-right fsh-line-muted">@FshFormat.Money(item.UnitPrice, _invoice.Currency)</span>
+                            <span class="text-right fsh-line-amount">@FshFormat.Money(item.Amount, _invoice.Currency)</span>
+                        </div>
+                    }
+                    <div class="fsh-lineitems-grid fsh-line-total">
+                        <span class="fsh-line-total-label">Total</span>
+                        <span></span>
+                        <span></span>
+                        <span class="text-right fsh-line-total-value">@FshFormat.Money(_invoice.SubtotalAmount, _invoice.Currency)</span>
+                    </div>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" lg="4">
+            <MudPaper Elevation="0" Class="fsh-section-card">
+                <div class="d-flex align-center gap-2 mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" Size="Size.Medium" />
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Details</MudText>
+                </div>
+                <dl class="fsh-dl">
+                    <div class="d-flex justify-space-between gap-3">
+                        <dt>Status</dt>
+                        <dd><FshStatusPill Text="@_invoice.Status" Tone="@StatusTone(_invoice.Status)" /></dd>
+                    </div>
+                    <div class="d-flex justify-space-between gap-3">
+                        <dt>Currency</dt>
+                        <dd>@_invoice.Currency</dd>
+                    </div>
+                    <div class="d-flex justify-space-between gap-3">
+                        <dt>Period</dt>
+                        <dd>@FormatPeriod(_invoice)</dd>
+                    </div>
+                    <div class="d-flex justify-space-between gap-3">
+                        <dt>Created</dt>
+                        <dd>@FshFormat.DateShort(_invoice.CreatedAtUtc)</dd>
+                    </div>
+                    @if (_invoice.IssuedAtUtc is not null)
+                    {
+                        <div class="d-flex justify-space-between gap-3">
+                            <dt>Issued</dt>
+                            <dd>@FshFormat.DateShort(_invoice.IssuedAtUtc)</dd>
+                        </div>
+                    }
+                    @if (_invoice.DueAtUtc is not null)
+                    {
+                        <div class="d-flex justify-space-between gap-3">
+                            <dt>Due</dt>
+                            <dd style="color: @(_invoice.Status == "Issued" ? "var(--mud-palette-warning)" : "inherit");">@FshFormat.DateShort(_invoice.DueAtUtc)</dd>
+                        </div>
+                    }
+                    @if (_invoice.PaidAtUtc is not null)
+                    {
+                        <div class="d-flex justify-space-between gap-3">
+                            <dt>Paid</dt>
+                            <dd style="color: var(--mud-palette-success);">@FshFormat.DateShort(_invoice.PaidAtUtc)</dd>
+                        </div>
+                    }
+                    @if (_invoice.VoidedAtUtc is not null)
+                    {
+                        <div class="d-flex justify-space-between gap-3">
+                            <dt>Voided</dt>
+                            <dd style="color: var(--mud-palette-error);">@FshFormat.DateShort(_invoice.VoidedAtUtc)</dd>
+                        </div>
+                    }
+                    @if (_invoice.PeriodStartUtc is not null)
+                    {
+                        <div class="d-flex justify-space-between gap-3">
+                            <dt>Period start</dt>
+                            <dd>@FshFormat.DateShort(_invoice.PeriodStartUtc)</dd>
+                        </div>
+                    }
+                    @if (_invoice.PeriodEndUtc is not null)
+                    {
+                        <div class="d-flex justify-space-between gap-3">
+                            <dt>Period end</dt>
+                            <dd>@FshFormat.DateShort(_invoice.PeriodEndUtc)</dd>
+                        </div>
+                    }
+                </dl>
+            </MudPaper>
+
+            @if (!string.IsNullOrEmpty(_invoice.Notes))
+            {
+                <MudPaper Elevation="0" Class="fsh-section-card mt-4">
+                    <div class="d-flex align-center gap-2 mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Notes" Color="Color.Primary" Size="Size.Medium" />
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Notes</MudText>
+                    </div>
+                    <p style="white-space: pre-wrap; font-size: 13px; line-height: 1.6; margin: 0; color: var(--mud-palette-text-primary);">@_invoice.Notes</p>
+                </MudPaper>
+            }
+        </MudItem>
+    </MudGrid>
+}

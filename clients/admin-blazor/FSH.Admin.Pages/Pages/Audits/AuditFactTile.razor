@@ -1,0 +1,19 @@
+@namespace FSH.Admin.Wasm.Pages.Audits
+
+<div class="min-w-0 flex-grow-1" style="flex-basis: 13rem; max-width: 100%;">
+    <div class="fsh-fact-tile">
+        <div class="fsh-mono-label">@Label.ToUpperInvariant()</div>
+        <div class="fsh-fact-value @(Mono ? "fsh-mono-medium" : null)">@Value</div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Value { get; set; } = "—";
+
+    [Parameter]
+    public bool Mono { get; set; }
+}

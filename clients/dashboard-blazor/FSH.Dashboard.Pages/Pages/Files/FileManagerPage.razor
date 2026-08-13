@@ -1,0 +1,293 @@
+@page "/files"
+@using FSH.BlazorShared.Permissions
+@attribute [Authorize]
+
+<FshPageHeader Icon="@Icons.Material.Outlined.FolderOpen" Title="Files" Description="Manage your uploaded files and shared assets" />
+
+<MudTabs @bind-ActivePanelIndex="_activeTab" Class="mt-n2">
+    <MudTabPanel Text="My Files" Icon="@Icons.Material.Outlined.Folder" />
+    <MudTabPanel Text="Shared in Tenant" Icon="@Icons.Material.Outlined.People" />
+</MudTabs>
+
+@if (_activeTab == 0)
+{
+    @* Upload Zone *@
+    <MudPaper Class="fsh-file-dropzone pa-6 mb-4 text-center" Elevation="0">
+        <div ondragover="event.preventDefault();" ondrop="@HandleDrop">
+            <InputFile id="fileInput" OnChange="HandleFileSelect" multiple accept="@_acceptTypes" style="display:none;" />
+            <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Size="Size.Large" Color="Color.Secondary" Style="font-size: 48px;" />
+            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mt-2">Drag & drop files here</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">or</MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="mt-2" OnClick="OpenFilePicker">
+                Browse files
+            </MudButton>
+            @if (_uploading)
+            {
+                <MudProgressLinear Value="_uploadProgress" Color="Color.Primary" Class="mt-3" Striped />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">@_uploadStatus</MudText>
+            }
+        </div>
+    </MudPaper>
+}
+
+@* Filter bar *@
+<div class="d-flex align-center gap-2 mb-3 flex-wrap">
+    <MudTextField @bind-Value="_search" Placeholder="Search files..." Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Outlined.Search" IconSize="Size.Small" Immediate="true"
+                  DebounceInterval="300" OnDebounceIntervalElapsed="LoadFiles"
+                  Margin="Margin.Dense" Variant="Variant.Outlined" Style="max-width: 300px;" />
+    @foreach (var filter in _typeFilters)
+    {
+        <MudChip T="string" Size="Size.Small" Variant="@(filter == _activeFilter ? Variant.Filled : Variant.Outlined)"
+                 Color="@(filter == _activeFilter ? Color.Primary : Color.Default)"
+                 OnClick="() => SetFilter(filter)">@filter</MudChip>
+    }
+</div>
+
+@* File list *@
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="d-flex mx-auto my-4" />
+}
+else if (FilteredFiles.Count == 0)
+{
+    <MudPaper Class="pa-8 text-center" Elevation="0">
+        <MudIcon Icon="@Icons.Material.Outlined.FolderOff" Size="Size.Large" Color="Color.Secondary" Style="font-size: 64px;" />
+        <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mt-4">
+            @(_activeTab == 0 ? "No files uploaded yet" : "No shared files")
+        </MudText>
+    </MudPaper>
+}
+else
+{
+    <MudTable Items="@FilteredFiles" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true" RowsPerPage="20">
+        <HeaderContent>
+            <MudTh>Name</MudTh>
+            <MudTh>Visibility</MudTh>
+            <MudTh>Size</MudTh>
+            <MudTh>Uploaded</MudTh>
+            <MudTh Class="text-right">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Name">
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@FileIcon(context.ContentType)" Size="Size.Small" Color="Color.Secondary" />
+                    <MudText Typo="Typo.body2" Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px;">
+                        @context.OriginalFileName
+                    </MudText>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="Visibility">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                         Color="@(context.Visibility == FileVisibility.Public ? Color.Success : Color.Default)">
+                    @(context.Visibility == FileVisibility.Public ? "Public" : "Private")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Size">@FormatBytes(context.SizeBytes)</MudTd>
+            <MudTd DataLabel="Uploaded">@FshFormat.DateRelative(context.CreatedAtUtc)</MudTd>
+            <MudTd Class="text-right">
+                <MudIconButton Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small"
+                               aria-label="Preview" OnClick="() => PreviewFile(context)" />
+                <MudIconButton Icon="@Icons.Material.Outlined.Download" Size="Size.Small"
+                               aria-label="Download" OnClick="() => DownloadFile(context)" />
+                @if (_activeTab == 0)
+                {
+                    <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small"
+                                   aria-label="Delete" OnClick="() => DeleteFile(context)" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    [Inject] private IFileService FileService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+
+    private int _activeTab;
+    private readonly List<FileAssetDto> _myFiles = [];
+    private readonly List<FileAssetDto> _sharedFiles = [];
+    private string? _search;
+    private bool _loading;
+    private bool _uploading;
+    private double _uploadProgress;
+    private string _uploadStatus = string.Empty;
+
+    private const string _acceptTypes = ".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar";
+
+    private readonly string[] _typeFilters = ["All", "Images", "Documents", "Archives", "Other"];
+    private string _activeFilter = "All";
+
+    private IReadOnlyList<FileAssetDto> FilteredFiles => (_activeTab == 0 ? _myFiles : _sharedFiles)
+        .Where(f => _activeFilter switch
+        {
+            "Images" => f.ContentType.StartsWith("image/"),
+            "Documents" => f.ContentType is "application/pdf" or "application/msword" or "application/vnd.openxmlformats-officedocument.wordprocessingml.document" or "application/vnd.ms-excel" or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" or "text/plain",
+            "Archives" => f.ContentType is "application/zip" or "application/x-rar-compressed",
+            _ => true
+        })
+        .Where(f => string.IsNullOrWhiteSpace(_search) || f.OriginalFileName.Contains(_search, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    protected override async Task OnInitializedAsync() => await LoadFiles();
+
+    private async Task LoadFiles()
+    {
+        _loading = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var myTask = FileService.ListMyFilesAsync(pageSize: 100);
+            var sharedTask = FileService.ListSharedFilesAsync(pageSize: 100);
+            await Task.WhenAll(myTask, sharedTask);
+
+            _myFiles.Clear();
+            _myFiles.AddRange(myTask.Result.OrderByDescending(f => f.CreatedAtUtc));
+
+            _sharedFiles.Clear();
+            _sharedFiles.AddRange(sharedTask.Result.OrderByDescending(f => f.CreatedAtUtc));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load files: {ex.Message}", Severity.Error);
+        }
+
+        _loading = false;
+    }
+
+    private void SetFilter(string filter) { _activeFilter = filter; }
+
+    private void OpenFilePicker() => JS.InvokeVoidAsync("document.getElementById('fileInput').click");
+
+    private async Task HandleFileSelect(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles())
+        {
+            await UploadFile(file);
+        }
+    }
+
+    private async Task HandleDrop(DragEventArgs e) { }
+
+    private async Task UploadFile(IBrowserFile file)
+    {
+        _uploading = true;
+        _uploadProgress = 0;
+        _uploadStatus = $"Uploading {file.Name}...";
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            // Step 1: Request presigned URL
+            var uploadResponse = await FileService.RequestUploadUrlAsync(new RequestUploadUrlRequest(
+                OwnerType: "MyFiles",
+                OwnerId: null,
+                FileName: file.Name,
+                ContentType: file.ContentType,
+                SizeBytes: file.Size));
+
+            // Step 2: Upload directly to S3 via JS interop (PUT presigned URL)
+            _uploadProgress = 50;
+            _uploadStatus = "Uploading to storage...";
+            await InvokeAsync(StateHasChanged);
+
+            using var stream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var bytes = ms.ToArray();
+
+            await JS.InvokeVoidAsync("fshFileUpload", uploadResponse.UploadUrl.ToString(), bytes, uploadResponse.RequiredHeaders);
+
+            // Step 3: Finalize
+            _uploadProgress = 90;
+            _uploadStatus = "Finalizing...";
+            await InvokeAsync(StateHasChanged);
+
+            await FileService.FinalizeUploadAsync(uploadResponse.FileAssetId);
+
+            _uploadProgress = 100;
+            _uploadStatus = "Upload complete!";
+            Snackbar.Add($"{file.Name} uploaded successfully!", Severity.Success);
+            await LoadFiles();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Upload failed: {ex.Message}", Severity.Error);
+        }
+
+        _uploading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task PreviewFile(FileAssetDto file)
+    {
+        var parameters = new DialogParameters<FilePreviewDialog>();
+        parameters.Add(d => d.File, file);
+        await DialogService.ShowAsync<FilePreviewDialog>($"Preview: {file.OriginalFileName}", parameters);
+    }
+
+    private async Task DownloadFile(FileAssetDto file)
+    {
+        try
+        {
+            var url = await FileService.GetFileDownloadUrlAsync(file.Id);
+            await JS.InvokeVoidAsync("fshOpenDownload", url.Url.ToString());
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Download failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteFile(FileAssetDto file)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Message", $"Are you sure you want to delete \"{file.OriginalFileName}\"?" },
+            { "ConfirmText", "Delete" },
+            { "CancelText", "Cancel" },
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<FSH.BlazorShared.Components.FshConfirmDialogContent>("Delete File", parameters, options);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled)
+        {
+            try
+            {
+                await FileService.DeleteAsync(file.Id);
+                Snackbar.Add($"{file.OriginalFileName} deleted.", Severity.Info);
+                await LoadFiles();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private static string FileIcon(string contentType) => contentType switch
+    {
+        var ct when ct.StartsWith("image/") => Icons.Material.Outlined.Image,
+        "application/pdf" => Icons.Material.Outlined.PictureAsPdf,
+        var ct when ct.Contains("word") => Icons.Material.Outlined.Description,
+        var ct when ct.Contains("excel") || ct.Contains("spreadsheet") => Icons.Material.Outlined.TableChart,
+        "text/plain" => Icons.Material.Outlined.TextSnippet,
+        var ct when ct.Contains("zip") || ct.Contains("rar") => Icons.Material.Outlined.FolderZip,
+        _ => Icons.Material.Outlined.InsertDriveFile,
+    };
+
+    private static string FormatBytes(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
+        _ => $"{bytes / (1024.0 * 1024 * 1024):F2} GB"
+    };
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+}

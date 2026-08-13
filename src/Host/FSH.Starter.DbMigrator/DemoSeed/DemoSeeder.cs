@@ -12,6 +12,7 @@ using FSH.Modules.Catalog.Data;
 using FSH.Modules.Catalog.Domain;
 using FSH.Modules.Chat.Data;
 using FSH.Modules.Chat.Domain;
+using FSH.Modules.Files.Contracts.Authorization;
 using FSH.Modules.Identity.Contracts.Authorization;
 using FSH.Modules.Identity.Data;
 using FSH.Modules.Identity.Domain;
@@ -42,7 +43,7 @@ namespace FSH.Starter.DbMigrator.DemoSeed;
 /// Naming: pre-2026-05-17 this lived in the API as <c>DevDataSeeder</c>
 /// (a hosted service) — moved here so the API no longer mutates data on
 /// startup, matching the same principle that pulled migrations out into
-/// this project. See <c>docs/superpowers/specs/2026-05-14-remove-api-auto-migration-design.md</c>.
+/// this project.
 /// </summary>
 internal sealed class DemoSeeder
 {
@@ -745,7 +746,7 @@ internal sealed class DemoSeeder
     [
         new(
             "Manager",
-            "Operations manager — full catalog + tickets + read-only users.",
+            "Operations manager — full catalog + tickets + files + read-only users.",
             [
                 IdentityPermissions.Users.View,
                 IdentityPermissions.Users.Update,
@@ -770,6 +771,8 @@ internal sealed class DemoSeeder
                 TicketsPermissions.Tickets.Create,
                 TicketsPermissions.Tickets.Update,
                 TicketsPermissions.Tickets.Delete,
+                FilesPermissions.Upload,
+                FilesPermissions.DeleteOwn,
             ]),
 
         new(

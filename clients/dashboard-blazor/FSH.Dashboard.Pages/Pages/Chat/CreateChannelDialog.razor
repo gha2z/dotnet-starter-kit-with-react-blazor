@@ -1,0 +1,63 @@
+@using FSH.BlazorShared.Services
+@using FSH.BlazorShared.Models.Chat
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Add" Class="mr-3" /> Create Channel
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_name" Label="Channel Name" Required="true" Immediate="true" />
+        <MudTextField @bind-Value="_description" Label="Description (optional)" Lines="2" />
+        <MudSwitch @bind-Value="_isPrivate" Label="Private channel" Color="Color.Primary" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit"
+                   Disabled="string.IsNullOrWhiteSpace(_name) || _saving">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Create
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Inject] private IChatService ChatService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    [Parameter] public EventCallback OnCreated { get; set; }
+
+    private string? _name;
+    private string? _description;
+    private bool _isPrivate;
+    private bool _saving;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_name)) return;
+
+        _saving = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await ChatService.CreateChannelAsync(new CreateChannelRequest(_name.Trim(), _description, _isPrivate));
+            Snackbar.Add("Channel created!", Severity.Success);
+            await OnCreated.InvokeAsync();
+            MudDialog.Close();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to create channel: {ex.Message}", Severity.Error);
+        }
+
+        _saving = false;
+    }
+}

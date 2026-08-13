@@ -1,0 +1,66 @@
+@namespace FSH.BlazorShared.Components
+@using MudBlazor
+
+<MudAvatar Class="fsh-monogram" Size="@AvatarSize" Variant="Variant.Filled"
+           Style="@($"{(PixelSize > 0 ? $"width: {PixelSize}px; height: {PixelSize}px; font-size: {PixelSize / 2}px; " : string.Empty)}background: {Background}; color: {Foreground}; font-family: 'JetBrains Mono', 'Cascadia Mono', monospace; letter-spacing: 0.08em; border-radius: 8px;")">
+    @Initials
+</MudAvatar>
+
+@code {
+    /// <summary>
+    /// Deterministic-tone initials avatar (React parity: FNV-1a hash of the seed picks one of four
+    /// greyscale tones; initials from first+last name).
+    /// </summary>
+    [Parameter] public string? Seed { get; set; }
+    [Parameter] public string? Name { get; set; }
+    [Parameter] public Size AvatarSize { get; set; } = Size.Medium;
+
+    /// <summary>Exact pixel size (e.g. 56). Overrides <see cref="AvatarSize"/>; 0 = use the enum size.</summary>
+    [Parameter] public int PixelSize { get; set; }
+
+    private string Initials
+    {
+        get
+        {
+            var display = string.IsNullOrEmpty(Name) ? Seed : Name;
+            if (string.IsNullOrWhiteSpace(display))
+            {
+                return "?";
+            }
+
+            var parts = display.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 2)
+            {
+                return $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
+            }
+
+            return display.Length >= 2
+                ? $"{display[0]}{display[1]}".ToUpperInvariant()
+                : display.ToUpperInvariant();
+        }
+    }
+
+    private string Background => _tones[Hash(Seed ?? string.Empty)];
+
+    private string Foreground => "var(--mud-palette-text-primary)";
+
+    private static readonly string[] _tones =
+    [
+        "color-mix(in srgb, var(--mud-palette-text-primary) 10%, transparent)",
+        "color-mix(in srgb, var(--mud-palette-text-primary) 16%, transparent)",
+        "color-mix(in srgb, var(--mud-palette-text-primary) 22%, transparent)",
+        "color-mix(in srgb, var(--mud-palette-text-primary) 30%, transparent)",
+    ];
+
+    private static uint Hash(string input)
+    {
+        uint hash = 2166136261;
+        foreach (var c in input)
+        {
+            hash ^= c;
+            hash *= 16777619;
+        }
+
+        return hash % (uint)_tones.Length;
+    }
+}

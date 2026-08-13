@@ -1,0 +1,83 @@
+@page "/settings/appearance"
+@attribute [Authorize]
+@namespace FSH.Admin.Wasm.Pages.Settings
+@inject FshThemeService Theme
+
+<SettingsScaffold>
+    <MudCard Elevation="1" Class="pa-4">
+        <div class="d-flex align-center gap-3 mb-3">
+            <FshToneIconTile Icon="@Icons.Material.Filled.Palette" Tone="Color.Primary" TileSize="40px" IconSize="Size.Small" />
+            <div>
+                <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Theme</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Console looks good in both modes. This preference is stored on this device.</MudText>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-3">
+            @foreach (var mode in Modes)
+            {
+                <div role="button" tabindex="0" aria-pressed="@IsActive(mode)"
+                     class="fsh-theme-card pa-4 cursor-pointer"
+                     style="@(IsActive(mode) ? "border: 2px solid var(--mud-palette-primary);" : "border: 1px solid var(--mud-palette-lines-default);")"
+                     @onclick="@(() => SetModeAsync(mode))"
+                     @onkeydown="@(e => { if (e.Key is "Enter" or " ") { _ = SetModeAsync(mode); } })">
+                    <div class="d-flex align-center gap-2 mb-2">
+                        <MudIcon Icon="@mode.Icon" Size="Size.Medium" />
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">@mode.Label</MudText>
+                        @if (IsActive(mode))
+                        {
+                            <span class="fsh-theme-active" style="margin-left: auto; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--mud-palette-primary);">Active</span>
+                        }
+                    </div>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@mode.Blurb</MudText>
+                </div>
+            }
+        </div>
+    </MudCard>
+
+    <MudCard Elevation="1" Class="pa-4">
+        <div class="d-flex align-center gap-3 mb-3">
+            <FshToneIconTile Icon="@Icons.Material.Filled.Palette" Tone="Color.Primary" TileSize="40px" IconSize="Size.Small" />
+            <div>
+                <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Density</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Compact mode will reduce card padding and row height for data-dense screens — similar to the dashboard's density toggle.</MudText>
+            </div>
+        </div>
+
+        <MudButton Variant="Variant.Outlined" Disabled="true" Size="Size.Small">Compact rows · coming soon</MudButton>
+    </MudCard>
+</SettingsScaffold>
+
+@code {
+    private sealed record ModeOption(ThemeMode Value, string Label, string Icon, string Blurb);
+
+    private static readonly ModeOption[] Modes =
+    [
+        new(ThemeMode.Light, "Light", Icons.Material.Filled.LightMode, "Paper-white surfaces, magazine-print mood."),
+        new(ThemeMode.Dark, "Dark", Icons.Material.Filled.DarkMode, "Console-default. Lower glare for long sessions."),
+    ];
+
+    protected override void OnInitialized()
+    {
+        Theme.Changed += OnThemeChanged;
+    }
+
+    private bool IsActive(ModeOption mode) => Theme.Mode == mode.Value;
+
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
+
+    private async Task SetModeAsync(ModeOption mode)
+    {
+        if (Theme.Mode == mode.Value)
+        {
+            return;
+        }
+
+        await Theme.SetAsync(mode.Value == ThemeMode.Dark);
+    }
+
+    public void Dispose()
+    {
+        Theme.Changed -= OnThemeChanged;
+    }
+}

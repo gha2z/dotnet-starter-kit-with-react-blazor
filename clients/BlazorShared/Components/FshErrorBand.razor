@@ -1,0 +1,29 @@
+@namespace FSH.BlazorShared.Components
+@using MudBlazor
+
+<div role="alert" class="d-flex align-center gap-3 rounded-lg px-4 py-3 mb-4 fsh-enter"
+     style="border: 1px solid color-mix(in srgb, var(--mud-palette-error) 30%, transparent); background: color-mix(in srgb, var(--mud-palette-error) 6%, transparent);">
+    <MudIcon Icon="@Icons.Material.Filled.ReportGmailerrorred" Color="Color.Error" Size="Size.Medium" />
+    <div class="flex-grow-1">
+        <MudText Class="fsh-mono-label" Color="Color.Error" Style="color: var(--mud-palette-error);">FAILURE ·</MudText>
+        <MudText Typo="Typo.body2" Style="color: var(--mud-palette-error);">@Message</MudText>
+        @if (!string.IsNullOrEmpty(CorrelationId))
+        {
+            <MudText Typo="Typo.caption" Class="fsh-mono-muted mt-1" Style="color: var(--mud-palette-error);">
+                Request @CorrelationId
+            </MudText>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// Destructive-tinted inline error band (React parity: AlertTriangle + mono FAILURE eyebrow + message).
+    /// </summary>
+    [Parameter] public string Message { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional server correlation/trace ID (React parity: error alerts surface the request id for support).
+    /// </summary>
+    [Parameter] public string? CorrelationId { get; set; }
+}

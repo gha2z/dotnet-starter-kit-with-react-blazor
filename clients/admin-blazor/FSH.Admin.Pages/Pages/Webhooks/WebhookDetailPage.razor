@@ -1,0 +1,167 @@
+@page "/webhooks/{Id}"
+@attribute [Authorize(Policy = WebhooksPermissions.Subscriptions.View)]
+@using FSH.BlazorShared.Formatting
+@using FSH.BlazorShared.Models.Webhooks
+
+<FshPageHeader Title="@(Subscription?.Url ?? "Subscription")"
+               Icon="@Icons.Material.Filled.Hub"
+               Tone="Color.Secondary"
+               Description="@(Subscription is null ? "Loading subscription…" : $"Subscribed to {Subscription.Events.Length} {((Subscription.Events.Length == 1) ? "event" : "events")}.")">
+    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack"
+               OnClick="GoBack">
+        Subscriptions
+    </MudButton>
+</FshPageHeader>
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+else if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (Subscription is null)
+{
+    <FshErrorBand Message="Subscription not found. It may have been deleted." />
+}
+else
+{
+    <MudPaper Elevation="1" Class="pa-4 pa-md-6 mb-4">
+        <div class="d-flex align-center gap-2 mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Primary" />
+            <MudText Typo="Typo.subtitle1" Style="margin: 0;">Endpoint</MudText>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
+            Where we POST event payloads.
+        </MudText>
+
+        <div class="row">
+            <div class="col-12 col-sm-6 mb-3">
+                <span class="fsh-mono-label">URL</span>
+                <div class="fsh-mono-medium fsh-truncate mt-1">@Subscription.Url</div>
+            </div>
+            <div class="col-12 col-sm-6 mb-3">
+                <span class="fsh-mono-label">Status</span>
+                <div class="mt-1">
+                    <FshStatusPill Text="@(Subscription.IsActive ? "Active" : "Inactive")"
+                                   Tone="@(Subscription.IsActive ? Color.Success : Color.Default)" />
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 mb-3">
+                <span class="fsh-mono-label">Subscription id</span>
+                <div class="fsh-mono-medium mt-1">@Subscription.Id</div>
+            </div>
+            <div class="col-12 col-sm-6 mb-3">
+                <span class="fsh-mono-label">Created</span>
+                <div class="fsh-mono-medium mt-1">@FshFormat.DateShort(Subscription.CreatedAtUtc)</div>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap align-center gap-2 mt-2">
+            <FshPermissionGate Perms="@(new[] { WebhooksPermissions.Subscriptions.Test })">
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Send"
+                           Disabled="@_isTesting" OnClick="TestAsync">
+                    @(_isTesting ? "Sending…" : "Send test event")
+                </MudButton>
+            </FshPermissionGate>
+            <FshPermissionGate Perms="@(new[] { WebhooksPermissions.Subscriptions.Delete })">
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error"
+                           StartIcon="@Icons.Material.Filled.Delete" Disabled="@_isDeleting"
+                           OnClick="DeleteAsync">
+                    @(_isDeleting ? "Deleting…" : "Delete subscription")
+                </MudButton>
+            </FshPermissionGate>
+        </div>
+    </MudPaper>
+
+    <MudPaper Elevation="1" Class="pa-4 pa-md-6 mb-4">
+        <div class="d-flex align-center gap-2 mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.List" Color="Color.Primary" />
+            <MudText Typo="Typo.subtitle1" Style="margin: 0;">Events</MudText>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3" Style="display: block;">
+            Event types this endpoint subscribes to.
+        </MudText>
+
+        @if (Subscription.Events.Length == 0)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                — no events; subscription would never fire
+            </MudText>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var evt in Subscription.Events)
+                {
+                    <code class="fsh-code-chip">@evt</code>
+                }
+            </div>
+        }
+    </MudPaper>
+
+    <MudPaper Elevation="1" Class="pa-4 pa-md-6">
+        <div class="d-flex align-center justify-space-between gap-2 mb-1">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.History" Color="Color.Primary" />
+                <MudText Typo="Typo.subtitle1" Style="margin: 0;">Deliveries</MudText>
+            </div>
+            <div class="d-flex align-center gap-2">
+                <span class="fsh-mono-label">@(_deliveries is null ? "—" : $"{_deliveries.TotalCount} attempts")</span>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                               Disabled="@_loadingDeliveries" OnClick="ReloadDeliveriesAsync" />
+            </div>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3" Style="display: block;">
+            Recent attempts to POST events to this endpoint.
+        </MudText>
+
+        @if (_deliveryError is not null)
+        {
+            <FshErrorBand Message="@_deliveryError" />
+        }
+        else if (_loadingDeliveries && _deliveries is null)
+        {
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+        }
+        else if (_deliveries is null || _deliveries.Items.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                No deliveries yet. Try the test button above, or wait for matching events to fire.
+            </MudText>
+        }
+        else
+        {
+            @foreach (var delivery in _deliveries.Items)
+            {
+                <div class="d-flex align-center gap-3 py-2" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                    <MudIcon Icon="@(delivery.Success ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                             Color="@(delivery.Success ? Color.Success : Color.Error)" Size="Size.Small" />
+                    <span class="fsh-mono-label" style="text-transform: none; letter-spacing: 0.02em;">
+                        @FshFormat.DateShort(delivery.AttemptedAtUtc)
+                    </span>
+                    <code class="fsh-code-chip">@delivery.EventType</code>
+                    <span class="fsh-truncate" style="color: var(--mud-palette-text-secondary); font-size: 11.5px;">
+                        @(delivery.ErrorMessage ?? (delivery.Success ? "OK" : "Failed"))
+                    </span>
+                    <span class="ms-auto">
+                        <FshStatusPill Text="@($"HTTP {(delivery.HttpStatusCode == 0 ? "—" : delivery.HttpStatusCode.ToString())}")"
+                                       Tone="@(delivery.Success ? Color.Success : Color.Error)" />
+                    </span>
+                    <span class="fsh-mono-label">try @delivery.AttemptCount</span>
+                </div>
+            }
+
+            @if (_deliveries.TotalPages > 1)
+            {
+                <div class="mt-2">
+                    <FshPager TotalCount="@_deliveries.TotalCount"
+                              PageNumber="@_deliveries.PageNumber"
+                              PageSize="@_deliveries.PageSize"
+                              PageChanged="OnDeliveryPageChangedAsync" />
+                </div>
+            }
+        }
+    </MudPaper>
+}

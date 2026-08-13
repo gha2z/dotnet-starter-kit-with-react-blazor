@@ -1,0 +1,98 @@
+@page "/billing/plans"
+@attribute [Authorize(Policy = BillingPermissions.View)]
+@using FSH.BlazorShared.Formatting
+@using FSH.BlazorShared.Models.Billing
+
+<BillingScaffold>
+    <div class="row mb-4">
+        <div class="col-12 col-md-4 mb-2 mb-md-0">
+            <FshStatTile Label="Plans" Value="@(_loading ? null : _plans.Count.ToString())" Hint="@($"{_activeCount} active")" />
+        </div>
+        <div class="col-12 col-md-4 mb-2 mb-md-0">
+            <FshStatTile Label="Active" Value="@(_loading ? null : _activeCount.ToString())" Hint="@(_inactiveCount > 0 ? $"{_inactiveCount} inactive" : "all active")" />
+        </div>
+        <div class="col-12 col-md-4">
+            <FshStatTile Label="Average base" Value="@(_loading ? null : FshFormat.Money(_averageBase, _currency))" Hint="monthly subscription fee" />
+        </div>
+    </div>
+
+    <MudPaper Elevation="1" Class="pa-4 pa-md-6">
+        <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-1">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.Tag" Color="Color.Primary" />
+                <MudText Typo="Typo.h6">All plans</MudText>
+            </div>
+            <FshPermissionGate Perms="@(new[] { BillingPermissions.Manage })">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateAsync">
+                    New plan
+                </MudButton>
+            </FshPermissionGate>
+        </div>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+            Pricing schedule used by tenant subscriptions and invoice generation.
+        </MudText>
+
+        @if (_error is not null)
+        {
+            <FshErrorBand Message="@_error" />
+        }
+        else if (_loading)
+        {
+            @for (var i = 0; i < 3; i++)
+            {
+                <div class="d-flex align-center justify-space-between gap-4 py-3" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                    <div style="flex: 1;">
+                        <div class="fsh-skeleton" style="width: 40%; height: 18px;"></div>
+                        <div class="fsh-skeleton mt-2" style="width: 60%; height: 12px;"></div>
+                    </div>
+                    <div class="fsh-skeleton" style="width: 80px; height: 18px;"></div>
+                </div>
+            }
+        }
+        else if (_plans.Count == 0)
+        {
+            <FshEmptyState Icon="@Icons.Material.Filled.Tag"
+                           Kicker="// plans"
+                           Title="No plans defined yet."
+                           Description="Create your first plan to start charging tenants." />
+        }
+        else
+        {
+            @foreach (var plan in _plans)
+            {
+                <div class="d-flex align-center justify-space-between gap-4 py-3" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                    <div class="min-w-0">
+                        <div class="d-flex flex-wrap align-center gap-2">
+                            <code class="fsh-code-chip">@plan.Key</code>
+                            <MudText Typo="Typo.body2" Style="margin: 0; font-weight: 500;">@plan.Name</MudText>
+                            <FshStatusPill Text="@(plan.Interval == "Yearly" ? "Yearly" : "Monthly")" />
+                            @if (plan.IsActive)
+                            {
+                                <FshStatusPill Text="Active" Tone="Color.Success" />
+                            }
+                            else
+                            {
+                                <FshStatusPill Text="Inactive" />
+                            }
+                        </div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="font-mono mt-1" Style="margin: 0;">
+                            currency @plan.Currency · overage @OverageLabel(plan)
+                        </MudText>
+                    </div>
+                    <div class="d-flex align-center gap-4">
+                        <div class="text-right">
+                            <MudText Typo="Typo.subtitle1" Class="font-weight-medium tabular-nums" Style="margin: 0;">@FshFormat.Money(TermPrice(plan), plan.Currency)</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="font-mono" Style="margin: 0; text-transform: uppercase; letter-spacing: 0.18em; font-size: 10.5px;">
+                                @(plan.Interval == "Yearly" ? "per year" : "per month")
+                            </MudText>
+                        </div>
+                        <FshPermissionGate Perms="@(new[] { BillingPermissions.Manage })">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="() => OpenEditAsync(plan)" />
+                        </FshPermissionGate>
+                    </div>
+                </div>
+            }
+        }
+    </MudPaper>
+</BillingScaffold>

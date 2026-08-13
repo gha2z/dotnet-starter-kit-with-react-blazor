@@ -1,0 +1,174 @@
+@page "/audits"
+@attribute [Authorize(Policy = AuditingPermissions.AuditTrails.View)]
+@using FSH.BlazorShared.Models.Audits
+@using FSH.BlazorShared.Formatting
+
+<FshPageHeader Title="Audit trail"
+               Icon="@Icons.Material.Filled.ReceiptLong"
+               Tone="Color.Primary"
+               Count="@(_data?.TotalCount ?? (_loading ? null : 0))"
+               Unit="event"
+               Description="Every security action, entity change, and exception captured by the auditing pipeline. Filter by event type, severity, or correlation id to follow a request end-to-end.">
+    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh"
+               Disabled="@_loading" OnClick="LoadAsync">
+        Refresh
+    </MudButton>
+</FshPageHeader>
+
+<div class="row mb-4">
+    <div class="col-12 col-sm-6 col-md-3 mb-2 mb-md-0">
+        <FshStatTile Label="Total events" Value="@(_summary is null ? null : _summary.Total.ToString("N0"))"
+                     Hint="across all event types" />
+    </div>
+    <div class="col-12 col-sm-6 col-md-3 mb-2 mb-md-0">
+        <FshStatTile Label="Errors + critical" Value="@(_summary is null ? null : _summary.Errors.ToString("N0"))"
+                     Hint="severity ≥ Error" Tone="@(_summary is { Errors: > 0 } ? Color.Error : Color.Inherit)" />
+    </div>
+    <div class="col-12 col-sm-6 col-md-3 mb-2 mb-md-0">
+        <FshStatTile Label="Security events" Value="@(_summary is null ? null : _summary.Security.ToString("N0"))"
+                     Hint="logins, role grants, tokens" Tone="@(_summary is { Security: > 0 } ? Color.Info : Color.Inherit)" />
+    </div>
+    <div class="col-12 col-sm-6 col-md-3">
+        <FshStatTile Label="Exceptions" Value="@(_summary is null ? null : _summary.Exceptions.ToString("N0"))"
+                     Hint="captured by the pipeline" />
+    </div>
+</div>
+
+<FshFilterBar Caption="Filters">
+    <div class="flex-grow-1" style="min-width: 14rem;">
+        <MudTextField T="string"
+                      @bind-Value="_searchInput"
+                      @bind-Value:after="OnSearchChangedAsync"
+                      Label="Search user, source, correlation…"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense" />
+    </div>
+    <div style="min-width: 10rem;">
+        <MudSelect T="string"
+                   @bind-Value="_eventTypeFilter"
+                   @bind-Value:after="OnFilterChangedAsync"
+                   Label="All event types"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense"
+                   Dense="true">
+            <MudSelectItem Value="@string.Empty">All event types</MudSelectItem>
+            @foreach (var type in AuditOptionLists.EventTypes)
+            {
+                <MudSelectItem Value="@type">@type</MudSelectItem>
+            }
+        </MudSelect>
+    </div>
+    <div style="min-width: 10rem;">
+        <MudSelect T="string"
+                   @bind-Value="_severityFilter"
+                   @bind-Value:after="OnFilterChangedAsync"
+                   Label="All severities"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense"
+                   Dense="true">
+            <MudSelectItem Value="@string.Empty">All severities</MudSelectItem>
+            @foreach (var severity in AuditOptionLists.Severities)
+            {
+                <MudSelectItem Value="@severity">@severity</MudSelectItem>
+            }
+        </MudSelect>
+    </div>
+    <FshPermissionGate Perms="@(new[] { AuditingPermissions.AuditTrails.ViewCrossTenant })">
+        <div style="min-width: 12rem;">
+            <MudTextField T="string"
+                          @bind-Value="_tenantFilter"
+                          @bind-Value:after="OnFilterChangedAsync"
+                          Label="Tenant id (cross-tenant)"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="fsh-mono-field" />
+        </div>
+    </FshPermissionGate>
+    <div style="min-width: 14rem;">
+        <MudTextField T="string"
+                      @bind-Value="_correlationFilter"
+                      @bind-Value:after="OnFilterChangedAsync"
+                      Label="Correlation id"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Class="fsh-mono-field" />
+    </div>
+    @if (ActiveFilterCount > 0)
+    {
+        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.Clear"
+                   OnClick="ClearFiltersAsync">
+            Clear all (@ActiveFilterCount)
+        </MudButton>
+    }
+</FshFilterBar>
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+else if (_loading && _items.Count == 0)
+{
+    <FshLoadingRow Label="Loading events" />
+}
+else if (_items.Count == 0)
+{
+    <FshEmptyState Icon="@Icons.Material.Filled.ReceiptLong"
+                   Kicker="// no events"
+                   Title="No audit events match your filters."
+                   Description="@(ActiveFilterCount > 0
+                       ? "Try clearing or relaxing a filter — the trail is broad by default."
+                       : "The audit pipeline hasn't recorded anything for this tenant yet.")">
+        @if (ActiveFilterCount > 0)
+        {
+            <MudButton Variant="Variant.Outlined" OnClick="ClearFiltersAsync">Clear filters</MudButton>
+        }
+    </FshEmptyState>
+}
+else
+{
+    <MudPaper Elevation="1" Class="pa-2 pa-md-4">
+        @foreach (var auditEvent in _items)
+        {
+            <div class="d-flex align-center gap-4 py-3 px-2 fsh-row-link"
+                 @onclick="@(() => OpenDetailAsync(auditEvent.Id))"
+                 role="button"
+                 tabindex="0">
+                <span class="fsh-dot" style="background: @SeverityDot(auditEvent.Severity);" aria-hidden
+                      title="@auditEvent.Severity"></span>
+                <span class="fsh-mono-label" style="text-transform: none; letter-spacing: 0.02em; min-width: 8rem;">
+                    @FshFormat.Timestamp(auditEvent.OccurredAtUtc)
+                </span>
+                <FshStatusPill Text="@auditEvent.EventType.ToString()" Tone="@EventTypeTone(auditEvent.EventType)" />
+                <div class="min-w-0 flex-grow-1">
+                    <div class="d-flex flex-wrap align-baseline gap-2">
+                        <span class="fsh-truncate fsh-mono-medium">@(auditEvent.Source ?? "—")</span>
+                        @if (!string.IsNullOrEmpty(auditEvent.UserName))
+                        {
+                            <span class="fsh-mono-muted">· @auditEvent.UserName</span>
+                        }
+                        @if (!string.IsNullOrEmpty(auditEvent.TenantId))
+                        {
+                            <code class="fsh-code-chip">@auditEvent.TenantId</code>
+                        }
+                    </div>
+                    @if (!string.IsNullOrEmpty(auditEvent.CorrelationId))
+                    {
+                        <div class="fsh-mono-muted mt-1 fsh-truncate">corr · @auditEvent.CorrelationId</div>
+                    }
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small"
+                         Style="color: var(--mud-palette-text-secondary);" />
+            </div>
+        }
+
+        @if (_data is not null && _data.TotalPages > 1)
+        {
+            <div class="mt-2">
+                <FshPager TotalCount="@_data.TotalCount"
+                          PageNumber="@_data.PageNumber"
+                          PageSize="@_data.PageSize"
+                          PageChanged="OnPageChangedAsync" />
+            </div>
+        }
+    </MudPaper>
+}

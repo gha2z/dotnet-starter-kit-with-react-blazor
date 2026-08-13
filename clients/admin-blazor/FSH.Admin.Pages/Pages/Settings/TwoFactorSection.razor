@@ -1,0 +1,185 @@
+@namespace FSH.Admin.Wasm.Pages.Settings
+@using FSH.BlazorShared.Models.Identity
+
+<MudCard Elevation="1" Class="pa-4">
+    <div class="d-flex align-center gap-3 mb-3">
+        <FshToneIconTile Icon="@Icons.Material.Filled.Security" Tone="Color.Primary" TileSize="40px" IconSize="Size.Small" />
+        <div>
+            <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Two-factor authentication</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Add a second verification step for your account.</MudText>
+        </div>
+    </div>
+
+    @if (Enabled)
+    {
+        <div class="d-flex align-center gap-2">
+            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">Enabled</MudChip>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" StartIcon="@Icons.Material.Filled.Shield" OnClick="OpenDisableDialog">
+                Disable
+            </MudButton>
+        </div>
+    }
+    else
+    {
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Shield" OnClick="BeginEnrollAsync" Disabled="@_enrolling">
+            @(_enrolling ? "Generating…" : "Enable two-factor")
+        </MudButton>
+    }
+
+    @if (_enrollment is not null)
+    {
+        <div class="mt-4 pa-3" style="border: 1px solid var(--mud-palette-lines-default); border-radius: 8px;">
+            <MudText Typo="Typo.body2" Class="mb-2">Scan this with your authenticator app, or manually enter the key:</MudText>
+            <div class="d-flex flex-wrap align-center gap-2 mb-3">
+                <code class="code-chip">@_enrollment.SharedKey</code>
+                <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="CopyKeyAsync">Copy key</MudButton>
+            </div>
+            <MudTextField Label="Enter the 6-digit code" @bind-Value="_code" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <div class="d-flex align-center gap-2 mt-2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_verifying" OnClick="VerifyAsync">
+                    @(_verifying ? "Verifying…" : "Verify & enable")
+                </MudButton>
+                <MudButton Variant="Variant.Text" OnClick="CancelEnroll">Cancel</MudButton>
+            </div>
+            @if (_enrollError is not null)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Error" Class="mt-2">@_enrollError</MudText>
+            }
+        </div>
+    }
+</MudCard>
+
+<MudDialog @bind-Visible="_disableOpen" Options="new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Small }">
+    <DialogContent>
+        <MudText Typo="Typo.subtitle1" Class="font-weight-medium mb-2">Disable two-factor</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Enter your password to confirm.</MudText>
+        <MudTextField Label="Password" @bind-Value="_disablePassword" InputType="InputType.Password"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="@(() => _disableOpen = false)">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" Disabled="@_disabling" OnClick="DisableAsync">
+            @(_disabling ? "Disabling…" : "Disable 2FA")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Enabled { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    [Inject] private ITwoFactorService TwoFactorService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IJSRuntime Js { get; set; } = default!;
+
+    private TwoFactorEnrollmentResponse? _enrollment;
+    private string _code = string.Empty;
+    private string? _enrollError;
+    private bool _enrolling;
+    private bool _verifying;
+    private bool _disableOpen;
+    private string _disablePassword = string.Empty;
+    private bool _disabling;
+
+    private async Task BeginEnrollAsync()
+    {
+        _enrolling = true;
+        _enrollError = null;
+        try
+        {
+            _enrollment = await TwoFactorService.EnrollAsync();
+        }
+        catch (Exception ex)
+        {
+            _enrollError = ex.Message;
+        }
+        finally
+        {
+            _enrolling = false;
+        }
+    }
+
+    private void CancelEnroll()
+    {
+        _enrollment = null;
+        _code = string.Empty;
+        _enrollError = null;
+    }
+
+    private async Task VerifyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_code))
+        {
+            _enrollError = "Enter the 6-digit code from your authenticator.";
+            return;
+        }
+
+        _verifying = true;
+        _enrollError = null;
+        try
+        {
+            var success = await TwoFactorService.VerifyEnrollAsync(_code.Trim());
+            if (!success)
+            {
+                _enrollError = "That code wasn't accepted. Check the time on your device and try again.";
+                return;
+            }
+
+            Snackbar.Add("Two-factor enabled. Future logins require a 6-digit code from your authenticator.", Severity.Success);
+            _enrollment = null;
+            _code = string.Empty;
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _enrollError = ex.Message;
+        }
+        finally
+        {
+            _verifying = false;
+        }
+    }
+
+    private async Task CopyKeyAsync()
+    {
+        if (_enrollment is null)
+        {
+            return;
+        }
+
+        await Js.InvokeVoidAsync("navigator.clipboard.writeText", _enrollment.SharedKey);
+        Snackbar.Add("Shared key copied", Severity.Info);
+    }
+
+    private void OpenDisableDialog()
+    {
+        _disablePassword = string.Empty;
+        _disableOpen = true;
+    }
+
+    private async Task DisableAsync()
+    {
+        _disabling = true;
+        try
+        {
+            var success = await TwoFactorService.DisableAsync(_disablePassword);
+            if (!success)
+            {
+                Snackbar.Add("Disable failed — check your password.", Severity.Error);
+                return;
+            }
+
+            _disableOpen = false;
+            Snackbar.Add("Two-factor disabled", Severity.Success);
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Disable failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _disabling = false;
+        }
+    }
+}

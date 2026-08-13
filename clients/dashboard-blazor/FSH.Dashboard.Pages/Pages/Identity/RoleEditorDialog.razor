@@ -1,0 +1,56 @@
+@namespace FSH.Dashboard.Wasm.Pages.Identity
+@using FSH.BlazorShared.Models.Identity
+@using FSH.BlazorShared.Services
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex align-center gap-2 mb-2">
+            <FshToneIconTile Icon="@Icons.Material.Filled.Shield" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
+            <MudText Typo="Typo.h6" Style="margin: 0;">@(Role is null ? "Create a role" : $"Edit {Role.Name}")</MudText>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
+            @(Role is null
+                ? "Define a permission bundle. You'll pick the permission grants right after."
+                : "Update this role's name and description. Permissions are managed on the role page.")
+        </MudText>
+
+        <MudForm @ref="_mudForm" Validation="@(new DataAnnotationsValidator())">
+            <MudTextField @bind-Value="_form.Name"
+                          Label="Name"
+                          For="@(() => _form.Name)"
+                          Placeholder="e.g. Operations"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          Disabled="@(_isSaving || IsSystemRole)" />
+            <MudTextField @bind-Value="_form.Description"
+                          Label="Description"
+                          For="@(() => _form.Description)"
+                          Placeholder="What does this role do?"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="3"
+                          Disabled="@(_isSaving || IsSystemRole)" />
+        </MudForm>
+
+        @if (IsSystemRole)
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-2">
+                <MudText Typo="Typo.body2" Style="margin: 0;">
+                    Built-in role — read only. Its name and description are managed centrally.
+                </MudText>
+            </MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@_isSaving">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_isSaving || IsSystemRole)" OnClick="SaveAsync">
+            @if (_isSaving)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+            }
+            @(Role is null ? "Create role" : "Save changes")
+        </MudButton>
+    </DialogActions>
+</MudDialog>

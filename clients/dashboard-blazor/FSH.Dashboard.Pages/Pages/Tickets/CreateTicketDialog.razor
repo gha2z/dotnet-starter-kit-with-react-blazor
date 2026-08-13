@@ -1,0 +1,95 @@
+@using FSH.BlazorShared.Models.Tickets
+
+<MudDialog @bind-Visible="Open" Options="DialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber" Class="mr-3" /> Open a ticket
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_title"
+                      Label="Title"
+                      Placeholder="Briefly describe the issue or request"
+                      MaxLength="160"
+                      Required="true"
+                      Variant="Variant.Outlined"
+                      Class="mb-4" />
+
+        <MudTextField @bind-Value="_description"
+                      Label="Description"
+                      Placeholder="Steps to reproduce, expected behavior, anything else useful"
+                      Lines="4"
+                      MaxLength="4096"
+                      Variant="Variant.Outlined"
+                      Class="mb-4" />
+
+        <MudSelect T="TicketPriority" @bind-Value="_priority" Label="Priority" Variant="Variant.Outlined">
+            @foreach (var p in Enum.GetValues<TicketPriority>())
+            {
+                <MudSelectItem T="TicketPriority" Value="@p">@p</MudSelectItem>
+            }
+        </MudSelect>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Disabled="_submitting">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit"
+                   Disabled="@(string.IsNullOrWhiteSpace(_title) || _submitting)">
+            @if (_submitting) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Open ticket
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public EventCallback OnCreated { get; set; }
+
+    [Inject] private ITicketService Tickets { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private string _title = string.Empty;
+    private string _description = string.Empty;
+    private TicketPriority _priority = TicketPriority.Medium;
+    private bool _submitting;
+    private string? _error;
+
+    private static readonly DialogOptions DialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+
+    private async Task Close()
+    {
+        Open = false;
+        await OpenChanged.InvokeAsync(false);
+    }
+
+    private async Task Submit()
+    {
+        if (string.IsNullOrWhiteSpace(_title)) return;
+        _submitting = true;
+        _error = null;
+        try
+        {
+            await Tickets.CreateTicketAsync(new CreateTicketRequest(_title.Trim(), TrimmedOrNull(_description), _priority));
+            Snackbar.Add("Ticket opened", Severity.Success);
+            await OnCreated.InvokeAsync();
+            _title = string.Empty;
+            _description = string.Empty;
+            _priority = TicketPriority.Medium;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private static string? TrimmedOrNull(string s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+}

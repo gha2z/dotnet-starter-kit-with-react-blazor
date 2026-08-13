@@ -1,0 +1,226 @@
+@namespace FSH.BlazorShared.Components
+@implements IDisposable
+@using FSH.BlazorShared.Models.Notifications
+@using FSH.BlazorShared.Realtime
+@using FSH.BlazorShared.Services
+@using Microsoft.AspNetCore.SignalR.Client
+@using MudBlazor
+@inject INotificationService Notifications
+@inject IHubConnectionService Hub
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<div class="fsh-bell">
+    <MudMenu Class="fsh-bell-menu" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" @bind-Open="MenuOpen">
+        <ActivatorContent Context="bellActivator">
+            <div class="fsh-bell-button">
+                <MudIconButton Icon="@Icons.Material.Filled.NotificationsNone" Size="Size.Medium" aria-label="Notifications" />
+                @if (_unreadCount > 0)
+                {
+                    <span class="fsh-bell-badge">@(_unreadCount > 99 ? "99+" : _unreadCount.ToString())</span>
+                }
+            </div>
+        </ActivatorContent>
+        <ChildContent>
+            <div class="fsh-bell-panel">
+                <div class="d-flex align-center justify-space-between fsh-bell-head">
+                    <span class="fsh-mono-label">Notifications</span>
+                    <button type="button" class="fsh-bell-action" disabled="@(_unreadCount == 0 || _busy)" @onclick="MarkAllReadAsync">Mark all read</button>
+                </div>
+                @if (_busy)
+                {
+                    <div class="d-flex justify-center pa-4">
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    </div>
+                }
+                else if (_items.Count == 0)
+                {
+                    <FshEmptyState Icon="@Icons.Material.Filled.NotificationsNone" Title="No notifications" Kicker="Inbox" Description="When someone mentions you or something needs attention, it lands here." />
+                }
+                else
+                {
+                    <div class="fsh-bell-list">
+                        @foreach (var item in _items)
+                        {
+                            <button type="button" class="fsh-bell-item @(item.IsRead ? "read" : null)" @onclick="() => OpenItemAsync(item)">
+                                <span class="fsh-bell-item-dot @(item.IsRead ? "read" : null)"></span>
+                                <span class="fsh-bell-item-body">
+                                    <span class="fsh-bell-item-title">@item.Title</span>
+                                    @if (!string.IsNullOrEmpty(item.Body))
+                                    {
+                                        <span class="fsh-bell-item-text fsh-truncate">@item.Body</span>
+                                    }
+                                    <span class="fsh-bell-item-time">@FormatRelative(item.CreatedAtUtc)</span>
+                                </span>
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        </ChildContent>
+    </MudMenu>
+</div>
+
+@code {
+    private readonly List<NotificationDto> _items = [];
+    private int _unreadCount;
+    private bool _busy;
+    private bool _menuOpen;
+    private IDisposable? _hubSub;
+
+    private bool MenuOpen
+    {
+        get => _menuOpen;
+        set
+        {
+            _menuOpen = value;
+            if (value)
+            {
+                _ = RefreshAsync();
+            }
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Hub.StateChanged += OnHubStateChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        TrySubscribeHub();
+        await RefreshAsync();
+    }
+
+    private void OnHubStateChanged(HubConnectionState state)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            if (state == HubConnectionState.Connected)
+            {
+                TrySubscribeHub();
+            }
+            else
+            {
+                _hubSub?.Dispose();
+                _hubSub = null;
+            }
+
+            await RefreshAsync();
+            StateHasChanged();
+        });
+    }
+
+    private void TrySubscribeHub()
+    {
+        if (_hubSub is not null || Hub.State != HubConnectionState.Connected)
+        {
+            return;
+        }
+
+        _hubSub = Hub.On<NotificationDto>("NotificationCreated", OnNotificationPushedAsync);
+    }
+
+    private async Task OnNotificationPushedAsync(NotificationDto notification)
+    {
+        await InvokeAsync(async () =>
+        {
+            _unreadCount++;
+            if (_items.All(i => i.Id != notification.Id))
+            {
+                _items.Insert(0, notification);
+                if (_items.Count > 20)
+                {
+                    _items.RemoveAt(_items.Count - 1);
+                }
+            }
+
+            Snackbar.Add("New notification", Severity.Info);
+            StateHasChanged();
+        });
+    }
+
+    private async Task RefreshAsync()
+    {
+        try
+        {
+            _unreadCount = await Notifications.GetUnreadCountAsync();
+            _items.Clear();
+            _items.AddRange(await Notifications.ListAsync(pageSize: 20));
+        }
+        catch
+        {
+            // Best-effort: the API may be unreachable while the shell renders.
+        }
+    }
+
+    private async Task OpenItemAsync(NotificationDto item)
+    {
+        if (!item.IsRead)
+        {
+            try
+            {
+                await Notifications.MarkReadAsync(item.Id);
+                _unreadCount = Math.Max(0, _unreadCount - 1);
+            }
+            catch
+            {
+                // Local state still reflects the click intent.
+            }
+
+            var index = _items.IndexOf(item);
+            if (index >= 0)
+            {
+                _items[index] = item with { ReadAtUtc = DateTime.UtcNow };
+            }
+        }
+
+        if (!string.IsNullOrEmpty(item.Link))
+        {
+            Nav.NavigateTo(item.Link);
+        }
+    }
+
+    private async Task MarkAllReadAsync()
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            await Notifications.MarkAllReadAsync();
+            _unreadCount = 0;
+            for (var i = 0; i < _items.Count; i++)
+            {
+                _items[i] = _items[i] with { ReadAtUtc = DateTime.UtcNow };
+            }
+        }
+        catch
+        {
+            // Keep the existing state if the request failed.
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static string FormatRelative(DateTime utc)
+    {
+        var diff = DateTime.UtcNow - utc;
+        if (diff < TimeSpan.FromMinutes(1)) return "now";
+        if (diff < TimeSpan.FromHours(1)) return $"{(int)diff.TotalMinutes}m";
+        if (diff < TimeSpan.FromDays(1)) return $"{(int)diff.TotalHours}h";
+        if (diff < TimeSpan.FromDays(7)) return $"{(int)diff.TotalDays}d";
+        return utc.ToLocalTime().ToString("MMM d");
+    }
+
+    public void Dispose()
+    {
+        Hub.StateChanged -= OnHubStateChanged;
+        _hubSub?.Dispose();
+    }
+}

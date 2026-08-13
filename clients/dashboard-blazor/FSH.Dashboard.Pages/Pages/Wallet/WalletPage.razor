@@ -1,0 +1,144 @@
+@page "/wallet"
+@attribute [Authorize]
+@using FSH.BlazorShared.Formatting
+@using MudBlazor
+
+<FshPageHeader Title="WhatsApp wallet"
+               Description="Your prepaid balance for WhatsApp messaging. Request a top-up and we'll raise an invoice to credit your wallet."
+               Icon="@Icons.Material.Filled.AccountBalanceWallet">
+</FshPageHeader>
+
+@if (_walletError is not null)
+{
+    <FshErrorBand Message="@_walletError" />
+}
+
+<div class="d-flex flex-column gap-4 fsh-subscription-grid">
+    @* Balance card *@
+    <MudPaper Elevation="0" Class="fsh-section-card">
+        <div class="d-flex align-center gap-2 mb-1" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mud-palette-text-secondary);">
+            <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Size="Size.Small" />
+            Current balance
+        </div>
+        @if (_loadingWallet)
+        {
+            <div class="fsh-skeleton mt-3" style="height: 40px; width: 160px; border-radius: 8px;"></div>
+        }
+        else
+        {
+            <div class="mt-2">
+                <span class="fsh-balance-amount">@FshFormat.Money(_wallet?.Balance ?? 0m, Currency)</span>
+            </div>
+        }
+        @if (!_loadingWallet && _wallet?.Balance is <= LowBalanceThreshold)
+        {
+            <div class="fsh-low-balance-hint">
+                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Style="margin-top: 2px;" />
+                <span>@(_wallet!.Balance <= 0
+                    ? "Your wallet is empty. Request a top-up to keep sending WhatsApp messages."
+                    : "Your balance is running low. Consider requesting a top-up soon.")</span>
+            </div>
+        }
+    </MudPaper>
+
+    @* Top-up request form *@
+    <MudPaper Elevation="0" Class="fsh-section-card">
+        <div class="d-flex align-center gap-2 mb-1" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mud-palette-text-secondary);">
+            <MudIcon Icon="@Icons.Material.Filled.Send" Size="Size.Small" />
+            Request a top-up
+        </div>
+        <EditForm Model="this" OnValidSubmit="SubmitTopupAsync" class="mt-4 d-flex flex-column gap-4">
+            <div class="d-flex flex-column gap-1">
+                <label class="fsh-mono-label" for="topup-amount">Amount</label>
+                @{ var amountInvalid = !string.IsNullOrWhiteSpace(_amount) && (!decimal.TryParse(_amount, out var v) || v <= 0); }
+                <MudTextField id="topup-amount" @bind-Value="_amount" Adornment="Adornment.End" AdornmentText="@Currency"
+                                 Placeholder="100.00" Variant="Variant.Outlined" Class="fsh-mono-field"
+                                 Required="true" Error="@amountInvalid" ErrorText="@(amountInvalid ? "Must be a positive number" : null)" />
+                <p class="fsh-muted-copy">How much to add to your wallet, in @Currency.</p>
+            </div>
+            <div class="d-flex flex-column gap-1">
+                <label class="fsh-mono-label" for="topup-note">Note</label>
+                <MudTextField id="topup-note" @bind-Value="_note" Lines="3" MaxLength="1000"
+                              Placeholder="e.g. budget for the June campaign" Variant="Variant.Outlined" />
+                <p class="fsh-muted-copy">Optional — anything we should know about this top-up.</p>
+            </div>
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+                       FullWidth="true" Disabled="@(!IsValidForm)" StartIcon="@Icons.Material.Filled.Send">
+                @(_submitting ? "Submitting…" : "Request top-up")
+            </MudButton>
+            @if (_formSuccess)
+            {
+                <MudAlert Severity="Severity.Success" Dense="true" Class="rounded-lg">Top-up requested successfully.</MudAlert>
+            }
+        </EditForm>
+    </MudPaper>
+</div>
+
+<section class="d-flex flex-column gap-3 mt-4">
+    <MudText Typo="Typo.h6" Class="font-weight-medium">My top-up requests</MudText>
+
+    @if (_requestsError is not null)
+    {
+        <FshErrorBand Message="@_requestsError" />
+    }
+
+    @if (_loadingRequests)
+    {
+        @for (var i = 0; i < 4; i++)
+        {
+            <div class="fsh-skeleton" style="height: 48px; border-radius: 12px;"></div>
+        }
+    }
+    else if (_topupRequests.Count == 0)
+    {
+        <FshEmptyState Icon="@Icons.Material.Filled.AccountBalanceWallet"
+                       Title="No top-up requests yet"
+                       Description="Once you request a top-up it will appear here with its status — pending, invoiced, or completed." />
+    }
+    else
+    {
+        @* Desktop grid header *@
+        <div class="fsh-wallet-grid fsh-activity-head">
+            <span>Requested</span>
+            <span class="text-right">Amount</span>
+            <span>Status</span>
+            <span>Invoice</span>
+        </div>
+
+        @foreach (var req in _topupRequests)
+        {
+            <div class="fsh-wallet-grid fsh-activity-row">
+                <div class="min-w-0">
+                    <span class="fsh-wallet-date">@FshFormat.DateShort(req.CreatedAtUtc)</span>
+                    @if (!string.IsNullOrEmpty(req.Note))
+                    {
+                        <span class="fsh-wallet-note fsh-truncate d-block">@req.Note</span>
+                    }
+                </div>
+                <span class="text-right" style="font-weight: 600; font-variant-numeric: tabular-nums;">
+                    @FshFormat.Money(req.Amount, req.Currency)
+                </span>
+                <span><FshStatusPill Text="@req.Status" Tone="@StatusColor(req.Status)" /></span>
+                <span style="font-size: 12px; color: var(--mud-palette-text-secondary);">
+                    @if (req.InvoiceId.HasValue)
+                    {
+                        <button type="button" class="fsh-inline-link" @onclick="() => OpenInvoice(req.InvoiceId.Value)">
+                            <MudIcon Icon="@Icons.Material.Filled.Receipt" Size="Size.Small" /> View invoice
+                        </button>
+                    }
+                    else
+                    {
+                        @("—")
+                    }
+                </span>
+            </div>
+        }
+
+        @if (_totalPages > 1)
+        {
+            <div class="d-flex align-center justify-center gap-2 mt-2">
+                <FshPager TotalCount="@(_totalPages * PageSize)" PageNumber="@_pageNumber" PageSize="@PageSize" PageChanged="GoToPage" />
+            </div>
+        }
+    }
+</section>

@@ -1,0 +1,16 @@
+@namespace FSH.Admin.Wasm.Pages.Billing
+
+<FshPageHeader Title="Billing"
+               Description="Manage plans, subscriptions, and invoices across every tenant on this instance."
+               Icon="@Icons.Material.Filled.CreditCard"
+               Tone="Color.Warning" />
+
+<BillingTabs />
+
+<div class="pt-1">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

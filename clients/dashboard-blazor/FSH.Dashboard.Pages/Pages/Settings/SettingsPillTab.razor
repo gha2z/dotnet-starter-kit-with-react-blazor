@@ -1,0 +1,14 @@
+@using Microsoft.AspNetCore.Components.Routing
+
+<NavLink Href="@Href" Match="NavLinkMatch.Prefix"
+         Style="display: inline-flex; align-items: center; height: 36px; flex-shrink: 0; padding: 0 14px; border-radius: 9999px; font-size: 12px; font-weight: 500; text-decoration: none; border: 1px solid var(--mud-palette-lines-default); background: var(--mud-palette-surface); color: var(--mud-palette-text-secondary); transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease; white-space: nowrap;"
+         ActiveClass="fsh-settings-pill-active">
+    <MudIcon Icon="@Icon" Size="Size.Small" Style="margin-right: 4px;" />
+    <span>@Label</span>
+</NavLink>
+
+@code {
+    [Parameter] public string Href { get; set; } = default!;
+    [Parameter] public string Icon { get; set; } = default!;
+    [Parameter] public string Label { get; set; } = default!;
+}

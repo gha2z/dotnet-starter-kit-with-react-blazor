@@ -1,0 +1,118 @@
+@page "/users"
+@attribute [Authorize(Policy = IdentityPermissions.Users.View)]
+@using FSH.BlazorShared.Models.Identity
+
+<FshPageHeader Title="Directory" Description="@HeaderDescription" Icon="@Icons.Material.Filled.People" Count="@_totalCount" Unit="account">
+    <FshPermissionGate Perms="@(new[] { IdentityPermissions.Users.Create })">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialogAsync">
+            New user
+        </MudButton>
+    </FshPermissionGate>
+</FshPageHeader>
+
+@if (_roleError is not null)
+{
+    <FshErrorBand Message="@_roleError" />
+}
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+<div class="d-flex flex-wrap align-center gap-4 mb-4">
+    <MudTextField T="string"
+                  Value="@_searchInput"
+                  ValueChanged="@OnSearchChangedAsync"
+                  Placeholder="Search name, username, email…"
+                  Clearable="true"
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  AdornmentColor="Color.Secondary"
+                  Variant="Variant.Outlined"
+                  Margin="Margin.Dense"
+                  Style="max-width: 360px; flex: 1;" />
+
+    <div class="fsh-segmented">
+        <span id="seg-status">Status</span>
+        <div class="fsh-segmented-group" role="group" aria-labelledby="seg-status">
+            <button type="button" class="fsh-segmented-btn" aria-pressed="@(_activeFilter == Tri.Any)" @onclick="@(() => OnActiveFilterChanged(string.Empty))">Any</button>
+            <button type="button" class="fsh-segmented-btn" aria-pressed="@(_activeFilter == Tri.Yes)" @onclick="@(() => OnActiveFilterChanged("Active"))">Active</button>
+            <button type="button" class="fsh-segmented-btn" aria-pressed="@(_activeFilter == Tri.No)" @onclick="@(() => OnActiveFilterChanged("Disabled"))">Disabled</button>
+        </div>
+    </div>
+
+    <div class="fsh-segmented">
+        <span id="seg-email">Email</span>
+        <div class="fsh-segmented-group" role="group" aria-labelledby="seg-email">
+            <button type="button" class="fsh-segmented-btn" aria-pressed="@(_confirmedFilter == Tri.Any)" @onclick="@(() => OnConfirmedFilterChanged(string.Empty))">Any</button>
+            <button type="button" class="fsh-segmented-btn" aria-pressed="@(_confirmedFilter == Tri.Yes)" @onclick="@(() => OnConfirmedFilterChanged("Confirmed"))">Confirmed</button>
+            <button type="button" class="fsh-segmented-btn" aria-pressed="@(_confirmedFilter == Tri.No)" @onclick="@(() => OnConfirmedFilterChanged("Pending"))">Pending</button>
+        </div>
+    </div>
+
+    <MudSelect T="string"
+               Value="@_roleId"
+               ValueChanged="@OnRoleFilterChanged"
+               Label="Role"
+               Clearable="true"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               Style="min-width: 180px;">
+        @foreach (var role in _roles)
+        {
+            <MudSelectItem Value="@(role.Id ?? string.Empty)">@role.Name</MudSelectItem>
+        }
+    </MudSelect>
+</div>
+
+<MudTable @ref="_table"
+          ServerData="LoadDataAsync"
+          RowsPerPage="12"
+          Hover="true"
+          Elevation="0"
+          Class="fsh-list-card"
+          RowClassFunc="@RowClassFunc"
+          OnRowClick="@((TableRowClickEventArgs<UserDto> e) => RowClickAsync(e))">
+    <HeaderContent>
+        <MudTh><MudTableSortLabel T="UserDto" SortLabel="firstname">Name</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel T="UserDto" SortLabel="username">Username</MudTableSortLabel></MudTh>
+        <MudTh Class="d-none d-lg-table-cell"><MudTableSortLabel T="UserDto" SortLabel="isactive">Status</MudTableSortLabel></MudTh>
+        <MudTh Style="width: 36px;"></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>
+            <div class="d-flex align-center gap-3">
+                <FshMonogram Seed="@(context.Id ?? context.Email)" Name="@DisplayName(context)" AvatarSize="Size.Medium" />
+                <div class="min-w-0">
+                    <MudText Typo="Typo.body2" Class="fsh-row-name font-weight-medium" Style="margin: 0;">@DisplayName(context)</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="truncate" Style="margin: 0;">@context.Email</MudText>
+                </div>
+            </div>
+        </MudTd>
+        <MudTd>
+            <MudText Typo="Typo.body2" Class="font-mono" Style="margin: 0;">@(context.UserName is null ? "-" : $"@{context.UserName}")</MudText>
+        </MudTd>
+        <MudTd Class="d-none d-lg-table-cell">
+            <div class="d-flex gap-2">
+                <FshStatusPill Text="@(context.IsActive ? "Active" : "Inactive")"
+                               Tone="@(context.IsActive ? Color.Success : Color.Default)" />
+                <FshStatusPill Text="@(context.EmailConfirmed ? "Confirmed" : "Pending")"
+                               Tone="@(context.EmailConfirmed ? Color.Info : Color.Warning)" />
+            </div>
+        </MudTd>
+        <MudTd>
+            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="fsh-row-chevron" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <FshEmptyState Icon="@Icons.Material.Filled.People"
+                       Kicker="// directory"
+                       Title="@(_searchActive ? "No matches." : "No users yet.")"
+                       Description="@(_searchActive ? "Adjust your filters or invite a new user." : "Register the first member to seed this tenant.")" />
+    </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager RowsPerPageString="Rows" />
+    </PagerContent>
+</MudTable>

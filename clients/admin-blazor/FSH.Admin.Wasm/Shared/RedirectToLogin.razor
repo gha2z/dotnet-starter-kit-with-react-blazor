@@ -1,0 +1,38 @@
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider Auth
+
+@if (_isAuthenticated)
+{
+    <MudContainer Class="d-flex align-center justify-center" Style="min-height: 100vh">
+        <MudPaper Class="pa-8 text-center" Elevation="1" Style="max-width: 420px">
+            <MudIcon Icon="@Icons.Material.Filled.GppBad" Size="Size.Large" Color="Color.Warning" />
+            <MudText Typo="Typo.h4" Class="mt-4">403 — Access denied</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                You don't hold the permissions to view this surface. Ask your root-tenant
+                operator to grant your role the missing permissions.
+            </MudText>
+        </MudPaper>
+    </MudContainer>
+}
+else
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+
+@code {
+    private bool _isAuthenticated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await Auth.GetAuthenticationStateAsync();
+        if (state.User.Identity?.IsAuthenticated is not true)
+        {
+            var path = Navigation.ToBaseRelativePath(Navigation.Uri);
+            var returnUrl = string.IsNullOrEmpty(path) ? null : Uri.EscapeDataString(path);
+            Navigation.NavigateTo(returnUrl is null ? "/login" : $"/login?returnUrl={returnUrl}", true);
+            return;
+        }
+
+        _isAuthenticated = true;
+    }
+}

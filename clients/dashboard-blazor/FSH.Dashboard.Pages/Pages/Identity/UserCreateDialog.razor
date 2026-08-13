@@ -1,0 +1,82 @@
+@namespace FSH.Dashboard.Wasm.Pages.Identity
+@using FSH.BlazorShared.Models.Identity
+@using FSH.BlazorShared.Services
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex align-center gap-2 mb-2">
+            <FshToneIconTile Icon="@Icons.Material.Filled.PersonAdd" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
+            <MudText Typo="Typo.h6" Style="margin: 0;">Register a user</MudText>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
+            Add a member to this tenant. They'll receive a confirmation email if email confirmation is enabled.
+        </MudText>
+
+        <MudForm @ref="_mudForm" Validation="@(new DataAnnotationsValidator())">
+            <div class="d-flex gap-4">
+                <MudTextField @bind-Value="_form.FirstName"
+                              Label="First name"
+                              For="@(() => _form.FirstName)"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Class="flex-1 mb-4"
+                              Disabled="@_isSubmitting" />
+                <MudTextField @bind-Value="_form.LastName"
+                              Label="Last name"
+                              For="@(() => _form.LastName)"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Class="flex-1 mb-4"
+                              Disabled="@_isSubmitting" />
+            </div>
+            <MudTextField @bind-Value="_form.UserName"
+                          Label="Username"
+                          For="@(() => _form.UserName)"
+                          HelperText="3-32 characters, starts with a letter. Letters, digits, . _ -"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          Disabled="@_isSubmitting" />
+            <MudTextField @bind-Value="_form.Email"
+                          Label="Email"
+                          For="@(() => _form.Email)"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          Disabled="@_isSubmitting" />
+            <MudTextField @bind-Value="_form.PhoneNumber"
+                          Label="Phone number (optional)"
+                          For="@(() => _form.PhoneNumber)"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          Disabled="@_isSubmitting" />
+            <MudTextField @bind-Value="_form.Password"
+                          Label="Password"
+                          InputType="InputType.Password"
+                          For="@(() => _form.Password)"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          Disabled="@_isSubmitting" />
+            <MudTextField @bind-Value="_form.ConfirmPassword"
+                          Label="Confirm password"
+                          InputType="InputType.Password"
+                          For="@(() => _form.ConfirmPassword)"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Disabled="@_isSubmitting" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting" OnClick="SaveAsync">
+            @if (_isSubmitting)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+            }
+            Register user
+        </MudButton>
+    </DialogActions>
+</MudDialog>

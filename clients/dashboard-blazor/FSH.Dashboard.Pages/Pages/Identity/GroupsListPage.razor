@@ -1,0 +1,114 @@
+@page "/identity/groups"
+@attribute [Authorize]
+@using FSH.BlazorShared.Models.Identity
+@using MudBlazor
+
+<FshPageHeader Title="Groups"
+               Description="Groups bundle members and roles into reusable cohorts. Add a user to a group to grant every role attached to that group."
+               Icon="@Icons.Material.Filled.Groups"
+               Count="@(_totalCount == 0 && _loading ? null : _totalCount)"
+               Unit="group">
+    <FshPermissionGate Perms="@(new[] { GroupsPermissions.Create })">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenCreateAsync">
+            New group
+        </MudButton>
+    </FshPermissionGate>
+</FshPageHeader>
+
+<MudTextField @bind-Value="_search"
+              Placeholder="Search by name or description…"
+              Variant="Variant.Outlined"
+              Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Filled.Search"
+              Class="mb-4"
+              Immediate="true" />
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+@if (_loading)
+{
+    @for (var i = 0; i < 4; i++)
+    {
+        <div class="fsh-skeleton" style="height: 56px; border-radius: 12px; margin-bottom: 8px;"></div>
+    }
+}
+else if (Filtered.Count == 0)
+{
+    <FshEmptyState Icon="@(SearchActive ? Icons.Material.Filled.Search : Icons.Material.Filled.Groups)"
+                   Title="@(SearchActive ? "No groups found" : "No groups yet")"
+                   Description="@EmptyStateDescription">
+        @if (SearchActive)
+        {
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="ClearSearch">Clear search</MudButton>
+        }
+    </FshEmptyState>
+}
+else
+{
+    <div class="d-flex justify-space-between align-center mb-3">
+        <p class="fsh-muted-copy" style="font-size: 12px; font-weight: 500; margin: 0;">@MetaText</p>
+    </div>
+
+    <div class="fsh-groups-grid fsh-list-head">
+        <span>Group</span>
+        <span class="fsh-col-composition">Composition</span>
+        <span class="fsh-col-flags">Flags</span>
+        <span></span>
+    </div>
+
+    @for (var i = 0; i < Filtered.Count; i++)
+    {
+        var group = Filtered[i];
+        var isLast = i == Filtered.Count - 1;
+        <div class="fsh-groups-grid fsh-list-row @(isLast ? "" : "fsh-row-border")" @onclick="() => OpenDetail(group)" style="cursor: pointer;">
+            <div class="d-flex align-center gap-3 min-w-0">
+                <span class="fsh-prod-thumb fsh-group-thumb">
+                    <span class="fsh-prod-initial">@Initial(group.Name)</span>
+                </span>
+                <div class="min-w-0">
+                    <div class="fsh-truncate d-flex align-center gap-2" style="font-size: 14px; font-weight: 500; color: var(--mud-palette-text-primary);">
+                        <span class="fsh-truncate">@group.Name</span>
+                        @if (group.IsSystemGroup)
+                        {
+                            <span class="fsh-status-tag">system</span>
+                        }
+                    </div>
+                    @if (!string.IsNullOrEmpty(group.Description))
+                    {
+                        <div class="fsh-truncate fsh-muted-copy" style="font-size: 12px;" title="@group.Description">@group.Description</div>
+                    }
+                </div>
+            </div>
+            <div class="fsh-truncate fsh-muted-copy fsh-col-composition" style="font-size: 12.5px;">
+                @(group.MemberCount) member@(group.MemberCount == 1 ? "" : "s")
+                @if (group.RoleNames is { Count: > 0 })
+                {
+                    <span>· @string.Join(", ", group.RoleNames)</span>
+                }
+            </div>
+            <div class="fsh-col-flags">
+                <div class="d-flex flex-wrap gap-1">
+                    @if (group.IsDefault)
+                    {
+                        <MudChip T="string" Size="Size.Small" Class="fsh-id-chip" Color="Color.Warning" Variant="Variant.Outlined">
+                            Default
+                        </MudChip>
+                    }
+                    @if (group.IsSystemGroup)
+                    {
+                        <MudChip T="string" Size="Size.Small" Class="fsh-id-chip" Variant="Variant.Outlined">
+                            System
+                        </MudChip>
+                    }
+                </div>
+            </div>
+            <div class="d-flex align-center justify-end" @onclick:stopPropagation="true">
+                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Color="Color.Default" />
+            </div>
+        </div>
+    }
+}

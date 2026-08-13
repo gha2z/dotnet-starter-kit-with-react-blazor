@@ -1,0 +1,16 @@
+@namespace FSH.BlazorShared.Components
+
+<div class="fsh-filter-bar">
+    <div class="fsh-mono-label">// @Caption</div>
+    <div class="d-flex align-center gap-4 flex-wrap">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// Filter bar (React parity: "// Filters" mono caption above the filter controls).
+    /// </summary>
+    [Parameter] public string Caption { get; set; } = "Filters";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

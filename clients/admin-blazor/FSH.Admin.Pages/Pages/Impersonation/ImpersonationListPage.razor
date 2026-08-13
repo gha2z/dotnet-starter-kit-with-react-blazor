@@ -1,0 +1,112 @@
+@page "/impersonation"
+@attribute [Authorize(Policy = IdentityPermissions.Impersonation.View)]
+@using FSH.BlazorShared.Formatting
+@using FSH.BlazorShared.Models.Identity
+
+<FshPageHeader Title="Impersonation"
+               Icon="@Icons.Material.Filled.ManageAccounts"
+               Tone="Color.Warning"
+               Count="@_grants.Count"
+               Unit="grant"
+               Description="Issue short-lived dashboard sessions on behalf of another user. Grants are audited; the operator surface never holds an impersonation session itself." />
+
+<div class="row mb-4">
+    <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-sm-0">
+        <FshKpiTile Label="Active" Value="@_byStatus[ImpersonationGrantStatus.Active].ToString()" Loading="@_loading" Footnote="live now" />
+    </div>
+    <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-sm-0">
+        <FshKpiTile Label="Ended" Value="@_byStatus[ImpersonationGrantStatus.Ended].ToString()" Loading="@_loading" Footnote="cleanly stopped" />
+    </div>
+    <div class="col-12 col-sm-6 col-lg-3 mb-2 mb-sm-0">
+        <FshKpiTile Label="Revoked" Value="@_byStatus[ImpersonationGrantStatus.Revoked].ToString()" Loading="@_loading" Footnote="killed early" />
+    </div>
+    <div class="col-12 col-sm-6 col-lg-3">
+        <FshKpiTile Label="Expired" Value="@_byStatus[ImpersonationGrantStatus.Expired].ToString()" Loading="@_loading" Footnote="timed out" />
+    </div>
+</div>
+
+<FshFilterBar Caption="Grant filter">
+    <div style="min-width: 12rem;">
+        <MudSelect T="string"
+                   Value="@_filter"
+                   ValueChanged="OnFilterChangedAsync"
+                   Label="Status"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense">
+            <MudSelectItem Value="0">Active</MudSelectItem>
+            <MudSelectItem Value="1">Ended</MudSelectItem>
+            <MudSelectItem Value="2">Revoked</MudSelectItem>
+            <MudSelectItem Value="3">Expired</MudSelectItem>
+            <MudSelectItem Value="@("all")">All</MudSelectItem>
+        </MudSelect>
+    </div>
+</FshFilterBar>
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+else if (_loading && _grants.Count == 0)
+{
+    <FshLoadingRow Label="Loading grants" />
+}
+else if (_grants.Count == 0)
+{
+    <FshEmptyState Icon="@Icons.Material.Filled.ManageAccounts"
+                   Kicker="// impersonation"
+                   Title="No grants found."
+                   Description="Impersonation lets operators act inside another user's tenant. Grants expire automatically and are never left running." />
+}
+else
+{
+    <MudPaper Elevation="1" Class="pa-2 pa-md-4">
+        @foreach (var grant in _grants)
+        {
+            var isCurrentActor = grant.ActorUserId == _currentUserId;
+            <div class="d-flex align-center justify-space-between gap-4 py-3 px-2" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                <div class="d-flex align-center gap-3 min-w-0">
+                    <span class="fsh-dot @StatusDot(grant.Status)" title="@grant.Status"></span>
+                    <div class="min-w-0">
+                        <div class="d-flex flex-wrap align-center gap-2">
+                            <MudText Typo="Typo.subtitle2" Style="margin: 0;">
+                                @(grant.ActorUserName ?? grant.ActorUserId)
+                                <span class="fsh-mono-muted">→</span>
+                                <span class="font-weight-medium">@(grant.ImpersonatedUserName ?? grant.ImpersonatedUserId)</span>
+                            </MudText>
+                            <code class="fsh-code-chip">tenant @grant.ImpersonatedTenantId</code>
+                            <FshStatusPill Text="@grant.Status.ToString()" Tone="@StatusTone(grant.Status)" />
+                        </div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="font-mono" Style="margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            started @FshFormat.DateShort(grant.StartedAtUtc) ·
+                            expires @FshFormat.DateShort(grant.ExpiresAtUtc)
+                            @if (!string.IsNullOrEmpty(grant.Reason))
+                            {
+                                <text> · “@grant.Reason”</text>
+                            }
+                        </MudText>
+                    </div>
+                </div>
+                <div class="d-flex align-center gap-2">
+                    <FshPermissionGate Perms="@(new[] { IdentityPermissions.Users.Impersonate })">
+                        @if (grant.Status == ImpersonationGrantStatus.Active && IsCurrentRow(grant))
+                        {
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.PlayArrow" OnClick="@(() => ReopenAsync(grant))">
+                                Re-open
+                            </MudButton>
+                        }
+                    </FshPermissionGate>
+                    <FshPermissionGate Perms="@(new[] { IdentityPermissions.Impersonation.Revoke })">
+                        @if (grant.Status == ImpersonationGrantStatus.Active)
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error"
+                                       StartIcon="@Icons.Material.Filled.StopCircle" OnClick="@(() => RevokeAsync(grant))">
+                                Revoke
+                            </MudButton>
+                        }
+                    </FshPermissionGate>
+                </div>
+            </div>
+        }
+    </MudPaper>
+}

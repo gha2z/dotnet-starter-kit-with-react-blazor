@@ -1,0 +1,145 @@
+@page "/tickets"
+@attribute [Authorize]
+@using FSH.BlazorShared.Formatting
+
+<FshPageHeader Title="Tickets"
+               Description="Open work, ranked by priority. The desk where issues land, get owned, and ship."
+               Icon="@Icons.Material.Filled.ConfirmationNumber"
+               Count="@(_totalCount == 0 && _loading ? null : _totalCount)"
+               Unit="ticket">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add"
+               OnClick="OpenCreateDialog">
+        New ticket
+    </MudButton>
+</FshPageHeader>
+
+<MudTextField @bind-Value="_search"
+              @bind-Value:after="(async () => await OnSearchChangedAsync(_search))"
+              Placeholder="Find by number, title, or description."
+              Variant="Variant.Outlined"
+              Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Filled.Search"
+              Class="mb-4"
+              Immediate="true" />
+
+<div class="d-flex flex-wrap gap-2 align-center mb-3">
+    <FshFilterBar Caption="Filters">
+        <MudButtonGroup Class="fsh-ticket-filter-pill">
+            @foreach (var s in AllStatuses)
+            {
+                <MudButton OnClick="() => SetStatus(s)"
+                           Class="@(_statusFilter == s ? "mud-button-root-active" : "")">
+                    @StatusLabel(s)
+                </MudButton>
+            }
+        </MudButtonGroup>
+        <MudButtonGroup Class="fsh-ticket-filter-pill">
+            @foreach (var p in AllPriorities)
+            {
+                <MudButton OnClick="() => SetPriority(p)"
+                           Class="@(_priorityFilter == p ? "mud-button-root-active" : "")">
+                    @PriorityLabel(p)
+                </MudButton>
+            }
+        </MudButtonGroup>
+    </FshFilterBar>
+</div>
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+@if (_loading)
+{
+    @for (var i = 0; i < 6; i++)
+    {
+        <div class="fsh-skeleton" style="height: 56px; border-radius: 12px; margin-bottom: 8px;"></div>
+    }
+}
+else if (_items.Count == 0)
+{
+    <FshEmptyState Icon="@Icons.Material.Filled.SearchOff"
+                   Title="@(HasFilters ? "No tickets found" : "No tickets yet")"
+                   Description="@EmptyDescription">
+        @if (HasFilters)
+        {
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="ClearFilters">Clear filters</MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">
+                Open ticket
+            </MudButton>
+        }
+    </FshEmptyState>
+}
+else
+{
+    <div class="d-flex flex-wrap gap-2 align-center mb-3">
+        <p class="fsh-muted-copy" style="font-size: 12px; font-weight: 500; margin: 0;">@MetaText</p>
+    </div>
+
+    <div class="fsh-tickets-grid fsh-list-head">
+        <span>Subject</span>
+        <span>Priority</span>
+        <span>Status</span>
+        <span>Assignee</span>
+        <span>Updated</span>
+        <span></span>
+    </div>
+
+    @for (var i = 0; i < _items.Count; i++)
+    {
+        var ticket = _items[i];
+        var isLast = i == _items.Count - 1;
+        <div class="fsh-tickets-grid fsh-list-row @(isLast ? "" : "fsh-row-border")"
+             @onclick="() => GoToTicket(ticket.Id)" style="cursor: pointer;">
+            <div class="d-flex align-center gap-3 min-w-0">
+                <span class="fsh-ticket-icon-tile">
+                    <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber" Size="Size.Small" />
+                </span>
+                <div class="min-w-0">
+                    <span class="fsh-truncate d-block" style="font-size: 14px; font-weight: 500; color: var(--mud-palette-text-primary);">
+                        @ticket.Title
+                    </span>
+                    <code class="fsh-truncate fsh-mono-muted d-block" style="font-size: 11px;">@ticket.Number</code>
+                </div>
+            </div>
+            <span>
+                <FshStatusPill Text="@PriorityLabel(ticket.Priority)" Tone="@PriorityTone(ticket.Priority)" />
+            </span>
+            <span>
+                <FshStatusPill Text="@StatusLabel(ticket.Status)" Tone="@StatusTone(ticket.Status)" />
+            </span>
+            <div class="d-flex align-center gap-2 min-w-0">
+                @if (ticket.AssignedToUserId.HasValue)
+                {
+                    <span class="fsh-truncate" style="font-size: 12px;" title="@ticket.AssignedToUserId">
+                        @ticket.AssignedToUserId.Value.ToString()[..8]…
+                    </span>
+                }
+                else
+                {
+                    <span class="fsh-muted-copy" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Unassigned</span>
+                }
+            </div>
+            <span class="fsh-muted-copy" style="font-size: 12px; font-variant-numeric: tabular-nums;">
+                @FshFormat.DateRelative(ticket.UpdatedAtUtc ?? ticket.CreatedAtUtc)
+            </span>
+            <div class="d-flex align-center justify-end">
+                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Color="Color.Default" />
+            </div>
+        </div>
+    }
+
+    @if (_totalPages > 1)
+    {
+        <div class="d-flex align-center justify-center gap-2 mt-4">
+            <FshPager TotalCount="@_totalCount" PageNumber="@_pageNumber" PageSize="@PageSize" PageChanged="GoToPage" />
+        </div>
+    }
+}
+
+<CreateTicketDialog @bind-Open="_createDialogOpen" OnCreated="OnTicketCreated" />

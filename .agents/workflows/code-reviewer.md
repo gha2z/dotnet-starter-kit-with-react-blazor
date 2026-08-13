@@ -9,6 +9,7 @@ playbook is the review procedure, not a second copy of the rules.
 ## Procedure
 1. `git diff HEAD` (and `git status`) to see what changed; group by area (backend module / BuildingBlocks / frontend).
 2. For each changed file, check it against the relevant rule file (`api-conventions.md`, `database.md`, `eventing.md`, `frontend/*`, …) and the checklist below.
+2b. Audit changed test files with the dotnet-test skills: **`test-anti-patterns`** (severity-ranked anti-patterns), **`assertion-quality`** (shallow/tautological assertions), **`test-gap-analysis`** (would the tests catch the change?) — and **`coverage-analysis`**/**`crap-score`** when coverage is claimed. For build slowness, **`build-perf-diagnostics`** on a binlog (`binlog-generation` first).
 3. If the Roslyn navigator MCP is available, run `detect_antipatterns` and `get_diagnostics` (solution scope) for machine-found issues (broad `catch`, missing `CancellationToken`, EF `AsNoTracking`, logging interpolation) and fold them in — noting false positives (mutate-then-save queries don't want `AsNoTracking`; hosted-service `catch(Exception)` that logs + filters OCE is fine).
 4. Report with `file:line` refs and a concrete fix per finding.
 
@@ -33,7 +34,7 @@ playbook is the review procedure, not a second copy of the rules.
 **Cross-cutting**
 - **Structured logging only** — no `$"..."` interpolation in log calls.
 - `CancellationToken` propagated into EF/IO calls.
-- Cross-module events go via the Outbox (`IOutboxWriter.AddAsync`), not a direct bus publish. The only sanctioned exception is Chat mentions, which carries its reason in a comment.
+- Cross-module events go via the Outbox (`IOutboxStore.AddAsync`), not a direct bus publish.
 
 **Frontend** (`frontend/*` rules)
 - Hand-written types + `apiFetch`; mutation data passed via `mutate(arg)`; query keys hierarchical; admin gates routes with `RouteGuard` + mirrors the permission; dashboard uses `withSuspense`.

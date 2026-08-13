@@ -1,0 +1,65 @@
+@page "/tenants"
+@attribute [Authorize(Policy = MultitenancyPermissions.Tenants.View)]
+@using FSH.BlazorShared.Models.Tenants
+
+<FshPageHeader Title="Registry" Description="@HeaderDescription" Icon="@Icons.Material.Filled.Business" Tone="Color.Info" Count="@_totalCount" Unit="tenant">
+    <FshPermissionGate Perms="@(new[] { MultitenancyPermissions.Tenants.Create })">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialogAsync">
+            New tenant
+        </MudButton>
+    </FshPermissionGate>
+</FshPageHeader>
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+<MudTable @ref="_table"
+          ServerData="LoadDataAsync"
+          RowsPerPage="12"
+          Hover="true"
+          Elevation="0"
+          Class="fsh-list-card"
+          RowClassFunc="@RowClassFunc"
+          OnRowClick="@((TableRowClickEventArgs<TenantDto> e) => RowClickAsync(e))">
+    <HeaderContent>
+        <MudTh>Tenant</MudTh>
+        <MudTh>Admin email</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh Style="width: 36px;"></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd>
+            <div class="d-flex align-center gap-3">
+                <FshMonogram Seed="@context.Id" Name="@context.Name" AvatarSize="Size.Medium" />
+                <div>
+                    <MudText Typo="Typo.body2" Class="fsh-row-name font-weight-medium" Style="margin: 0;">@context.Name</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="font-mono" Style="margin: 0;">
+                        @context.Id · valid @FormatDate(context.ValidUpto)
+                    </MudText>
+                </div>
+            </div>
+        </MudTd>
+        <MudTd>
+            <MudText Typo="Typo.body2" Class="font-mono" Style="margin: 0;">@context.AdminEmail</MudText>
+        </MudTd>
+        <MudTd>
+            <FshStatusPill Text="@(context.IsActive ? "Active" : "Inactive")"
+                           Tone="@(context.IsActive ? Color.Success : Color.Default)" />
+        </MudTd>
+        <MudTd>
+            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Class="fsh-row-chevron" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <FshEmptyState Icon="@Icons.Material.Filled.Business"
+                       Kicker="// registry"
+                       Title="No tenants yet."
+                       Description="Provision the first tenant to get started." />
+    </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager RowsPerPageString="Rows" />
+    </PagerContent>
+</MudTable>

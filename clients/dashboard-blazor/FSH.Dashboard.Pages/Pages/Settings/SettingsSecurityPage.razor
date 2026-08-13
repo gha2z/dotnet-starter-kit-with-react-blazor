@@ -1,0 +1,112 @@
+@page "/settings/security"
+@attribute [Authorize]
+@layout SettingsLayout
+@using FSH.BlazorShared.Models.Identity
+@using FSH.BlazorShared.Services
+@inject IUserService UserService
+@inject ISessionService SessionService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<FshPageHeader Title="Security" Icon="@Icons.Material.Filled.Shield"
+               Description="Password and active sessions." />
+
+<MudPaper Class="pa-6 mb-6" Elevation="0" Outlined="true">
+    <MudText Typo="Typo.h6" Class="mb-2">Password</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+        Change your sign-in password. You&apos;ll remain signed in on other devices until you revoke those sessions.
+    </MudText>
+    <MudButton Variant="Variant.Outlined" OnClick="OpenChangePasswordAsync">
+        Change password
+    </MudButton>
+</MudPaper>
+
+<MudPaper Class="pa-6" Elevation="0" Outlined="true">
+    <MudText Typo="Typo.h6" Class="mb-2">Active sessions</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+        Browsers and devices currently signed in to your account.
+    </MudText>
+
+    @if (_loadingSessions)
+    {
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+    }
+    else if (_sessions.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">No active sessions tracked.</MudText>
+    }
+    else
+    {
+        <MudTable T="UserSessionDto" Items="_sessions" Hover="true" Dense="true">
+            <HeaderContent>
+                <MudTh>Device</MudTh>
+                <MudTh>IP Address</MudTh>
+                <MudTh>Last active</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Device">
+                    @context.Browser @context.BrowserVersion — @context.OperatingSystem
+                    @if (context.IsCurrentSession)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ml-2">This device</MudChip>
+                    }
+                    @if (!context.IsActive)
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-2">Revoked</MudChip>
+                    }
+                </MudTd>
+                <MudTd DataLabel="IP Address">@context.IpAddress</MudTd>
+                <MudTd DataLabel="Last active">@context.LastActivityAt.ToLocalTime()</MudTd>
+                <MudTd>
+                    @if (context.IsActive && !context.IsCurrentSession)
+                    {
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error"
+                                   OnClick="() => RevokeSessionAsync(context.Id)">Revoke</MudButton>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudPaper>
+
+@code {
+    private List<UserSessionDto> _sessions = [];
+    private bool _loadingSessions = true;
+    private readonly DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _sessions = await SessionService.GetMySessionsAsync();
+        }
+        catch
+        {
+            // Sessions may not be available
+        }
+        finally
+        {
+            _loadingSessions = false;
+        }
+    }
+
+    private async Task OpenChangePasswordAsync()
+    {
+        await DialogService.ShowAsync<ChangePasswordDialog>("Change password", options: _dialogOptions);
+    }
+
+    private async Task RevokeSessionAsync(Guid sessionId)
+    {
+        try
+        {
+            await SessionService.RevokeMySessionAsync(sessionId);
+            _sessions.RemoveAll(s => s.Id == sessionId);
+            Snackbar.Add("Session revoked.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Revoke failed: {ex.Message}", Severity.Error);
+        }
+    }
+}

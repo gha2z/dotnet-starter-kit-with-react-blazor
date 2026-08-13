@@ -1,0 +1,79 @@
+@namespace FSH.Dashboard.Wasm.Pages.Identity
+@using FSH.BlazorShared.Models.Identity
+@using FSH.BlazorShared.Services
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex align-center gap-2 mb-2">
+            <FshToneIconTile Icon="@Icons.Material.Filled.Groups" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
+            <MudText Typo="Typo.h6" Style="margin: 0;">New group</MudText>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
+            Groups bundle members and roles into reusable cohorts. Adding a user to a group grants every role attached to that group.
+        </MudText>
+
+        <MudForm @ref="_mudForm" Validation="@(new DataAnnotationsValidator())">
+            <MudTextField @bind-Value="_form.Name"
+                          Label="Name"
+                          For="@(() => _form.Name)"
+                          Placeholder="e.g. Support team"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          Disabled="@_isSubmitting" />
+            <MudTextField @bind-Value="_form.Description"
+                          Label="Description (optional)"
+                          For="@(() => _form.Description)"
+                          Placeholder="What is this group for?"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="3"
+                          Class="mb-4"
+                          Disabled="@_isSubmitting" />
+            <MudSwitch T="bool" @bind-Value="_form.IsDefault" Color="Color.Primary" Class="mb-4"
+                       Disabled="@_isSubmitting">
+                <span style="font-size: 13px; font-weight: 500;">Default group</span>
+            </MudSwitch>
+
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="display: block; margin-bottom: 4px;">Roles</MudText>
+            @if (_roles is null)
+            {
+                <div class="d-flex justify-center py-4">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                </div>
+            }
+            else if (_roles.Count == 0)
+            {
+                <div class="fsh-muted-copy" style="font-size: 13px;">No roles available. You can attach roles to this group later.</div>
+            }
+            else
+            {
+                <div class="fsh-perm-group">
+                    @foreach (var role in _roles)
+                    {
+                        var roleId = role.Id ?? string.Empty;
+                        <div class="fsh-perm-row">
+                            <MudCheckBox T="bool" Value="@(roleId.Length > 0 && _form.RoleIds.Contains(roleId))"
+                                         ValueChanged="@((bool value) => ToggleRole(roleId, value))" />
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="font-size: 13px; font-weight: 500;">@role.Name</div>
+                                <div class="fsh-muted-copy fsh-truncate" style="font-size: 11.5px;">@role.Description</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting" OnClick="SaveAsync">
+            @if (_isSubmitting)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+            }
+            Create group
+        </MudButton>
+    </DialogActions>
+</MudDialog>

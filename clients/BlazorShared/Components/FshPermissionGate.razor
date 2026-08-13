@@ -1,0 +1,29 @@
+@namespace FSH.BlazorShared.Components
+@inject IAuthorizationService AuthorizationService
+@inject AuthenticationStateProvider AuthProvider
+
+@if (_hasPermission)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public string[] Perms { get; set; } = [];
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _hasPermission;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        foreach (var perm in Perms)
+        {
+            var result = await AuthorizationService.AuthorizeAsync(authState.User, perm);
+            if (result.Succeeded)
+            {
+                _hasPermission = true;
+                return;
+            }
+        }
+    }
+}

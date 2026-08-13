@@ -1,0 +1,196 @@
+@page "/chat"
+@page "/chat/{Id:guid}"
+@using FSH.BlazorShared.Permissions
+@attribute [Authorize]
+
+<FshPageHeader Icon="@Icons.Material.Outlined.Chat" Title="Chat" Description="Team conversations and direct messages" />
+
+<MudGrid Class="fsh-chat-root" Style="height: calc(100vh - 160px);">
+    @* ── Left: Channel Rail ────────────────────────────────────── *@
+    <MudItem xs="12" md="3" Class="fsh-chat-rail">
+        <MudPaper Class="d-flex flex-column" Style="height: 100%; border-radius: var(--mud-default-border-radius);" Elevation="0">
+            <div class="d-flex align-center pa-3">
+                <MudTextField @bind-Value="_searchChannels" Placeholder="Search channels..." Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Outlined.Search" IconSize="Size.Small" Immediate="true"
+                              DebounceInterval="300" OnDebounceIntervalElapsed="LoadChannels"
+                              Margin="Margin.Dense" Variant="Variant.Outlined" Class="flex-grow-1" />
+                <MudIconButton Icon="@Icons.Material.Outlined.Add" Size="Size.Small" OnClick="OpenCreateChannelDialog"
+                               Class="ml-2" aria-label="Create channel" />
+            </div>
+
+            <MudDivider />
+
+            <div class="fsh-chat-channel-list" style="flex: 1; overflow-y: auto;">
+                @if (_loadingChannels)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="d-flex mx-auto my-4" />
+                }
+                else if (_channels.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="pa-4 text-center" Color="Color.Secondary">
+                        No channels yet. Create one to get started.
+                    </MudText>
+                }
+                else
+                {
+                    @foreach (var ch in _channels)
+                    {
+                        var isActive = ch.Id == _activeChannelId;
+                        <MudListItem @key="ch.Id" T="ChannelDto" Value="ch" OnClick="() => SelectChannel(ch.Id)"
+                                     Class="@ChannelItemClass(isActive)">
+                            <div class="d-flex align-center" style="width: 100%;">
+                                <MudIcon Icon="@ChannelIcon(ch.Type)" Size="Size.Small" Class="mr-2"
+                                         Color="@ChannelIconColor(isActive)" />
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    <MudText Typo="Typo.body2" Style="@ChannelTextWeight(isActive)">
+                                        @(ch.Name ?? "Direct Message")
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        @(ch.LastMessageAtUtc.HasValue ? FshFormat.DateRelative(ch.LastMessageAtUtc.Value) : "No messages")
+                                    </MudText>
+                                </div>
+                                @if (ch.UnreadCount > 0)
+                                {
+                                    <MudBadge Content="ch.UnreadCount.ToString()" Color="Color.Primary" Overlap="true" Class="ml-1" />
+                                }
+                            </div>
+                        </MudListItem>
+                    }
+                }
+            </div>
+        </MudPaper>
+    </MudItem>
+
+    @* ── Right: Active Channel ─────────────────────────────────── *@
+    <MudItem xs="12" md="9" Class="d-flex flex-column" Style="height: 100%;">
+        @if (_activeChannelId is null)
+        {
+            <MudPaper Class="d-flex align-center justify-center flex-grow-1" Elevation="0" Style="border-radius: var(--mud-default-border-radius);">
+                <div class="text-center">
+                    <MudIcon Icon="@Icons.Material.Outlined.ChatBubbleOutline" Size="Size.Large" Color="Color.Secondary" Style="font-size: 64px;" />
+                    <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mt-4">Select a channel to start chatting</MudText>
+                </div>
+            </MudPaper>
+        }
+        else
+        {
+            @* Header *@
+            <MudPaper Class="d-flex align-center pa-3 mb-1" Elevation="0" Style="border-radius: var(--mud-default-border-radius);">
+                <MudIcon Icon="@ChannelIcon(_activeChannel?.Type ?? ChannelType.Channel)" Class="mr-2" />
+                <div class="flex-grow-1">
+                    <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">@(_activeChannel?.Name ?? "Direct Message")</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @(_activeChannel?.Members.Count ?? 0) member@((_activeChannel?.Members.Count ?? 0) != 1 ? "s" : "")
+                    </MudText>
+                </div>
+                @if (_activeChannel?.UnreadCount > 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                        @_activeChannel.UnreadCount unread
+                    </MudChip>
+                }
+            </MudPaper>
+
+            @* Messages *@
+            <div class="fsh-chat-messages flex-grow-1" style="overflow-y: auto;" @ref="_messagesContainer">
+                @if (_loadingMessages)
+                {
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="d-flex mx-auto my-4" />
+                }
+                else if (_messages.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="pa-4 text-center" Color="Color.Secondary">
+                        No messages yet. Send the first message!
+                    </MudText>
+                }
+                else
+                {
+                    @foreach (var msg in _messages)
+                    {
+                        var isOwn = msg.AuthorUserId == _currentUserId;
+                        <div @key="msg.Id" class="fsh-chat-message @(isOwn ? "fsh-chat-message-own" : "fsh-chat-message-other")">
+                            @if (!isOwn)
+                            {
+                                <MudAvatar Size="Size.Small" Color="Color.Primary" Class="mr-2">
+                                    @msg.AuthorUserId[..2].ToUpper()
+                                </MudAvatar>
+                            }
+                            <div class="fsh-chat-message-bubble">
+                                @if (!isOwn)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Primary" Style="font-weight: 600;">@msg.AuthorUserId</MudText>
+                                }
+                                @if (msg.DeletedAtUtc.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2" Style="font-style: italic;" Color="Color.Secondary">Message deleted</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2">@msg.Body</MudText>
+                                }
+                                @if (msg.Attachments.Count > 0)
+                                {
+                                    <div class="mt-1">
+                                        @foreach (var att in msg.Attachments)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Outlined.Attachment"
+                                                     Href="@att.Url" Target="_blank">@att.OriginalFileName</MudChip>
+                                        }
+                                    </div>
+                                }
+                                @if (msg.Reactions.Count > 0)
+                                {
+                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                        @foreach (var reaction in msg.Reactions.GroupBy(r => r.Emoji))
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                                     OnClick="() => ToggleReaction(msg.Id, reaction.Key)">
+                                                @reaction.Key @reaction.Count()
+                                            </MudChip>
+                                        }
+                                    </div>
+                                }
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                    @FshFormat.DateRelative(msg.CreatedAtUtc)
+                                    @if (msg.EditedAtUtc.HasValue)
+                                    {
+                                        <span> (edited)</span>
+                                    }
+                                    @if (msg.IsPinned)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" Class="ml-1" />
+                                    }
+                                </MudText>
+                            </div>
+                            @if (isOwn)
+                            {
+                                <MudAvatar Size="Size.Small" Color="Color.Secondary" Class="ml-2">
+                                    @msg.AuthorUserId[..2].ToUpper()
+                                </MudAvatar>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+
+            @* Typing indicator *@
+            @if (_typingUsers.Count > 0)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="px-3 py-1">
+                    @string.Join(", ", _typingUsers) @(_typingUsers.Count == 1 ? "is" : "are") typing...
+                </MudText>
+            }
+
+            @* Composer *@
+            <MudPaper Class="d-flex align-center pa-2 mt-1" Elevation="0" Style="border-radius: var(--mud-default-border-radius);">
+                <MudTextField @bind-Value="_messageText" Placeholder="Type a message..." Immediate="true"
+                              DebounceInterval="300" OnDebounceIntervalElapsed="SendTypingIndicator"
+                              OnKeyDown="HandleKeyDown" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Class="flex-grow-1" Lines="1" aria-label="Message" />
+                <MudIconButton Icon="@Icons.Material.Outlined.Send" Color="Color.Primary" Size="Size.Small"
+                               aria-label="Send message"
+                               OnClick="SendMessage" Disabled="string.IsNullOrWhiteSpace(_messageText)" Class="ml-2" />
+            </MudPaper>
+        }
+    </MudItem>
+</MudGrid>

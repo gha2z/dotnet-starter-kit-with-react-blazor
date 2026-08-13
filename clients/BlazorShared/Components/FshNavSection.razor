@@ -1,0 +1,42 @@
+@namespace FSH.BlazorShared.Components
+@using MudBlazor
+
+@if (Collapsed)
+{
+    <div class="fsh-nav-section-stack">
+        @ChildContent
+    </div>
+}
+else
+{
+    <div class="fsh-nav-section @(IsOpen ? "open" : null)">
+        <button type="button" class="fsh-nav-section-header" aria-expanded="@IsOpen" title="@Caption" @onclick="OnHeaderClickAsync">
+            <MudIcon Icon="@Icon" Size="Size.Small" Class="fsh-nav-section-icon" />
+            <span class="fsh-nav-section-caption">@Caption</span>
+            <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" Class="fsh-nav-section-chevron" />
+        </button>
+        <div class="fsh-nav-section-body @(IsOpen ? "open" : null)">
+            <div class="fsh-nav-section-body-inner">
+                @ChildContent
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// Collapsible nav section (React parity: accordion with animated expand,
+    /// single-select owned by the parent layout). In collapsed sidebar mode the
+    /// section renders its items as a flat icon stack instead of the accordion.
+    /// </summary>
+    [Parameter] public string SectionId { get; set; } = string.Empty;
+    [Parameter] public string Caption { get; set; } = string.Empty;
+    [Parameter] public string Icon { get; set; } = string.Empty;
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public bool Collapsed { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback<string> OnToggle { get; set; }
+
+    private async Task OnHeaderClickAsync()
+        => await OnToggle.InvokeAsync(SectionId);
+}

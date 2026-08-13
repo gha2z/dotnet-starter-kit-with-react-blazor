@@ -1,0 +1,229 @@
+@page "/system/sessions"
+@namespace FSH.Dashboard.Wasm.Pages.SystemPages
+@using FSH.BlazorShared.Models.Identity
+
+<FshPageHeader Title="Sessions"
+               Icon="@Icons.Material.Filled.Wifi"
+               Tone="Color.Info"
+               Description="Active browser and device sessions across the tenant. Auto-refreshes every 30 seconds." />
+
+<MudPaper Elevation="0" Class="pa-4 mb-4 rounded-xl" Style="border: 1px solid var(--mud-palette-divider);">
+    <div class="d-flex flex-wrap align-center gap-3">
+        <MudTextField T="string" Value="@_search" ValueChanged="OnSearchChanged"
+                      Placeholder="Search user, email, IP…" Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Small"
+                      DebounceInterval="300" Style="max-width: 300px;" />
+        <MudSwitch T="bool" Value="@_includeInactive" ValueChanged="OnIncludeInactiveChanged"
+                   Label="Include inactive" Color="Color.Primary" />
+        <MudSpacer />
+        @if (_stats is not null)
+        {
+            <div class="d-flex gap-4" style="font-size: 12px;">
+                <span class="fsh-mono-label">ACTIVE: <span class="fsh-mono-medium">@_stats.ActiveCount</span></span>
+                <span class="fsh-mono-label">USERS: <span class="fsh-mono-medium">@_stats.DistinctUsers</span></span>
+                <span class="fsh-mono-label">MOBILE: <span class="fsh-mono-medium">@_stats.MobileCount</span></span>
+            </div>
+        }
+    </div>
+</MudPaper>
+
+@if (_loading && _items.Count == 0)
+{
+    <div class="d-flex justify-center py-8">
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+    </div>
+}
+else if (_items.Count == 0)
+{
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="text-center py-8">No sessions found.</MudText>
+}
+else
+{
+    <MudTable T="UserSessionDto" Items="@_items" Hover="true" Striped="true"
+              Dense="true" Class="rounded-xl overflow-hidden">
+        <HeaderContent>
+            <MudTh>User</MudTh>
+            <MudTh>Device</MudTh>
+            <MudTh>Browser / OS</MudTh>
+            <MudTh>IP</MudTh>
+            <MudTh>Last activity</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="User">
+                <div class="d-flex align-center gap-2">
+                    <div class="fsh-user-menu-tile" style="background: color-mix(in srgb, var(--mud-palette-primary) 18%, transparent); color: var(--mud-palette-primary); width: 28px; height: 28px; font-size: 11px;">
+                        @UserInitials(context.UserName ?? context.UserEmail ?? "?")
+                    </div>
+                    <div>
+                        <div style="font-size: 13px;">@(context.UserName ?? "—")</div>
+                        <div class="fsh-mono-muted" style="font-size: 11px;">@(context.UserEmail ?? "—")</div>
+                    </div>
+                </div>
+            </MudTd>
+            <MudTd DataLabel="Device">
+                <MudIcon Icon="@(IsMobile(context.DeviceType) ? Icons.Material.Filled.PhoneAndroid : Icons.Material.Filled.Computer)"
+                         Size="Size.Small" Style="color: var(--mud-palette-text-secondary);" />
+            </MudTd>
+            <MudTd DataLabel="Browser / OS">
+                <span style="font-size: 12px;">@context.Browser @context.BrowserVersion</span>
+                <br />
+                <span class="fsh-mono-muted" style="font-size: 11px;">@context.OperatingSystem @context.OsVersion</span>
+            </MudTd>
+            <MudTd DataLabel="IP">
+                <span class="fsh-mono-label" style="font-size: 11px;">@(context.IpAddress ?? "—")</span>
+            </MudTd>
+            <MudTd DataLabel="Last activity">
+                <span class="fsh-mono-label" style="font-size: 12px;">@FormatRelative(context.LastActivityAt)</span>
+            </MudTd>
+            <MudTd DataLabel="Status">
+                @if (context.IsCurrentSession)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">You</MudChip>
+                }
+                @if (!context.IsActive)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">Inactive</MudChip>
+                }
+            </MudTd>
+            <MudTd>
+                @if (context.IsActive && !context.IsCurrentSession)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                   OnClick="() => RevokeSessionAsync(context)" aria-label="Revoke session" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 25, 50, 100 }" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    [Inject] private ISessionService SessionService { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private List<UserSessionDto> _items = [];
+    private string? _search;
+    private bool _includeInactive;
+    private bool _loading = true;
+    private Timer? _timer;
+    private bool _disposed;
+    private SessionStats? _stats;
+
+    private sealed class SessionStats
+    {
+        public int ActiveCount { get; set; }
+        public int DistinctUsers { get; set; }
+        public int MobileCount { get; set; }
+    }
+
+    protected override void OnInitialized()
+    {
+        _timer = new Timer(_ => _ = InvokeAsync(LoadAsync), null, 30_000, 30_000);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task OnSearchChanged(string? value)
+    {
+        _search = value;
+        await LoadAsync();
+    }
+
+    private async Task OnIncludeInactiveChanged(bool value)
+    {
+        _includeInactive = value;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var result = await SessionService.GetTenantSessionsAsync(
+                search: _search,
+                includeInactive: _includeInactive,
+                pageNumber: 1,
+                pageSize: 100);
+
+            _items = result.Items.ToList();
+            _stats = new SessionStats
+            {
+                ActiveCount = _items.Count(s => s.IsActive),
+                DistinctUsers = _items.Select(s => s.UserId).Where(u => !string.IsNullOrEmpty(u)).Distinct().Count(),
+                MobileCount = _items.Count(s => IsMobile(s.DeviceType)),
+            };
+        }
+        catch
+        {
+            _items = [];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task RevokeSessionAsync(UserSessionDto session)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Message", $"Revoke session for {session.UserName ?? session.UserEmail}?" },
+            { "ConfirmText", "Revoke" },
+            { "CancelText", "Cancel" },
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<FshConfirmDialogContent>("Revoke session", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return;
+
+        try
+        {
+            if (!string.IsNullOrEmpty(session.UserId) && Guid.TryParse(session.UserId, out var userId))
+            {
+                await SessionService.AdminRevokeUserSessionAsync(userId, session.Id);
+            }
+            Snackbar.Add("Session revoked.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to revoke session: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static bool IsMobile(string? deviceType) =>
+        string.Equals(deviceType, "Mobile", StringComparison.OrdinalIgnoreCase);
+
+    private static string UserInitials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+            : (name.Length > 0 ? name[..Math.Min(2, name.Length)].ToUpperInvariant() : "?");
+    }
+
+    private static string FormatRelative(DateTime utc)
+    {
+        var diff = DateTime.UtcNow - utc;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        return $"{(int)diff.TotalDays}d ago";
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _timer?.Dispose();
+    }
+}

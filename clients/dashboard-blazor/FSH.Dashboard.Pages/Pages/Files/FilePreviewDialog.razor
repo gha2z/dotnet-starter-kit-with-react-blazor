@@ -1,0 +1,100 @@
+@using FSH.BlazorShared.Models.Files
+@using FSH.BlazorShared.Services
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Visibility" Class="mr-3" /> @File.OriginalFileName
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" md="8">
+                @if (File.ContentType.StartsWith("image/"))
+                {
+                    @if (!string.IsNullOrEmpty(_previewUrl))
+                    {
+                        <img src="@_previewUrl" style="max-width:100%;max-height:400px;object-fit:contain;border-radius:8px;" />
+                    }
+                    else
+                    {
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="d-flex mx-auto my-8" />
+                    }
+                }
+                else if (File.ContentType == "application/pdf" && !string.IsNullOrEmpty(_previewUrl))
+                {
+                    <iframe src="@_previewUrl" style="width:100%;height:400px;border:none;border-radius:8px;"></iframe>
+                }
+                else
+                {
+                    <div class="d-flex flex-column align-center justify-center" style="height:300px;">
+                        <MudIcon Icon="@Icons.Material.Outlined.InsertDriveFile" Size="Size.Large" Color="Color.Secondary" Style="font-size:64px;" />
+                        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-4">Preview not available for this file type</MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-3" OnClick="Download">
+                            Download to view
+                        </MudButton>
+                    </div>
+                }
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">File Details</MudText>
+                <MudSimpleTable Dense="true" Hover="false">
+                    <tbody>
+                        <tr><td class="fsh-mono-label">Type</td><td>@File.ContentType</td></tr>
+                        <tr><td class="fsh-mono-label">Size</td><td>@FormatBytes(File.SizeBytes)</td></tr>
+                        <tr><td class="fsh-mono-label">Visibility</td><td>@File.Visibility</td></tr>
+                        <tr><td class="fsh-mono-label">Status</td><td>@File.Status</td></tr>
+                        <tr><td class="fsh-mono-label">Owner</td><td>@File.OwnerType</td></tr>
+                        <tr><td class="fsh-mono-label">Uploaded</td><td>@FshFormat.DateTimeShort(File.CreatedAtUtc)</td></tr>
+                    </tbody>
+                </MudSimpleTable>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Inject] private IFileService FileService { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    [Parameter] public FileAssetDto File { get; set; } = default!;
+
+    private string? _previewUrl;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (File.Visibility == FileVisibility.Public && !string.IsNullOrEmpty(File.PublicUrl))
+        {
+            _previewUrl = File.PublicUrl;
+        }
+        else if (File.ContentType.StartsWith("image/") || File.ContentType == "application/pdf")
+        {
+            try
+            {
+                var url = await FileService.GetFileDownloadUrlAsync(File.Id, inline: true);
+                _previewUrl = url.Url.ToString();
+            }
+            catch { /* Preview unavailable */ }
+        }
+    }
+
+    private async Task Download()
+    {
+        var url = await FileService.GetFileDownloadUrlAsync(File.Id);
+        await JS.InvokeVoidAsync("fshOpenDownload", url.Url.ToString());
+    }
+
+    private void Close() => MudDialog.Close();
+
+    private static string FormatBytes(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
+        _ => $"{bytes / (1024.0 * 1024 * 1024):F2} GB"
+    };
+}

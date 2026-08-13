@@ -1,0 +1,138 @@
+@page "/settings/sessions"
+@attribute [Authorize]
+@namespace FSH.Admin.Wasm.Pages.Settings
+@using FSH.BlazorShared.Formatting
+@using FSH.BlazorShared.Models.Identity
+
+<SettingsScaffold>
+    @if (_error is not null)
+    {
+        <FshErrorBand Message="@_error" />
+    }
+    else if (_loading)
+    {
+        <FshLoadingRow Label="Loading sessions" />
+    }
+    else
+    {
+        <MudCard Elevation="1" Class="pa-4">
+            <div class="d-flex align-center gap-3 mb-3">
+                <FshToneIconTile Icon="@Icons.Material.Filled.Devices" Tone="Color.Primary" TileSize="40px" IconSize="Size.Small" />
+                <div>
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Active sessions</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Sign out of other devices if you notice anything unusual.</MudText>
+                </div>
+            </div>
+
+            @if (_sessions.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">No active sessions.</MudText>
+            }
+            else
+            {
+                @foreach (var session in _sessions.OrderByDescending(s => s.IsCurrentSession).ThenByDescending(s => s.LastActivityAt))
+                {
+                    <div @key="session.Id" class="d-flex align-center gap-3 py-2" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                        <FshToneIconTile Icon="@DeviceIcon(session.DeviceType)" Tone="Color.Default" TileSize="36px" IconSize="Size.Small" />
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex align-center gap-2 flex-wrap">
+                                <span class="font-weight-medium" style="font-size: 14px;">@DeviceLabel(session)</span>
+                                @if (session.IsCurrentSession)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">This device</MudChip>
+                                }
+                            </div>
+                            <div class="fsh-mono-muted" style="font-size: 11px;">
+                                @session.Browser · @session.OperatingSystem · @session.IpAddress · last active @FshFormat.Timestamp(session.LastActivityAt)
+                            </div>
+                        </div>
+                        @if (!session.IsCurrentSession)
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" StartIcon="@Icons.Material.Filled.Logout" OnClick="() => RevokeAsync(session.Id)">
+                                Revoke
+                            </MudButton>
+                        }
+                    </div>
+                }
+            }
+
+            @if (_sessions.Any(s => !s.IsCurrentSession))
+            {
+                <div class="mt-3">
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteSweep" OnClick="RevokeAllAsync">
+                        Sign out all other sessions
+                    </MudButton>
+                </div>
+            }
+        </MudCard>
+    }
+</SettingsScaffold>
+
+@code {
+    [Inject] private ISessionService SessionService { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private readonly List<UserSessionDto> _sessions = [];
+    private string? _error;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var items = await SessionService.GetMySessionsAsync();
+            _sessions.Clear();
+            _sessions.AddRange(items);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task RevokeAsync(Guid sessionId)
+    {
+        try
+        {
+            await SessionService.RevokeMySessionAsync(sessionId);
+            Snackbar.Add("Session revoked", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Revoke failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RevokeAllAsync()
+    {
+        try
+        {
+            var count = await SessionService.RevokeAllMySessionsAsync();
+            Snackbar.Add($"{count} {(count == 1 ? "session" : "sessions")} revoked", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Revoke all failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static string DeviceIcon(string? deviceType) => deviceType switch
+    {
+        "Mobile" => Icons.Material.Filled.Smartphone,
+        "Tablet" => Icons.Material.Filled.TabletMac,
+        _ => Icons.Material.Filled.Computer,
+    };
+
+    private static string DeviceLabel(UserSessionDto session) =>
+        string.IsNullOrWhiteSpace(session.DeviceType) ? "Unknown device" : session.DeviceType;
+}

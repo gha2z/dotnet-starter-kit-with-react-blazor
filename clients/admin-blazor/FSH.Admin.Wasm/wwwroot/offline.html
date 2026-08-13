@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Offline — FullStackHero Admin</title>
+    <style>
+        body {
+            margin: 0; padding: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #1B2A2C; color: #E4E4EA;
+        }
+        .icon {
+            width: 72px; height: 72px; border-radius: 18px;
+            background: linear-gradient(135deg, #E85D75 0%, #C93A54 100%);
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Outfit', sans-serif; font-size: 36px; font-weight: 700;
+            color: #fff; margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(232, 93, 117, 0.3);
+        }
+        h1 { margin: 0 0 8px; font-size: 22px; font-weight: 600; }
+        p { margin: 0 0 24px; font-size: 14px; color: #A0AEC0; }
+        button {
+            padding: 10px 28px; border: none; border-radius: 8px;
+            background: #E11D48; color: #fff; font-size: 14px; font-weight: 500;
+            cursor: pointer; transition: background 0.15s;
+        }
+        button:hover { background: #BE123C; }
+    </style>
+</head>
+<body>
+    <div class="icon" aria-hidden="true">F</div>
+    <h1>You're offline</h1>
+    <p>No network connection detected. Some features may be unavailable.</p>
+    <button onclick="window.location.reload()">Retry</button>
+</body>
+</html>

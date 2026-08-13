@@ -1,0 +1,216 @@
+@page "/identity/groups/{Id}"
+@attribute [Authorize]
+@using FSH.BlazorShared.Formatting
+@using FSH.BlazorShared.Models.Identity
+@using MudBlazor
+
+<MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-2" OnClick="GoBack">
+    Back to groups
+</MudButton>
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+@if (_loading)
+{
+    <div class="d-flex flex-column gap-3">
+        <div class="fsh-skeleton" style="height: 96px; border-radius: 12px;"></div>
+        <div class="fsh-skeleton" style="height: 256px; border-radius: 12px;"></div>
+    </div>
+}
+else if (_group is null)
+{
+    <FshEmptyState Icon="@Icons.Material.Filled.SearchOff"
+                   Title="Group not found"
+                   Description="This group doesn't exist, or you don't have access to it." />
+}
+else
+{
+    <div class="fsh-enter overflow-hidden rounded-xl border fsh-detail-card">
+        <div class="fsh-detail-accent-bar" aria-hidden="true"></div>
+        <div class="d-flex flex-column gap-4 p-4 fsh-detail-header-row">
+            <div class="d-flex flex-wrap align-center gap-4 min-w-0">
+                <FshToneIconTile Icon="@Icons.Material.Filled.Groups" Tone="Color.Primary" TileSize="52px" IconSize="Size.Medium" />
+                <div class="min-w-0 flex-fill">
+                    <div class="d-flex flex-wrap align-center gap-2">
+                        <span style="font-size: 18px; font-weight: 600; color: var(--mud-palette-text-primary);">@_group.Name</span>
+                        @if (_group.IsDefault)
+                        {
+                            <MudChip T="string" Size="Size.Small" Class="fsh-id-chip" Color="Color.Warning" Variant="Variant.Outlined">
+                                Default
+                            </MudChip>
+                        }
+                        @if (_group.IsSystemGroup)
+                        {
+                            <MudChip T="string" Size="Size.Small" Class="fsh-id-chip" Variant="Variant.Outlined">
+                                System
+                            </MudChip>
+                        }
+                    </div>
+                    <div class="fsh-muted-copy" style="font-size: 13px;">
+                        @(string.IsNullOrWhiteSpace(_group.Description) ? "Group cohort." : _group.Description)
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-3">
+                    <div class="fsh-detail-stat">
+                        <span class="fsh-detail-stat-value">@_group.MemberCount</span>
+                        <span class="fsh-detail-stat-label">@(_group.MemberCount == 1 ? "member" : "members")</span>
+                    </div>
+                    <div class="fsh-detail-stat">
+                        <span class="fsh-detail-stat-value">@(_group.RoleNames?.Count ?? 0)</span>
+                        <span class="fsh-detail-stat-label">@((_group.RoleNames?.Count ?? 0) == 1 ? "role" : "roles")</span>
+                    </div>
+                </div>
+                <FshPermissionGate Perms="@(new[] { GroupsPermissions.Delete })">
+                    @if (!_group.IsSystemGroup)
+                    {
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" OnClick="ConfirmDeleteAsync">
+                            Delete group
+                        </MudButton>
+                    }
+                </FshPermissionGate>
+            </div>
+        </div>
+    </div>
+
+    @if (_group.IsSystemGroup)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            <MudText Typo="Typo.body2" Style="margin: 0;">
+                <b>System group — read only.</b>
+                @_group.Name ships with the framework and cannot be edited or deleted.
+            </MudText>
+        </MudAlert>
+    }
+
+    <div class="d-flex flex-wrap gap-3 mt-4">
+        <div class="fsh-detail-card fsh-detail-section flex-fill" style="min-width: 340px;">
+            <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-3">
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Badge" Color="Color.Primary" Size="Size.Small" />
+                    <span style="font-weight: 600; font-size: 14px;">Group details</span>
+                </div>
+                @if (_dirtyCount > 0)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">@_dirtyCount pending</MudChip>
+                }
+            </div>
+
+            @if (_roles is null)
+            {
+                <div class="d-flex justify-center py-6">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                </div>
+            }
+            else
+            {
+                <MudTextField @bind-Value="_name" @bind-Value:after="MarkDirty" Label="Name" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Class="mb-4" MaxLength="64" Disabled="@(_isSaving || IsSystemGroup)" />
+                <MudTextField @bind-Value="_description" @bind-Value:after="MarkDirty" Label="Description (optional)" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Lines="3" Class="mb-4" MaxLength="256" Disabled="@(_isSaving || IsSystemGroup)" />
+                <MudSwitch T="bool" @bind-Value="_isDefault" @bind-Value:after="MarkDirty" Color="Color.Primary" Class="mb-4"
+                           Disabled="@(_isSaving || IsSystemGroup)">
+                    <span style="font-size: 13px; font-weight: 500;">Default group</span>
+                </MudSwitch>
+
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="display: block; margin-bottom: 4px;">Roles</MudText>
+                @if (_roles.Count == 0)
+                {
+                    <div class="fsh-muted-copy" style="font-size: 13px;">No roles available.</div>
+                }
+                else
+                {
+                    <div class="fsh-perm-group">
+                        @foreach (var role in _roles)
+                        {
+                            var roleId = role.Id ?? string.Empty;
+                            <div class="fsh-perm-row">
+                                <MudCheckBox T="bool" Value="@(roleId.Length > 0 && _selectedRoleIds.Contains(roleId))"
+                                             ValueChanged="@((bool value) => ToggleRole(roleId, value))"
+                                             Disabled="@(_isSaving || IsSystemGroup)" />
+                                <div style="flex: 1; min-width: 0;">
+                                    <div style="font-size: 13px; font-weight: 500;">@role.Name</div>
+                                    <div class="fsh-muted-copy fsh-truncate" style="font-size: 11.5px;">@role.Description</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="d-flex gap-2 mt-3">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               Disabled="@(_dirtyCount == 0 || _isSaving || IsSystemGroup)" OnClick="SaveAsync">
+                        @(_isSaving ? "Saving…" : "Save group")
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                               Disabled="@(_dirtyCount == 0 || IsSystemGroup)" OnClick="ResetDraft">
+                        Discard
+                    </MudButton>
+                </div>
+            }
+        </div>
+    </div>
+
+    <FshPermissionGate Perms="@(new[] { GroupsPermissions.Update })">
+        <div class="fsh-detail-card fsh-detail-section mt-4">
+            <div class="d-flex flex-wrap align-center justify-space-between gap-2 mb-3">
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Filled.GroupAdd" Color="Color.Primary" Size="Size.Small" />
+                    <span style="font-weight: 600; font-size: 14px;">Members</span>
+                </div>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.PersonAdd"
+                           Disabled="@IsSystemGroup" OnClick="OpenAddMembersAsync">
+                    Add members
+                </MudButton>
+            </div>
+
+            @if (_members is null)
+            {
+                <div class="d-flex justify-center py-6">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                </div>
+            }
+            else if (_members.Count == 0)
+            {
+                <div class="fsh-muted-copy" style="font-size: 13px;">No members yet. Add the first member to this group.</div>
+            }
+            else
+            {
+                <div class="fsh-members-grid fsh-list-head">
+                    <span>Member</span>
+                    <span>Username</span>
+                    <span class="fsh-col-joined">Joined</span>
+                    <span></span>
+                </div>
+                @for (var i = 0; i < _members.Count; i++)
+                {
+                    var member = _members[i];
+                    var isLast = i == _members.Count - 1;
+                    <div class="fsh-members-grid fsh-list-row @(isLast ? "" : "fsh-row-border")">
+                        <div class="d-flex align-center gap-3 min-w-0">
+                            <FshMonogram Seed="@(member.UserName ?? member.Email)" Name="@MemberDisplay(member)" PixelSize="32" />
+                            <div class="min-w-0">
+                                <div class="fsh-truncate" style="font-size: 13.5px; font-weight: 500;">@MemberDisplay(member)</div>
+                                <div class="fsh-truncate fsh-muted-copy" style="font-size: 12px;" title="@member.Email">@member.Email</div>
+                            </div>
+                        </div>
+                        <code class="fsh-truncate fsh-mono-muted" style="font-size: 12px;">@member.UserName</code>
+                        <span class="fsh-muted-copy" style="font-size: 12.5px;">@FshFormat.DateTimeShort(member.AddedAt)</span>
+                        <div class="d-flex align-center justify-end" @onclick:stopPropagation="true">
+                            <FshPermissionGate Perms="@(new[] { GroupsPermissions.Update })">
+                                <MudIconButton Icon="@Icons.Material.Filled.PersonRemove" Size="Size.Small" Color="Color.Default"
+                                               aria-label="Remove member"
+                                               Disabled="@(IsSystemGroup || _isRemovingMembers.Contains(member.UserId))"
+                                               OnClick="() => RemoveMemberAsync(member)" />
+                            </FshPermissionGate>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </FshPermissionGate>
+}
+
+

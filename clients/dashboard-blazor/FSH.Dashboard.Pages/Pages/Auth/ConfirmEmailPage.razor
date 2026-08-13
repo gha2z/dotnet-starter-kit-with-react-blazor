@@ -1,0 +1,69 @@
+@page "/confirm-email"
+@inject IAuthService AuthService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<div class="d-flex align-center justify-center" style="min-height: 100vh; background: #F0F2F5;">
+    <MudPaper Class="pa-8" Style="width: 420px; max-width: 90vw;" Elevation="3">
+        <div class="d-flex flex-column align-center">
+            @if (_isLoading)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+                <MudText Typo="Typo.body1" Class="mt-4">Confirming your email...</MudText>
+            }
+            else if (!string.IsNullOrEmpty(_error))
+            {
+                <MudIcon Icon="@Icons.Material.Filled.Cancel" Size="Size.Large" Color="Color.Error" />
+                <MudText Typo="Typo.h5" Class="mt-4">Email confirmation failed</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2 mb-4">@_error</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Nav.NavigateTo("/login"))">
+                    Back to Sign In
+                </MudButton>
+            }
+            else
+            {
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" />
+                <MudText Typo="Typo.h5" Class="mt-4">Email confirmed!</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2 mb-4">
+                    @_message
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Nav.NavigateTo("/login"))">
+                    Sign In
+                </MudButton>
+            }
+        </div>
+    </MudPaper>
+</div>
+
+@code {
+    private bool _isLoading = true;
+    private string? _error;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Nav.TryGetQueryString("userId", out string? userId);
+        Nav.TryGetQueryString("code", out string? code);
+        Nav.TryGetQueryString("tenant", out string? tenant);
+
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(code))
+        {
+            _error = "Invalid confirmation link.";
+            _isLoading = false;
+            return;
+        }
+
+        try
+        {
+            _message = await AuthService.ConfirmEmailAsync(userId!, code!, tenant ?? string.Empty);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

@@ -1,0 +1,57 @@
+@namespace FSH.Admin.Wasm.Pages.Audits
+@using FSH.BlazorShared.Models.Audits
+@using Microsoft.JSInterop
+
+<div class="px-6 py-4">
+    <div class="d-flex align-center justify-space-between mb-2">
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small"
+                     Style="color: var(--mud-palette-text-secondary);" />
+            <MudText Class="fsh-mono-label mb-0">PAYLOAD</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">· @_lineCount lines</MudText>
+        </div>
+        <MudButton Variant="Variant.Text" Size="Size.Small" Class="pa-0"
+                   StartIcon="@(_copied ? Icons.Material.Filled.Check : Icons.Material.Filled.ContentCopy)"
+                   OnClick="OnCopyAsync" Style="font-size: 11px;">
+            @(_copied ? "Copied" : "Copy")
+        </MudButton>
+    </div>
+    <pre class="fsh-payload-pre">@_json</pre>
+</div>
+
+@code {
+    [Inject]
+    private ISnackbar Snackbar { get; set; } = default!;
+
+    [Inject]
+    private IJSRuntime Js { get; set; } = default!;
+
+    [Parameter]
+    public AuditDetailDto Detail { get; set; } = default!;
+
+    private string _json = string.Empty;
+    private int _lineCount;
+    private bool _copied;
+
+    protected override void OnInitialized()
+    {
+        _json = System.Text.Json.JsonSerializer.Serialize(Detail.Payload, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        _lineCount = _json.Split('\n').Length;
+    }
+
+    private async Task OnCopyAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("fshClipboard.copy", _json);
+            _copied = true;
+            Snackbar.Add("Payload copied", Severity.Success);
+            await Task.Delay(1500);
+            _copied = false;
+        }
+        catch
+        {
+            Snackbar.Add("Clipboard unavailable", Severity.Warning);
+        }
+    }
+}

@@ -1,0 +1,107 @@
+@namespace FSH.Admin.Wasm.Pages.Tenants
+@using FSH.BlazorShared.Models.Tenants
+@using FSH.BlazorShared.Services
+@using MudBlazor
+
+<MudPaper Elevation="1" Class="pa-6 mb-4">
+    <div class="d-flex align-center gap-2 mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Palette" Color="Color.Primary" />
+        <div>
+            <MudText Typo="Typo.h6" Style="margin: 0;">Branding</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Style="margin: 0;">
+                Operator-controlled colors + brand assets that drive this tenant's UI.
+            </MudText>
+        </div>
+    </div>
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+    }
+    else if (_theme is null)
+    {
+        <div class="d-flex justify-center py-6">
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+        </div>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-4">
+            Theme tokens consumed by this tenant's apps on sign-in. Live preview reflects the
+            primary action with the chosen palette.
+        </MudAlert>
+
+        <div class="d-flex align-center gap-2 mb-4">
+            @if (_theme.IsDefault && !IsDirty)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="font-mono"
+                         Style="text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px;">
+                    default
+                </MudChip>
+            }
+            @if (IsDirty)
+            {
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning"
+                         Class="font-mono" Style="text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px;">
+                    unsaved
+                </MudChip>
+            }
+        </div>
+
+        <div class="d-flex flex-wrap gap-4">
+            <div style="flex: 1 1 320px; min-width: 280px;">
+                <TenantPaletteEditor Title="Light palette"
+                                     Palette="_theme.LightPalette"
+                                     Defaults="PaletteDto.DefaultLight"
+                                     Editable="true"
+                                     Dirty="IsDirty"
+                                     OnChanged="OnPaletteChanged" />
+            </div>
+            <div style="flex: 1 1 320px; min-width: 280px;">
+                <TenantPaletteEditor Title="Dark palette"
+                                     Palette="_theme.DarkPalette"
+                                     Defaults="PaletteDto.DefaultDark"
+                                     Editable="true"
+                                     Dirty="IsDirty"
+                                     OnChanged="OnPaletteChanged" />
+            </div>
+        </div>
+
+        <div class="mt-4 rounded pa-4" style="border: 1px solid var(--mud-palette-lines-default);">
+            <MudText Typo="Typo.subtitle1" Style="margin: 0 0 2px;">Brand assets</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                URLs to your hosted brand assets. Upload via the Files module first, then paste
+                the resulting public URL here.
+            </MudText>
+            <MudTextField T="string" Label="Logo URL" Class="font-mono"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Placeholder="https://cdn.example.com/logo.svg"
+                          Value="_theme.BrandAssets.LogoUrl"
+                          ValueChanged="@(v => SetAsset(v ?? string.Empty, setLogo: true))" />
+            <MudTextField T="string" Label="Logo URL (dark mode)" Class="font-mono"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Placeholder="https://cdn.example.com/logo-dark.svg"
+                          Value="_theme.BrandAssets.LogoDarkUrl"
+                          ValueChanged="@(v => SetAsset(v ?? string.Empty, setLogoDark: true))" />
+            <MudTextField T="string" Label="Favicon URL" Class="font-mono"
+                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Placeholder="https://cdn.example.com/favicon.ico"
+                          Value="_theme.BrandAssets.FaviconUrl"
+                          ValueChanged="@(v => SetAsset(v ?? string.Empty, setFavicon: true))" />
+        </div>
+
+        <div class="d-flex align-center justify-space-between mt-4 flex-wrap gap-2">
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Refresh"
+                       Disabled="@(_isResetting || _isSaving)"
+                       OnClick="ResetToDefaultsAsync">
+                @(_isResetting ? "Resetting…" : "Reset to defaults")
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Save"
+                       Disabled="@(!IsDirty || _isSaving)"
+                       OnClick="SaveAsync">
+                @(_isSaving ? "Saving…" : "Save branding")
+            </MudButton>
+        </div>
+    }
+</MudPaper>

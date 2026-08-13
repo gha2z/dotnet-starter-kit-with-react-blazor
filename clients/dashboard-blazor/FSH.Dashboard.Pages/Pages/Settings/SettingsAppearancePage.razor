@@ -1,0 +1,189 @@
+@page "/settings/appearance"
+@attribute [Authorize]
+@layout SettingsLayout
+@implements IDisposable
+@using FSH.BlazorShared.Theming
+@inject FshThemeService ThemeService
+@inject IDialogService Dialog
+
+<FshPageHeader Title="Appearance" Icon="@Icons.Material.Filled.Palette"
+               Description="Theme, accent, typography and motion preferences." />
+
+<MudPaper Class="pa-6" Elevation="0" Outlined="true">
+    <MudText Typo="Typo.h6" Class="mb-2">Theme</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+        Pick a colour mode for the dashboard. System follows your OS preference.
+    </MudText>
+    <MudRadioGroup T="ThemeMode" @bind-Value="_currentMode">
+        <MudRadio Value="ThemeMode.Light" Color="Color.Primary">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.LightMode" Size="Size.Small" />
+                Light — bright canvas
+            </div>
+        </MudRadio>
+        <MudRadio Value="ThemeMode.System" Color="Color.Primary">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.SettingsBrightness" Size="Size.Small" />
+                System — follow OS
+            </div>
+        </MudRadio>
+        <MudRadio Value="ThemeMode.Dark" Color="Color.Primary">
+            <div class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.DarkMode" Size="Size.Small" />
+                Dark — reduced glare
+            </div>
+        </MudRadio>
+    </MudRadioGroup>
+</MudPaper>
+
+<MudPaper Class="pa-6 mt-4" Elevation="0" Outlined="true">
+    <MudText Typo="Typo.h6" Class="mb-2">Accent colour</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+        Choose the accent used across buttons, links and highlights.
+    </MudText>
+    <div class="d-flex flex-wrap gap-4">
+        @foreach (var accent in FshAppearanceOptions.Accents)
+        {
+            <button type="button" class="@AccentCardClass(accent.Id)" @onclick="() => SelectAccentAsync(accent.Id)"
+                    aria-pressed="@(ThemeService.AccentId == accent.Id)">
+                <div class="fsh-accent-swatch" style="@SwatchStyle(accent.LightPrimary, accent.DarkPrimary)"></div>
+                <div class="fsh-accent-label">@accent.Label</div>
+                <div class="fsh-accent-desc">@accent.Description</div>
+                @if (ThemeService.AccentId == accent.Id)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="fsh-accent-check"
+                             Color="Color.Primary" />
+                }
+            </button>
+        }
+        <button type="button" class="@AccentCardClass(FshAppearanceOptions.CustomAccentId)" @onclick="OpenCustomAccentAsync"
+                aria-pressed="@(ThemeService.AccentId == FshAppearanceOptions.CustomAccentId)">
+            <div class="fsh-accent-swatch fsh-accent-custom-swatch">
+                <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Medium" Class="fsh-accent-custom-icon" />
+            </div>
+            <div class="fsh-accent-label">Custom</div>
+            <div class="fsh-accent-desc">Pick your own hue</div>
+        </button>
+    </div>
+    @if (ThemeService.AccentId == FshAppearanceOptions.CustomAccentId)
+    {
+        <div class="mt-4 d-flex align-center gap-2">
+            <MudIcon Icon="@Icons.Material.Filled.Palette" Size="Size.Small" Color="Color.Primary" />
+            <MudText Typo="Typo.body2">
+                Current custom: hue @($"{ThemeService.CustomAccent.Hue:0}°"), chroma @($"{ThemeService.CustomAccent.Chroma:0.###}")
+            </MudText>
+        </div>
+    }
+</MudPaper>
+
+<MudPaper Class="pa-6 mt-4" Elevation="0" Outlined="true">
+    <MudText Typo="Typo.h6" Class="mb-2">Typography</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+        Font used across the dashboard interface.
+    </MudText>
+    <div class="d-flex flex-wrap gap-4">
+        @foreach (var font in FshAppearanceOptions.Fonts)
+        {
+            <button type="button" class="@FontCardClass(font.Id)" @onclick="() => SelectFontAsync(font.Id)"
+                    aria-pressed="@(ThemeService.FontId == font.Id)">
+                <div class="fsh-font-sample" style="@FontSampleStyle(font.Family)">Ag</div>
+                <div class="fsh-accent-label">@font.Label</div>
+                <div class="fsh-accent-desc">@font.Description</div>
+                @if (ThemeService.FontId == font.Id)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="fsh-accent-check"
+                             Color="Color.Primary" />
+                }
+            </button>
+        }
+    </div>
+</MudPaper>
+
+<MudPaper Class="pa-6 mt-4" Elevation="0" Outlined="true">
+    <MudText Typo="Typo.h6" Class="mb-2">Density</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+        Compact mode reduces spacing so more content fits on screen.
+    </MudText>
+    <MudSwitch T="bool" Value="ThemeService.Density == FshDensityMode.Compact"
+               ValueChanged="OnDensityChanged" Color="Color.Primary"
+               Label="Compact density" />
+</MudPaper>
+
+<MudPaper Class="pa-6 mt-4" Elevation="0" Outlined="true">
+    <MudText Typo="Typo.h6" Class="mb-2">Motion</MudText>
+    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-4">
+        Reduce or disable animations and transitions.
+    </MudText>
+    <MudSwitch T="bool" Value="ThemeService.ReducedMotion"
+               ValueChanged="OnMotionChanged" Color="Color.Primary"
+               Label="Reduce motion" />
+</MudPaper>
+
+@code {
+    private ThemeMode _currentMode
+    {
+        get => ThemeService.Mode;
+        set => _ = ThemeService.SetModeAsync(value);
+    }
+
+    protected override void OnInitialized()
+    {
+        ThemeService.Changed += OnThemeChanged;
+    }
+
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        ThemeService.Changed -= OnThemeChanged;
+    }
+
+    private string AccentCardClass(string id)
+    {
+        var selected = ThemeService.AccentId == id;
+        return selected
+            ? "fsh-accent-card fsh-accent-card-selected"
+            : "fsh-accent-card";
+    }
+
+    private string FontCardClass(string id)
+    {
+        var selected = ThemeService.FontId == id;
+        return selected
+            ? "fsh-accent-card fsh-accent-card-selected"
+            : "fsh-accent-card";
+    }
+
+    private static string SwatchStyle(string light, string dark)
+        => $"background: linear-gradient(135deg, {light} 0%, {dark} 100%);";
+
+    private static string FontSampleStyle(string family)
+        => $"font-family: {family};";
+
+    private async Task SelectAccentAsync(string id)
+        => await ThemeService.SetAccentAsync(id);
+
+    private async Task SelectFontAsync(string id)
+        => await ThemeService.SetFontAsync(id);
+
+    private async Task OnDensityChanged(bool compact)
+        => await ThemeService.SetDensityAsync(compact ? FshDensityMode.Compact : FshDensityMode.Comfortable);
+
+    private async Task OnMotionChanged(bool reduced)
+        => await ThemeService.SetReducedMotionAsync(reduced);
+
+    private async Task OpenCustomAccentAsync()
+    {
+        var parameters = new DialogParameters<CustomAccentDialog>
+        {
+            { x => x.InitialSpec, ThemeService.CustomAccent }
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await Dialog.ShowAsync<CustomAccentDialog>("Custom accent", parameters, options);
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: FshCustomAccentSpec spec })
+        {
+            await ThemeService.SetCustomAccentAsync(spec);
+        }
+    }
+}

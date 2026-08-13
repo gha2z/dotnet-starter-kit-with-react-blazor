@@ -1,0 +1,78 @@
+@using FSH.BlazorShared.Models.Tickets
+
+<MudDialog @bind-Visible="Open" Options="DialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="mr-3" Color="Color.Success" />
+            @Ticket?.Number — @Ticket?.Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Class="mb-2" Style="font-size: 13px;">
+            Resolution notes are kept on the ticket and shown in the description panel.
+            Leave blank if there's nothing to add.
+        </MudText>
+        <MudTextField @bind-Value="_note"
+                      Label="Resolution note"
+                      Placeholder="What changed? Root cause? Anything reviewers should know."
+                      Lines="4"
+                      MaxLength="4096"
+                      Variant="Variant.Outlined" />
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-4">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Disabled="_submitting">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit"
+                   Disabled="_submitting" StartIcon="@Icons.Material.Filled.CheckCircle">
+            @if (_submitting) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Mark resolved
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+    [Parameter] public TicketDto? Ticket { get; set; }
+    [Parameter] public EventCallback OnResolved { get; set; }
+
+    [Inject] private ITicketService Tickets { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private string _note = string.Empty;
+    private bool _submitting;
+    private string? _error;
+
+    private static readonly DialogOptions DialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+
+    private async Task Close()
+    {
+        Open = false;
+        await OpenChanged.InvokeAsync(false);
+    }
+
+    private async Task Submit()
+    {
+        if (Ticket is null) return;
+        _submitting = true;
+        _error = null;
+        try
+        {
+            await Tickets.ResolveTicketAsync(Ticket.Id, new ResolveTicketRequest(string.IsNullOrWhiteSpace(_note) ? null : _note.Trim()));
+            Snackbar.Add("Ticket resolved", Severity.Success);
+            await OnResolved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}

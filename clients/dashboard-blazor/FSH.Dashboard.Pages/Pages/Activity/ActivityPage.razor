@@ -1,0 +1,77 @@
+@page "/activity"
+@attribute [Authorize]
+@implements IDisposable
+
+<FshPageHeader Title="Live activity"
+               Description="Full event log streamed from the API over Server-Sent Events."
+               Icon="@Icons.Material.Filled.Insights"
+               Count="@(_eventCount > 0 ? _eventCount : null)"
+               Unit="event">
+    @if (IsLive)
+    {
+        <FshStatusPill Text="streaming" Tone="Color.Success" Icon="@Icons.Material.Filled.Sensors" />
+    }
+    else if (SseService.IsConnected)
+    {
+        <FshStatusPill Text="connecting" Icon="@Icons.Material.Filled.Sensors" />
+    }
+    else
+    {
+        <FshStatusPill Text="offline" Tone="Color.Error" Icon="@Icons.Material.Filled.CloudOff" />
+    }
+</FshPageHeader>
+
+@if (_events.Count == 0)
+{
+    <FshEmptyState
+        Icon="@Icons.Material.Filled.Inbox"
+        Title="@(IsLive ? "Listening for activity" : "No events yet")"
+        Description="@(IsLive
+            ? "The stream is open. Events will appear here as the backend publishes them."
+            : "The activity stream is not connected. Events will queue once the connection comes online.")" />
+}
+else
+{
+    <div class="mb-3 d-flex align-center justify-space-between">
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="fsh-mono-muted">
+            @_events.Count event@(_events.Count == 1 ? "" : "s") shown
+            <span class="opacity-60">· @_eventCount total</span>
+        </MudText>
+    </div>
+
+    @* Mobile: card list *@
+    <div class="d-flex flex-column gap-2 d-md-none" role="log" aria-live="polite" aria-relevant="additions" aria-label="Activity events">
+        @foreach (var ev in _events)
+        {
+            <div class="rounded-xl fsh-activity-mobile-card">
+                <div class="d-flex align-center justify-space-between gap-2">
+                    <FshStatusPill Text="@ev.EventType" Tone="@EventTone(ev.EventType)" />
+                    <span class="fsh-activity-time">@FormatTime(ev.ReceivedAt)</span>
+                </div>
+                <p class="fsh-activity-payload mt-2">@PayloadSummary(ev.Data)</p>
+            </div>
+        }
+    </div>
+
+    @* Desktop: grid table *@
+    <MudPaper Elevation="0" Class="d-none d-md-block rounded-xl"
+              Style="border: 1px solid var(--mud-palette-divider); overflow: hidden;">
+        <div class="fsh-activity-head fsh-activity-grid">
+            <span>Action</span>
+            <span>Entity</span>
+            <span class="text-right">Time</span>
+        </div>
+        @for (var i = 0; i < _events.Count; i++)
+        {
+            var ev = _events[i];
+            <div class="fsh-activity-row fsh-activity-grid @(i == _events.Count - 1 ? "fsh-activity-row-last" : null)">
+                <div class="d-flex align-center gap-2" style="min-width: 0;">
+                    <FshStatusPill Text="@ev.EventType" Tone="@EventTone(ev.EventType)" />
+                    <span class="fsh-activity-payload" title="@PayloadSummary(ev.Data)">@PayloadSummary(ev.Data)</span>
+                </div>
+                <code class="fsh-activity-entity" title="@EntityLabel(ev.Data)">@EntityLabel(ev.Data)</code>
+                <span class="text-right fsh-activity-time">@FormatTime(ev.ReceivedAt)</span>
+            </div>
+        }
+    </MudPaper>
+}

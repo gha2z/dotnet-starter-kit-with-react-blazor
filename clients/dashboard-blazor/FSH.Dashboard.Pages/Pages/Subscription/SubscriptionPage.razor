@@ -1,0 +1,247 @@
+@page "/subscription"
+@attribute [Authorize]
+@using FSH.BlazorShared.Formatting
+@using MudBlazor
+
+<FshPageHeader Title="Subscription"
+               Description="Your tenant's plan, validity, usage, and recent invoices."
+               Icon="@Icons.Material.Filled.CreditCard">
+</FshPageHeader>
+
+@if (ErrorMessage is not null)
+{
+    <FshErrorBand Message="@ErrorMessage" />
+}
+
+<div class="d-flex flex-column gap-4 fsh-subscription-grid">
+    @* Left rail — plan + validity *@
+    <aside class="d-flex flex-column gap-4" style="min-width: 0;">
+        <MudPaper Elevation="0" Class="fsh-section-card">
+            <div class="d-flex align-center gap-2 mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.CreditCard" Color="Color.Primary" Size="Size.Medium" />
+                <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Plan</MudText>
+            </div>
+            @if (_loadingStatus || _loadingSubscription)
+            {
+                <div class="d-flex flex-column gap-3">
+                    <div class="fsh-skeleton" style="height: 28px; width: 60%;"></div>
+                    <div class="fsh-skeleton" style="height: 12px; width: 40%;"></div>
+                    <div class="fsh-skeleton" style="height: 12px; width: 80%;"></div>
+                </div>
+            }
+            else if (PlanName is null && _subscription is null)
+            {
+                <div class="d-flex flex-column gap-1">
+                    <div class="fsh-fact-value" style="font-size: 13px;">No active subscription</div>
+                    <p class="fsh-muted-copy">Your tenant has no plan assigned. Contact your operator to enable
+                        billing, quotas, and overage tracking.</p>
+                </div>
+            }
+            else
+            {
+                <div class="d-flex flex-column gap-4">
+                    <div class="d-flex align-baseline justify-space-between gap-3">
+                        <span class="fsh-plan-name">@(PlanName ?? "—")</span>
+                        @if (_subscription is not null)
+                        {
+                            <FshStatusPill Text="@_subscription.Status" Tone="Color.Success" />
+                        }
+                    </div>
+                    @if (_subscription is not null)
+                    {
+                        <dl class="fsh-dl">
+                            <div class="d-flex justify-space-between gap-3">
+                                <dt>Started</dt>
+                                <dd>@FshFormat.DateShort(_subscription.StartUtc)</dd>
+                            </div>
+                            <div class="d-flex justify-space-between gap-3">
+                                <dt>Ends</dt>
+                                <dd>@(_subscription.EndUtc is null ? "open-ended" : FshFormat.DateShort(_subscription.EndUtc))</dd>
+                            </div>
+                        </dl>
+                    }
+                    <p class="fsh-muted-copy">Plan changes are operator-driven. Contact your operator to upgrade,
+                        renew, or cancel.</p>
+                </div>
+            }
+        </MudPaper>
+
+        <MudPaper Elevation="0" Class="fsh-section-card">
+            <div class="d-flex align-center gap-2 mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Color="Color.Primary" Size="Size.Medium" />
+                <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Validity</MudText>
+            </div>
+            @if (_loadingStatus)
+            {
+                <div class="d-flex flex-column gap-3">
+                    <div class="fsh-skeleton" style="height: 20px; width: 96px;"></div>
+                    <div class="fsh-skeleton" style="height: 12px; width: 60%;"></div>
+                </div>
+            }
+            else if (_status is null)
+            {
+                <p class="fsh-muted-copy" style="font-size: 12px;">Tenant status is unavailable right now.</p>
+            }
+            else
+            {
+                var (tone, label) = ExpiryState();
+                <div class="d-flex flex-column gap-3">
+                    <div class="d-flex align-center gap-2">
+                        <FshStatusPill Text="@label" Tone="@tone" />
+                        @if (!_status.IsActive)
+                        {
+                            <FshStatusPill Text="Inactive" Tone="Color.Error" />
+                        }
+                    </div>
+                    <dl class="fsh-dl">
+                        <div class="d-flex justify-space-between gap-3">
+                            <dt>Valid until</dt>
+                            <dd>@FshFormat.DateShort(ParseDate(_status.ValidUpto))</dd>
+                        </div>
+                        @if (_status.ExpiryState == "InGrace")
+                        {
+                            <div class="d-flex justify-space-between gap-3">
+                                <dt>Grace ends</dt>
+                                <dd style="color: var(--mud-palette-warning);">@FshFormat.DateShort(ParseDate(_status.GraceEndsUtc))</dd>
+                            </div>
+                        }
+                    </dl>
+                </div>
+            }
+        </MudPaper>
+    </aside>
+
+    @* Right column — usage + invoices *@
+    <div class="d-flex flex-column gap-4" style="min-width: 0; flex: 1;">
+        <MudPaper Elevation="0" Class="fsh-section-card">
+            <div class="d-flex align-center gap-2 mb-1">
+                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Primary" Size="Size.Medium" />
+                <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Usage by resource</MudText>
+            </div>
+            <p class="fsh-muted-copy mb-3" style="font-size: 11.5px;">Current-month consumption against your plan limits.</p>
+
+            @if (_loadingUsage)
+            {
+                <ul class="d-flex flex-column gap-3" style="padding: 0; margin: 0; list-style: none;">
+                    @for (var i = 0; i < 3; i++)
+                    {
+                        <li class="d-flex flex-column gap-2 py-1">
+                            <div class="d-flex justify-space-between">
+                                <div class="fsh-skeleton" style="height: 14px; width: 128px;"></div>
+                                <div class="fsh-skeleton" style="height: 14px; width: 96px;"></div>
+                            </div>
+                            <div class="fsh-skeleton" style="height: 4px; width: 100%;"></div>
+                        </li>
+                    }
+                </ul>
+            }
+            else if (_usageError)
+            {
+                <p class="fsh-muted-copy py-6 text-center" style="font-size: 12px;">Couldn't load usage. Try refreshing.</p>
+            }
+            else if (UsageRows.Count == 0)
+            {
+                <div class="d-flex flex-column align-center gap-2 py-8 text-center">
+                    <FshToneIconTile Icon="@Icons.Material.Filled.Speed" TileSize="32px" IconSize="Size.Small" />
+                    <div class="fsh-fact-value" style="font-size: 13px;">No usage captured yet</div>
+                    <p class="fsh-muted-copy" style="max-width: 24rem;">Consumption will appear here as snapshots are recorded for this period.</p>
+                </div>
+            }
+            else
+            {
+                <ul class="d-flex flex-column" style="padding: 0; margin: 0; list-style: none;">
+                    @foreach (var row in UsageRows)
+                    {
+                        var overUtilized = row.Utilization >= 80;
+                        var hasOverage = row.Overage > 0;
+                        <li class="fsh-usage-row">
+                            <div class="d-flex align-center gap-2" style="min-width: 0;">
+                                <span class="fsh-usage-resource">@row.Resource</span>
+                                @if (hasOverage)
+                                {
+                                    <FshStatusPill Text="@OverageLabel(row.Overage)" Tone="Color.Error" />
+                                }
+                            </div>
+                            <div class="text-right" style="font-variant-numeric: tabular-nums;">
+                                <span class="fsh-usage-used">@FshFormat.Number(row.Used)</span>
+                                <span class="fsh-usage-limit">/ @FshFormat.Number(row.Limit)</span>
+                                <span class="fsh-usage-pct">@row.Utilization%</span>
+                            </div>
+                            <div class="fsh-usage-bar-wrap">
+                                <div class="fsh-usage-bar"
+                                     style="width: @row.Utilization%; background: @(hasOverage ? "var(--mud-palette-error)" : overUtilized ? "var(--mud-palette-warning)" : "var(--mud-palette-primary)");">
+                                </div>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </MudPaper>
+
+        <MudPaper Elevation="0" Class="fsh-section-card">
+            <div class="d-flex align-center justify-space-between mb-1">
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Primary" Size="Size.Medium" />
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-medium" Style="margin: 0;">Recent invoices</MudText>
+                </div>
+                <button type="button" class="fsh-inline-link" @onclick="NavigateToInvoices">
+                    See all <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" />
+                </button>
+            </div>
+            <p class="fsh-muted-copy mb-3" style="font-size: 11.5px;">Your five most recent invoices.</p>
+
+            @if (_loadingInvoices)
+            {
+                <ul class="d-flex flex-column gap-2" style="padding: 0; margin: 0; list-style: none;">
+                    @for (var i = 0; i < 3; i++)
+                    {
+                        <li class="d-flex align-center gap-3">
+                            <div class="fsh-skeleton" style="height: 32px; width: 32px; border-radius: 8px;"></div>
+                            <div class="fsh-skeleton" style="height: 14px; width: 160px;"></div>
+                            <div class="fsh-skeleton" style="height: 14px; width: 64px; margin-left: auto;"></div>
+                        </li>
+                    }
+                </ul>
+            }
+            else if (_invoicesError)
+            {
+                <p class="fsh-muted-copy py-6 text-center" style="font-size: 12px;">Couldn't load invoices. Try refreshing.</p>
+            }
+            else if (_invoices.Count == 0)
+            {
+                <div class="d-flex flex-column align-center gap-2 py-6 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Secondary" Size="Size.Medium" />
+                    <div class="fsh-fact-value" style="font-size: 13px;">No invoices yet</div>
+                    <p class="fsh-muted-copy" style="max-width: 24rem;">Once your tenant has been billed for a period, invoices will appear here.</p>
+                </div>
+            }
+            else
+            {
+                <ul class="d-flex flex-column" style="padding: 0; margin: 0; list-style: none;">
+                    @for (var i = 0; i < _invoices.Count; i++)
+                    {
+                        var invoice = _invoices[i];
+                        <li class="fsh-invoice-row" @onclick="() => OpenInvoice(invoice.Id)">
+                            <span class="fsh-invoice-icon" aria-hidden="true">
+                                <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Size="Size.Small" Color="Color.Primary" />
+                            </span>
+                            <div class="min-w-0 flex-1">
+                                <div class="d-flex align-center gap-2">
+                                    <code class="fsh-invoice-number">@invoice.InvoiceNumber</code>
+                                    <FshStatusPill Text="@invoice.Status" Tone="@InvoiceStatusTone(invoice.Status)" />
+                                </div>
+                                <div class="fsh-invoice-period">period @FormatPeriod(invoice)</div>
+                            </div>
+                            <span class="fsh-invoice-amount">@FshFormat.Money(invoice.SubtotalAmount, invoice.Currency)</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </MudPaper>
+    </div>
+</div>
+
+@code {
+    private static DateTime? ParseDate(string? iso) =>
+        DateTime.TryParse(iso, out var parsed) ? parsed : (DateTime?)null;
+}

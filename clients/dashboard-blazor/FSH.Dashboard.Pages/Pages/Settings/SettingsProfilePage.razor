@@ -1,0 +1,115 @@
+@page "/settings/profile"
+@attribute [Authorize]
+@layout SettingsLayout
+@using FSH.BlazorShared.Models.Identity
+@using FSH.BlazorShared.Services
+@inject IUserService UserService
+@inject ISnackbar Snackbar
+
+<FshPageHeader Title="Profile" Icon="@Icons.Material.Filled.AccountCircle"
+               Description="Your identity across the tenant." />
+
+@if (_loading)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+else if (_profile is not null)
+{
+    <MudPaper Class="pa-6" Elevation="0" Outlined="true">
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" Label="First name" @bind-Value="_firstName" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" Label="Last name" @bind-Value="_lastName" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" Label="Email" Value="@_profile.Email" ReadOnly="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField T="string" Label="Phone number" @bind-Value="_phoneNumber" Placeholder="+1 (555) 123-4567" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                    Subject ID: <code>@_profile.Id</code>
+                </MudText>
+            </MudItem>
+            <MudItem xs="12" Class="d-flex justify-end gap-2">
+                <MudButton Variant="Variant.Text" OnClick="ResetForm" Disabled="@_saving">Reset</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync"
+                           Disabled="@(_saving || !_dirty)">
+                    @(_saving ? "Saving…" : "Save changes")
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+}
+
+@code {
+    private UserDto? _profile;
+    private string _firstName = "";
+    private string _lastName = "";
+    private string _phoneNumber = "";
+    private bool _loading = true;
+    private bool _saving;
+    private string? _error;
+
+    private bool _dirty =>
+        _profile is not null && (
+            (_profile.FirstName ?? "") != _firstName ||
+            (_profile.LastName ?? "") != _lastName ||
+            (_profile.PhoneNumber ?? "") != _phoneNumber);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _profile = await UserService.GetMyProfileAsync();
+            _firstName = _profile.FirstName ?? "";
+            _lastName = _profile.LastName ?? "";
+            _phoneNumber = _profile.PhoneNumber ?? "";
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load profile: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        if (_profile is null) return;
+        _firstName = _profile.FirstName ?? "";
+        _lastName = _profile.LastName ?? "";
+        _phoneNumber = _profile.PhoneNumber ?? "";
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        try
+        {
+            var request = new UpdateProfileRequest(
+                string.IsNullOrWhiteSpace(_firstName) ? null : _firstName.Trim(),
+                string.IsNullOrWhiteSpace(_lastName) ? null : _lastName.Trim(),
+                string.IsNullOrWhiteSpace(_phoneNumber) ? null : _phoneNumber.Trim());
+            _profile = await UserService.UpdateMyProfileAsync(request);
+            Snackbar.Add("Profile saved.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

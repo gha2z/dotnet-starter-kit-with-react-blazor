@@ -1,0 +1,152 @@
+@page "/identity/users"
+@attribute [Authorize]
+@using FSH.BlazorShared.Models.Identity
+@using MudBlazor
+
+<FshPageHeader Title="Users"
+               Description="Every member with access to this tenant. Register newcomers, review status, and manage roles."
+               Icon="@Icons.Material.Filled.People"
+               Count="@(_totalCount == 0 && _loading ? null : _totalCount)"
+               Unit="user">
+    <FshPermissionGate Perms="@(new[] { IdentityPermissions.Users.Create })">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenCreateAsync">
+            Register user
+        </MudButton>
+    </FshPermissionGate>
+</FshPageHeader>
+
+@if (_roleError is not null)
+{
+    <FshErrorBand Message="@_roleError" />
+}
+
+<MudTextField @bind-Value="_search"
+              @bind-Value:after="(async () => await OnSearchChangedAsync(_search))"
+              Placeholder="Search by name, username, or email…"
+              Variant="Variant.Outlined"
+              Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Filled.Search"
+              Class="mb-4"
+              Immediate="true" />
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+@if (_loading)
+{
+    @for (var i = 0; i < 4; i++)
+    {
+        <div class="fsh-skeleton" style="height: 56px; border-radius: 12px; margin-bottom: 8px;"></div>
+    }
+}
+else if (_items.Count == 0)
+{
+    <FshEmptyState Icon="@(FilterActive ? Icons.Material.Filled.Search : Icons.Material.Filled.People)"
+                   Title="@(FilterActive ? "No users found" : "No users yet")"
+                   Description="@EmptyStateDescription">
+        @if (FilterActive)
+        {
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="ClearFilters">Clear filters</MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateAsync">
+                Register user
+            </MudButton>
+        }
+    </FshEmptyState>
+}
+else
+{
+    <div class="d-flex flex-wrap gap-2 align-center mb-3">
+        <p class="fsh-muted-copy" style="font-size: 12px; font-weight: 500; margin: 0;">@MetaText</p>
+    </div>
+
+    <FshFilterBar Caption="Filters">
+        <MudSelect T="string" @bind-Value="_statusFilter"
+                   Label="Status"
+                   Clearable="true"
+                   Variant="Variant.Text"
+                   Style="min-width: 150px;">
+            <MudSelectItem T="string" Value="@StatusActive">Active</MudSelectItem>
+            <MudSelectItem T="string" Value="@StatusInactive">Inactive</MudSelectItem>
+        </MudSelect>
+        <MudSelect T="string" @bind-Value="_emailFilter"
+                   Label="Email"
+                   Clearable="true"
+                   Variant="Variant.Text"
+                   Style="min-width: 150px;">
+            <MudSelectItem T="string" Value="@EmailConfirmed">Confirmed</MudSelectItem>
+            <MudSelectItem T="string" Value="@EmailPending">Pending</MudSelectItem>
+        </MudSelect>
+        <MudSelect T="string" @bind-Value="_roleFilter"
+                   Label="Role"
+                   Clearable="true"
+                   Variant="Variant.Text"
+                   Style="min-width: 180px;">
+            @foreach (var role in _roles)
+            {
+                <MudSelectItem T="string" Value="@role.Id">@role.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </FshFilterBar>
+
+    <div class="fsh-users-grid fsh-list-head">
+        <span>User</span>
+        <span class="fsh-col-username">Username</span>
+        <span class="fsh-col-status">Status</span>
+        <span></span>
+    </div>
+
+    @for (var i = 0; i < _items.Count; i++)
+    {
+        var user = _items[i];
+        var isLast = i == _items.Count - 1;
+        <div class="fsh-users-grid fsh-list-row @(isLast ? "" : "fsh-row-border")" @onclick="() => OpenDetail(user)" style="cursor: pointer;">
+            <div class="d-flex align-center gap-3 min-w-0">
+                <FshMonogram Seed="@(user.UserName ?? user.Email)" Name="@DisplayName(user)" PixelSize="36" />
+                <div class="min-w-0">
+                    <div class="fsh-truncate d-flex align-center gap-2" style="font-size: 14px; font-weight: 500; color: var(--mud-palette-text-primary);">
+                        <span class="fsh-truncate">@DisplayName(user)</span>
+                        @if (!user.IsActive)
+                        {
+                            <span class="fsh-status-tag">inactive</span>
+                        }
+                    </div>
+                    <div class="fsh-truncate fsh-muted-copy" style="font-size: 12px;" title="@user.Email">@user.Email</div>
+                </div>
+            </div>
+            <code class="fsh-truncate fsh-mono-muted fsh-col-username" style="font-size: 12px;" title="@user.UserName">@user.UserName</code>
+            <div class="fsh-col-status">
+                <div class="d-flex flex-wrap gap-1">
+                    <MudChip T="string" Size="Size.Small" Class="fsh-id-chip"
+                             Color="@(user.IsActive ? Color.Success : Color.Error)"
+                             Variant="Variant.Outlined">
+                        @(user.IsActive ? "Active" : "Inactive")
+                    </MudChip>
+                    <MudChip T="string" Size="Size.Small" Class="fsh-id-chip"
+                             Color="@(user.EmailConfirmed ? Color.Success : Color.Default)"
+                             Variant="Variant.Outlined">
+                        @(user.EmailConfirmed ? "Confirmed" : "Pending")
+                    </MudChip>
+                </div>
+            </div>
+            <div class="d-flex align-center justify-end" @onclick:stopPropagation="true">
+                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Color="Color.Default" />
+            </div>
+        </div>
+    }
+
+    <FshPager TotalCount="@_totalCount" PageNumber="@_pageNumber" PageSize="@PageSize" PageChanged="GoToPageAsync" />
+}
+
+@code {
+    private const string StatusActive = "active";
+    private const string StatusInactive = "inactive";
+    private const string EmailConfirmed = "confirmed";
+    private const string EmailPending = "pending";
+}

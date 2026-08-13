@@ -1,0 +1,45 @@
+@namespace FSH.BlazorShared.Components
+@using MudBlazor
+
+<div class="fsh-kpi-tile">
+    <div class="d-flex align-center justify-space-between mb-2">
+        <span class="fsh-mono-label fsh-truncate">@Label</span>
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <div class="fsh-kpi-icon @(Tone == Color.Primary ? "tone-primary" : null)">
+                <MudIcon Icon="@Icon" Size="Size.Small" />
+            </div>
+        }
+    </div>
+    @if (Loading)
+    {
+        <div class="fsh-skeleton fsh-skeleton-value mb-2"></div>
+    }
+    else
+    {
+        <div class="fsh-kpi-value mb-2">@Value</div>
+    }
+    @if (!string.IsNullOrEmpty(Delta))
+    {
+        <span class="fsh-pill @(DeltaPositive ? "fsh-pill-positive" : "fsh-pill-negative")">@Delta</span>
+    }
+    else if (!string.IsNullOrEmpty(Footnote))
+    {
+        <span class="fsh-mono-label">@Footnote</span>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// KPI tile (React parity: mono label, display value with skeleton while
+    /// loading, optional tone icon and delta/status pill).
+    /// </summary>
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public Color Tone { get; set; } = Color.Default;
+    [Parameter] public string? Delta { get; set; }
+    [Parameter] public bool DeltaPositive { get; set; } = true;
+    [Parameter] public string? Footnote { get; set; }
+    [Parameter] public bool Loading { get; set; }
+}

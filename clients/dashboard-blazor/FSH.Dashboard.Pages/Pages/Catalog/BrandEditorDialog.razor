@@ -1,0 +1,152 @@
+@namespace FSH.Dashboard.Wasm.Pages.Catalog
+@using FSH.BlazorShared.Models.Catalog
+@using FSH.BlazorShared.Services
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex align-center gap-2 mb-2">
+            <FshToneIconTile Icon="@Icons.Material.Filled.LocalOffer" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
+            <MudText Typo="Typo.h6" Style="margin: 0;">@(Brand is null ? "Add a brand" : "Edit brand")</MudText>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
+            @(Brand is null
+                ? "Add a brand to your catalog. The slug is generated automatically from the name."
+                : $"Update details for {Brand.Name}. The slug is re-derived from the name.")
+        </MudText>
+
+        <MudTextField T="string"
+                      @bind-Value="_name"
+                      Label="Name"
+                      Placeholder="Acme Goods"
+                      Required="true"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Class="mb-4"
+                      MaxLength="128" />
+
+        <div class="mb-4">
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">Slug</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">Auto-derived from the name. Used in URLs.</MudText>
+            <div class="fsh-slug-preview fsh-mono-muted">@SlugPreview</div>
+        </div>
+
+        <MudTextField T="string"
+                      @bind-Value="_description"
+                      Label="Description"
+                      HelperText="Shown on listing and product detail pages."
+                      Placeholder="Quality essentials for the modern home."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Lines="3"
+                      Class="mb-4"
+                      MaxLength="1024" />
+
+        <MudTextField T="string"
+                      @bind-Value="_logoUrl"
+                      Label="Logo URL"
+                      HelperText="Optional. Public URL to the brand's logo image."
+                      Placeholder="https://…"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      InputType="InputType.Url"
+                      Class="mb-4"
+                      MaxLength="512" />
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="mt-4">
+                <FshErrorBand Message="@_error" />
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync"
+                   Disabled="_isSubmitting || string.IsNullOrWhiteSpace(_name)">
+            @(_isSubmitting ? "Saving…" : Brand is null ? "Add brand" : "Save changes")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Inject] private ICatalogService Catalog { get; set; } = default!;
+
+    [Parameter] public BrandDto? Brand { get; set; }
+
+    private string _name = string.Empty;
+    private string _description = string.Empty;
+    private string _logoUrl = string.Empty;
+    private string? _error;
+    private bool _isSubmitting;
+
+    protected override void OnInitialized()
+    {
+        if (Brand is not null)
+        {
+            _name = Brand.Name;
+            _description = Brand.Description ?? string.Empty;
+            _logoUrl = Brand.LogoUrl ?? string.Empty;
+        }
+    }
+
+    private string SlugPreview => string.IsNullOrWhiteSpace(_name) ? "—" : Slugify(_name);
+
+    private static string Slugify(string value)
+    {
+        var sb = new System.Text.StringBuilder();
+        var prevDash = false;
+        foreach (var ch in value.ToLowerInvariant().Trim())
+        {
+            if (char.IsLetterOrDigit(ch))
+            {
+                sb.Append(ch);
+                prevDash = false;
+            }
+            else if (!prevDash && sb.Length > 0)
+            {
+                sb.Append('-');
+                prevDash = true;
+            }
+        }
+        return sb.ToString().TrimEnd('-');
+    }
+
+    private async Task SubmitAsync()
+    {
+        var name = _name.Trim();
+        if (string.IsNullOrEmpty(name))
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+        _error = null;
+        try
+        {
+            var description = string.IsNullOrWhiteSpace(_description) ? null : _description.Trim();
+            var logoUrl = string.IsNullOrWhiteSpace(_logoUrl) ? null : _logoUrl.Trim();
+            if (Brand is not null)
+            {
+                await Catalog.UpdateBrandAsync(new UpdateBrandRequest(Brand.Id, name, description, logoUrl));
+            }
+            else
+            {
+                await Catalog.CreateBrandAsync(new CreateBrandRequest(name, description, logoUrl));
+            }
+
+            Dialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private void Cancel() => Dialog.Cancel();
+}

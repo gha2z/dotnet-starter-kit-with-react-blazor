@@ -1,0 +1,74 @@
+@namespace FSH.Admin.Wasm.Pages.Tenants
+@using FSH.BlazorShared.Models.Identity
+@using FSH.BlazorShared.Services
+@using MudBlazor
+
+@if (_canView && _grants.Count > 0)
+{
+    <MudPaper Elevation="1" Class="pa-6 mb-4">
+        <div class="d-flex align-center gap-2 mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.Badge" Color="Color.Primary" />
+            <div>
+                <MudText Typo="Typo.h6" Style="margin: 0;">Active impersonations</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Style="margin: 0;">
+                    Operators currently signed in as users in this tenant. Revoking immediately
+                    invalidates the issued token.
+                </MudText>
+            </div>
+        </div>
+
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+        }
+
+        <MudList T="ImpersonationGrantDto" Dense="true">
+            @foreach (var grant in _grants)
+            {
+                var row = grant;
+                <MudListItem T="ImpersonationGrantDto">
+                    <div class="d-flex align-center justify-space-between w-100 gap-2">
+                        <div style="min-width: 0;">
+                            <div class="d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Class="mud-success-text" />
+                                <MudText Typo="Typo.body2" Style="margin: 0;">
+                                    @(row.ActorUserName ?? row.ActorUserId)
+                                    <span class="mud-text-secondary">→</span>
+                                    @(row.ImpersonatedUserName ?? row.ImpersonatedUserId)
+                                </MudText>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Success" Class="font-mono" Style="text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px;">
+                                    Active
+                                </MudChip>
+                            </div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="font-mono">
+                                started @row.StartedAtUtc.ToLocalTime().ToString("HH:mm:ss") · expires @row.ExpiresAtUtc.ToLocalTime().ToString("HH:mm:ss")
+                                @if (!string.IsNullOrEmpty(row.Reason))
+                                {
+                                    <span>· @Truncate(row.Reason, 80)</span>
+                                }
+                            </MudText>
+                        </div>
+                        <div class="d-flex align-center gap-2">
+                            @if (_canReopen && _currentUserId is not null && row.ActorUserId == _currentUserId)
+                            {
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                                           StartIcon="@Icons.Material.Filled.LockOpen"
+                                           OnClick="@(() => ReopenAsync(row))">
+                                    Re-open
+                                </MudButton>
+                            }
+                            @if (_canRevoke)
+                            {
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error"
+                                           StartIcon="@Icons.Material.Filled.Close"
+                                           OnClick="@(() => RevokeAsync(row))">
+                                    Revoke
+                                </MudButton>
+                            }
+                        </div>
+                    </div>
+                </MudListItem>
+            }
+        </MudList>
+    </MudPaper>
+}

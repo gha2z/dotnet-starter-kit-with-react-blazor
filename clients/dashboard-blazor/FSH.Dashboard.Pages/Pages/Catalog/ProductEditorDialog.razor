@@ -1,0 +1,215 @@
+@namespace FSH.Dashboard.Wasm.Pages.Catalog
+@using FSH.BlazorShared.Models.Catalog
+@using FSH.BlazorShared.Services
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex align-center gap-2 mb-2">
+            <FshToneIconTile Icon="@Icons.Material.Filled.Inventory2" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
+            <MudText Typo="Typo.h6" Style="margin: 0;">@(Product is null ? "Add a product" : "Edit product")</MudText>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
+            @(Product is null
+                ? "Add a product to your catalog. Give it a brand, a category, an initial price, and a starting stock."
+                : $"Update {Product.Name}. Price and stock are changed separately so the ledger stays traceable.")
+        </MudText>
+
+        @if (Product is null)
+        {
+            <MudTextField T="string"
+                          @bind-Value="_sku"
+                          Label="SKU"
+                          Placeholder="ACME-001"
+                          Required="true"
+                          HelperText="Unique stock-keeping unit. Cannot be changed after creation."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          MaxLength="64" />
+        }
+
+        <MudTextField T="string"
+                      @bind-Value="_name"
+                      Label="Name"
+                      Placeholder="Camping Stove Pro"
+                      Required="true"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Class="mb-4"
+                      MaxLength="256" />
+
+        <MudTextField T="string"
+                      @bind-Value="_description"
+                      Label="Description"
+                      HelperText="Shown on the product detail page."
+                      Placeholder="A lightweight stove for backcountry cooking."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Lines="3"
+                      Class="mb-4"
+                      MaxLength="4096" />
+
+        <div class="d-flex gap-3 mb-4 flex-wrap">
+            <MudSelect T="Guid?" @bind-Value="_brandId"
+                       Label="Brand"
+                       Required="true"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Style="min-width: 200px;"
+                       Class="flex-grow-1">
+                @foreach (var brand in Brands)
+                {
+                    <MudSelectItem T="Guid?" Value="@brand.Id">@brand.Name</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="Guid?" @bind-Value="_categoryId"
+                       Label="Category"
+                       Required="true"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Style="min-width: 200px;"
+                       Class="flex-grow-1">
+                @foreach (var category in Categories)
+                {
+                    <MudSelectItem T="Guid?" Value="@category.Id">@category.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+
+        @if (Product is null)
+        {
+            <div class="d-flex gap-3 mb-4 flex-wrap">
+                <MudTextField T="decimal" @bind-Value="_priceAmount"
+                              Label="Price"
+                              Adornment="@Adornment.Start"
+                              AdornmentText="@_currency"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Style="min-width: 160px;">
+                </MudTextField>
+                <MudTextField T="int" @bind-Value="_stock"
+                              Label="Starting stock"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Style="min-width: 140px;">
+                </MudTextField>
+                <MudSelect T="string" @bind-Value="_currency"
+                           Label="Currency"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Style="min-width: 140px;">
+                    @foreach (var currency in Currencies)
+                    {
+                        <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex align-center justify-space-between mb-2" style="border: 1px solid var(--mud-palette-divider); border-radius: 10px; padding: 12px 14px;">
+                <div>
+                    <div style="font-size: 13px; font-weight: 500;">Visible in catalog</div>
+                    <div class="fsh-muted-copy" style="font-size: 12px;">Hidden products don't appear in any listing or report.</div>
+                </div>
+                <MudSwitch T="bool" @bind-Value="_isActive" Color="Color.Primary" />
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="mt-4">
+                <FshErrorBand Message="@_error" />
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync"
+                   Disabled="_isSubmitting || string.IsNullOrWhiteSpace(_name) || _brandId is null || _categoryId is null">
+            @(_isSubmitting ? "Saving…" : Product is null ? "Add product" : "Save changes")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private static readonly string[] Currencies = ["USD", "EUR", "GBP"];
+
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+    [Inject] private ICatalogService Catalog { get; set; } = default!;
+
+    [Parameter] public ProductDto? Product { get; set; }
+    [Parameter] public IReadOnlyList<BrandDto> Brands { get; set; } = [];
+    [Parameter] public IReadOnlyList<CategoryDto> Categories { get; set; } = [];
+
+    private string _sku = string.Empty;
+    private string _name = string.Empty;
+    private string _description = string.Empty;
+    private Guid? _brandId;
+    private Guid? _categoryId;
+    private decimal _priceAmount;
+    private string _currency = "USD";
+    private int _stock;
+    private bool _isActive = true;
+    private string? _error;
+    private bool _isSubmitting;
+
+    protected override void OnInitialized()
+    {
+        if (Product is not null)
+        {
+            _name = Product.Name;
+            _description = Product.Description ?? string.Empty;
+            _brandId = Product.BrandId;
+            _categoryId = Product.CategoryId;
+            _priceAmount = Product.Price.Amount;
+            _currency = Product.Price.Currency;
+            _stock = Product.Stock;
+            _isActive = Product.IsActive;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        var name = _name.Trim();
+        if (string.IsNullOrEmpty(name) || _brandId is null || _categoryId is null)
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+        _error = null;
+        try
+        {
+            var description = string.IsNullOrWhiteSpace(_description) ? null : _description.Trim();
+            if (Product is not null)
+            {
+                await Catalog.UpdateProductAsync(new UpdateProductRequest(Product.Id, name, description, _brandId.Value, _categoryId.Value, _isActive));
+            }
+            else
+            {
+                var sku = _sku.Trim();
+                if (string.IsNullOrEmpty(sku))
+                {
+                    return;
+                }
+
+                await Catalog.CreateProductAsync(new CreateProductRequest(
+                    sku, name, description, _brandId.Value, _categoryId.Value, _priceAmount, _currency, _stock));
+            }
+
+            Dialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private void Cancel() => Dialog.Cancel();
+}

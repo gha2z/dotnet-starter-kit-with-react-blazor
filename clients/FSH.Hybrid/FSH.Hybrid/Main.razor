@@ -1,0 +1,72 @@
+@using FSH.BlazorShared.Components
+@using FSH.BlazorShared.Theming
+@using FSH.Hybrid.Services
+@inject FshThemeService Theme
+@inject NavigationManager Nav
+
+<MudThemeProvider Theme="FshMudTheme.CreateDashboard()" IsDarkMode="@Theme.IsDarkMode" IsDarkModeChanged="@OnThemeChanged" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<CascadingAuthenticationState>
+    <FshErrorBoundary>
+        <Router AppAssembly="@typeof(Main).Assembly">
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                    <NotAuthorized>
+                        <RedirectToLogin />
+                    </NotAuthorized>
+                    <Authorizing>
+                        <MudOverlay Visible="true">
+                            <MudProgressCircular Indeterminate="true" />
+                        </MudOverlay>
+                    </Authorizing>
+                </AuthorizeRouteView>
+            </Found>
+            <NotFound>
+                <FshNotFound />
+            </NotFound>
+        </Router>
+    </FshErrorBoundary>
+</CascadingAuthenticationState>
+
+@code {
+    private async Task OnThemeChanged(bool isDarkMode)
+        => await Theme.SetAsync(isDarkMode);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Theme.Changed += OnThemeChanged;
+        await Theme.InitializeAsync();
+
+        // Consume a deep-linked Blazor route (fsh://<path>) handed in from the native shell.
+        HybridNavigationBridge.BlazorPathReceived += OnBlazorPathReceived;
+        var pending = HybridNavigationBridge.PendingPath;
+        HybridNavigationBridge.PendingPath = null;
+        if (!string.IsNullOrEmpty(pending))
+        {
+            Nav.NavigateTo(pending);
+        }
+    }
+
+    private void OnThemeChanged()
+        => InvokeAsync(StateHasChanged);
+
+    private void OnBlazorPathReceived(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        HybridNavigationBridge.PendingPath = null;
+        Nav.NavigateTo(path);
+    }
+
+    public void Dispose()
+    {
+        Theme.Changed -= OnThemeChanged;
+        HybridNavigationBridge.BlazorPathReceived -= OnBlazorPathReceived;
+    }
+}

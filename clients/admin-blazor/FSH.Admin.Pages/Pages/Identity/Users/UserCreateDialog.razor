@@ -1,0 +1,80 @@
+@namespace FSH.Admin.Wasm.Pages.Identity.Users
+
+<MudDialog MaxWidth="MaxWidth.Medium" FullWidth="true">
+    <DialogContent>
+        <MudForm @ref="_mudForm" Validation="@(new DataAnnotationsValidator())">
+            <div class="d-flex align-center gap-3 mb-2">
+                <FshToneIconTile Icon="@Icons.Material.Filled.Person" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
+                <MudText Typo="Typo.subtitle1" Class="font-weight-semibold" Style="margin: 0;">Identity</MudText>
+            </div>
+            <div style="border-bottom: 1px solid var(--mud-palette-divider); margin-bottom: 16px;"></div>
+
+            <MudGrid GutterSize="GutterSize.Small">
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.FirstName"
+                                  Label="First name"
+                                  For="@(() => _form.FirstName)"
+                                  Disabled="@_isSubmitting" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.LastName"
+                                  Label="Last name"
+                                  For="@(() => _form.LastName)"
+                                  Disabled="@_isSubmitting" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_form.UserName"
+                                  Label="Username"
+                                  For="@(() => _form.UserName)"
+                                  HelperText="3-32 characters, starts with a letter. Letters, digits, . _ -"
+                                  Disabled="@_isSubmitting" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_form.Email"
+                                  Label="Email"
+                                  For="@(() => _form.Email)"
+                                  Disabled="@_isSubmitting" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_form.PhoneNumber"
+                                  Label="Phone number (optional)"
+                                  For="@(() => _form.PhoneNumber)"
+                                  Disabled="@_isSubmitting" />
+                </MudItem>
+            </MudGrid>
+
+            <div class="d-flex align-center gap-3 mt-4 mb-2">
+                <FshToneIconTile Icon="@Icons.Material.Filled.Lock" Tone="Color.Secondary" TileSize="32px" IconSize="Size.Small" />
+                <MudText Typo="Typo.subtitle1" Class="font-weight-semibold" Style="margin: 0;">Credentials</MudText>
+            </div>
+            <div style="border-bottom: 1px solid var(--mud-palette-divider); margin-bottom: 16px;"></div>
+
+            <MudGrid GutterSize="GutterSize.Small">
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.Password"
+                                  Label="Password"
+                                  InputType="InputType.Password"
+                                  For="@(() => _form.Password)"
+                                  Disabled="@_isSubmitting" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.ConfirmPassword"
+                                  Label="Confirm password"
+                                  InputType="InputType.Password"
+                                  For="@(() => _form.ConfirmPassword)"
+                                  Disabled="@_isSubmitting" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting" OnClick="SaveAsync">
+            @if (_isSubmitting)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+            }
+            Create account
+        </MudButton>
+    </DialogActions>
+</MudDialog>

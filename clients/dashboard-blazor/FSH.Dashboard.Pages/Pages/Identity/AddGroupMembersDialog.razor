@@ -1,0 +1,82 @@
+@namespace FSH.Dashboard.Wasm.Pages.Identity
+@using FSH.BlazorShared.Models.Identity
+@using FSH.BlazorShared.Services
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex align-center gap-2 mb-2">
+            <FshToneIconTile Icon="@Icons.Material.Filled.PersonAdd" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
+            <MudText Typo="Typo.h6" Style="margin: 0;">Add members</MudText>
+        </div>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
+            Search this tenant's users and pick the ones to add. Users already in the group are skipped.
+        </MudText>
+
+        <MudTextField @bind-Value="_search"
+                      @bind-Value:after="(async () => await OnSearchChangedAsync(_search))"
+                      Placeholder="Search by name, username, or email…"
+                      Variant="Variant.Outlined"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      DebounceInterval="250"
+                      Margin="Margin.Dense"
+                      Class="mb-4" />
+
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+        }
+
+        @if (_isSearching)
+        {
+            <div class="d-flex justify-center py-4">
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            </div>
+        }
+        else if (_results.Count == 0)
+        {
+            <div class="fsh-muted-copy" style="font-size: 13px;">
+                @(string.IsNullOrWhiteSpace(_search)
+                    ? "Type to search for users in this tenant."
+                    : "No users found.")
+            </div>
+        }
+        else
+        {
+            <div class="fsh-perm-group" style="max-height: 320px; overflow: auto;">
+                @foreach (var user in _results)
+                {
+                    var userId = user.Id ?? string.Empty;
+                    var isSelected = userId.Length > 0 && _selected.Contains(userId);
+                    var isDisabled = userId.Length > 0 && _existingMemberIds.Contains(userId);
+                    <div class="fsh-perm-row">
+                        <MudCheckBox T="bool"
+                                     Value="@(isSelected || isDisabled)"
+                                     ValueChanged="@((bool value) => ToggleUser(userId, value))"
+                                     Disabled="@isDisabled" />
+                        <FshMonogram Seed="@(user.UserName ?? user.Email)" Name="@DisplayName(user)" PixelSize="28" />
+                        <div style="flex: 1; min-width: 0;">
+                            <div class="fsh-truncate" style="font-size: 13px; font-weight: 500;">@DisplayName(user)</div>
+                            <div class="fsh-truncate fsh-muted-copy" style="font-size: 11.5px;">@@@(user.UserName) · @(user.Email ?? "no email")</div>
+                        </div>
+                        @if (isDisabled)
+                        {
+                            <span class="fsh-status-tag">already in group</span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_selected.Count == 0 || _isSubmitting)" OnClick="SaveAsync">
+            @if (_isSubmitting)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+            }
+            Add @(_selected.Count) member@(_selected.Count == 1 ? "" : "s")
+        </MudButton>
+    </DialogActions>
+</MudDialog>

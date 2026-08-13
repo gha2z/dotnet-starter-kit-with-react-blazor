@@ -1,0 +1,28 @@
+@namespace FSH.BlazorShared.Components
+@using FSH.BlazorShared.Infrastructure
+@inject INetworkStatus Network
+@implements IDisposable
+
+@if (!Network.IsOnline)
+{
+    <MudAlert Severity="Severity.Warning" Class="fsh-offline-banner" Elevation="1" role="alert">
+        <MudIcon Icon="@Icons.Material.Filled.WifiOff" Size="Size.Small" />
+        <span>You are offline. Some features may be unavailable.</span>
+    </MudAlert>
+}
+
+@code {
+    /// <summary>
+    /// Connectivity banner (React parity: dashboard offline alert). Appears while the
+    /// browser reports no network and auto-dismisses on reconnect.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        Network.StatusChanged += OnStatusChanged;
+        await Network.InitializeAsync();
+    }
+
+    private void OnStatusChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Network.StatusChanged -= OnStatusChanged;
+}

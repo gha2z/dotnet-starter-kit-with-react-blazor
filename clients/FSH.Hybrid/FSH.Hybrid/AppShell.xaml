@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="FSH.Hybrid.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:hybrid="clr-namespace:FSH.Hybrid"
+    xmlns:pages="clr-namespace:FSH.Hybrid.Pages"
+    Shell.FlyoutBehavior="Flyout"
+    Shell.NavBarIsVisible="False"
+    Title="FSH Hybrid">
+
+    <FlyoutItem Title="FSH Hybrid" FlyoutDisplayOptions="AsMultipleItems">
+        <Tab Title="Dashboard" Route="home">
+            <ShellContent ContentTemplate="{DataTemplate hybrid:MainPage}" />
+        </Tab>
+        <Tab Title="Settings" Route="settings">
+            <ShellContent ContentTemplate="{DataTemplate pages:SettingsPage}" />
+        </Tab>
+        <Tab Title="About" Route="about">
+            <ShellContent ContentTemplate="{DataTemplate pages:AboutPage}" />
+        </Tab>
+    </FlyoutItem>
+
+</Shell>

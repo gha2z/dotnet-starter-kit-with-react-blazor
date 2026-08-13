@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+	<!-- Push notifications (Phase 5.4): required on API 33+; harmless on older APIs. -->
+	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+	<uses-permission android:name="android.permission.INTERNET" />
+	<!-- Required by MAUI Essentials Connectivity (ConnectivityService). -->
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+	<!-- Dev-only cleartext to emulator host aliases (10.0.2.2/localhost); everything else HTTPS-only. -->
+	<application android:networkSecurityConfig="@xml/network_security_config" />
+</manifest>

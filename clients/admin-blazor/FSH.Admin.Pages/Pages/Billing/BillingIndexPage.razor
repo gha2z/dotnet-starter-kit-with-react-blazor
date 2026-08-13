@@ -1,0 +1,17 @@
+@page "/billing"
+@attribute [Authorize(Policy = BillingPermissions.View)]
+@inject NavigationManager Nav
+
+<MudContainer Class="d-flex align-center justify-center" Style="min-height: 50vh">
+    <MudProgressCircular Indeterminate="true" />
+</MudContainer>
+
+@code {
+    // React parity: /billing is the index route and redirects to the invoices tab
+    // (routes.tsx: { index: true, element: <Navigate to="/billing/invoices" replace /> }).
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Yield();
+        Nav.NavigateTo("/billing/invoices", replace: true);
+    }
+}

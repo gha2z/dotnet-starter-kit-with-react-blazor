@@ -1,0 +1,165 @@
+@page "/catalog/products"
+@attribute [Authorize]
+@using FSH.BlazorShared.Formatting
+@using MudBlazor
+
+<FshPageHeader Title="Products"
+               Description="The inventory your customers see. Manage pricing, stock, and visibility from one place."
+               Icon="@Icons.Material.Filled.Inventory2"
+               Count="@(_totalCount == 0 && _loading ? null : _totalCount)"
+               Unit="product">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add"
+               OnClick="() => OpenEditorAsync(null)">
+        New product
+    </MudButton>
+</FshPageHeader>
+
+<MudTextField @bind-Value="_search"
+              Placeholder="Search by name, SKU, or slug…"
+              Variant="Variant.Outlined"
+              Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Filled.Search"
+              Class="mb-4"
+              Immediate="true" />
+
+@if (_error is not null)
+{
+    <FshErrorBand Message="@_error" />
+}
+
+@if (_loading)
+{
+    @for (var i = 0; i < 4; i++)
+    {
+        <div class="fsh-skeleton" style="height: 56px; border-radius: 12px; margin-bottom: 8px;"></div>
+    }
+}
+else if (Filtered.Count == 0)
+{
+    <FshEmptyState Icon="@(FilterActive ? Icons.Material.Filled.Search : Icons.Material.Filled.Inventory2)"
+                   Title="@(FilterActive ? "No products found" : "No products yet")"
+                   Description="@EmptyStateDescription">
+        @if (FilterActive)
+        {
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="ClearFilters">Clear filters</MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="() => OpenEditorAsync(null)">
+                Add product
+            </MudButton>
+        }
+    </FshEmptyState>
+}
+else
+{
+    <div class="d-flex flex-wrap gap-2 align-center mb-3">
+        <p class="fsh-muted-copy" style="font-size: 12px; font-weight: 500; margin: 0;">@MetaText</p>
+    </div>
+
+    <FshFilterBar Caption="Filters">
+        <MudSelect T="Guid?" @bind-Value="_brandFilter"
+                   Label="Brand"
+                   Clearable="true"
+                   Variant="Variant.Text"
+                   Style="min-width: 160px;">
+            @foreach (var brand in _brands)
+            {
+                <MudSelectItem T="Guid?" Value="@brand.Id">@brand.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect T="Guid?" @bind-Value="_categoryFilter"
+                   Label="Category"
+                   Clearable="true"
+                   Variant="Variant.Text"
+                   Style="min-width: 160px;">
+            @foreach (var category in _categories)
+            {
+                <MudSelectItem T="Guid?" Value="@category.Id">@category.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <div class="fsh-prod-filter-pill">
+            <MudButton OnClick="() => SetVisibility(null)"
+                       Class="@(_visibilityFilter == null ? "mud-button-root-active" : "")">
+                All
+            </MudButton>
+            <MudButton OnClick="() => SetVisibility(true)"
+                       Class="@(_visibilityFilter == true ? "mud-button-root-active" : "")">
+                Active
+            </MudButton>
+            <MudButton OnClick="() => SetVisibility(false)"
+                       Class="@(_visibilityFilter == false ? "mud-button-root-active" : "")">
+                Hidden
+            </MudButton>
+        </div>
+    </FshFilterBar>
+
+    <div class="fsh-products-grid fsh-list-head">
+        <span>Product</span>
+        <span>SKU</span>
+        <span class="fsh-col-brand">Brand</span>
+        <span class="fsh-col-price">Price · Stock</span>
+        <span></span>
+    </div>
+
+    @for (var i = 0; i < Filtered.Count; i++)
+    {
+        var product = Filtered[i];
+        var isLast = i == Filtered.Count - 1;
+        <div class="fsh-products-grid fsh-list-row @(isLast ? "" : "fsh-row-border")" @onclick="() => OpenDetail(product)" style="cursor: pointer;">
+            <div class="d-flex align-center gap-3 min-w-0">
+                <span class="fsh-prod-thumb">
+                    @if (!string.IsNullOrEmpty(product.ThumbnailUrl))
+                    {
+                        <img src="@product.ThumbnailUrl" alt="" loading="lazy" referrerpolicy="no-referrer" />
+                    }
+                    else
+                    {
+                        <span class="fsh-prod-initial">@Initial(product.Name)</span>
+                    }
+                </span>
+                <div class="min-w-0">
+                    <div class="fsh-truncate d-flex align-center gap-2" style="font-size: 14px; font-weight: 500; color: var(--mud-palette-text-primary);">
+                        <span class="fsh-truncate">@product.Name</span>
+                        @if (!product.IsActive)
+                        {
+                            <span class="fsh-status-tag">hidden</span>
+                        }
+                    </div>
+                    @if (!string.IsNullOrEmpty(product.Description))
+                    {
+                        <div class="fsh-truncate fsh-muted-copy" style="font-size: 12px;" title="@product.Description">@product.Description</div>
+                    }
+                </div>
+            </div>
+            <code class="fsh-truncate fsh-mono-muted" style="font-size: 12px;" title="@product.Sku">@product.Sku</code>
+            <div class="fsh-truncate fsh-col-brand" style="font-size: 12.5px; color: var(--mud-palette-text-secondary);">
+                <span class="fsh-truncate" title="@BrandName(product.BrandId)">@BrandName(product.BrandId)</span>
+                <span class="fsh-dot"></span>
+                <span class="fsh-truncate" title="@CategoryName(product.CategoryId)">@CategoryName(product.CategoryId)</span>
+            </div>
+            <div class="fsh-col-price">
+                <div class="fsh-list-money">@FshFormat.Money(product.Price.Amount, product.Price.Currency)</div>
+                <div class="mt-1">
+                    @StockChip(product)
+                </div>
+            </div>
+            <div class="d-flex align-center justify-end gap-1" @onclick:stopPropagation="true">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                               Color="Color.Default" aria-label="@($"Edit {product.Name}")"
+                               OnClick="() => OpenEditorAsync(product)" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                               Color="Color.Error" aria-label="@($"Delete {product.Name}")"
+                               OnClick="() => ConfirmDeleteAsync(product)" />
+            </div>
+        </div>
+    }
+
+    @if (!FilterActive && _totalPages > 1)
+    {
+        <div class="d-flex align-center justify-center gap-2 mt-4">
+            <FshPager TotalCount="@_totalCount" PageNumber="@_pageNumber" PageSize="@PageSize" PageChanged="GoToPage" />
+        </div>
+    }
+}

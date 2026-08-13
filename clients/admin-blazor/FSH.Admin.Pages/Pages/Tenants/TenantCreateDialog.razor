@@ -1,0 +1,120 @@
+@namespace FSH.Admin.Wasm.Pages.Tenants
+
+<MudDialog MaxWidth="MaxWidth.Medium" FullWidth="true">
+    <DialogContent>
+        <MudForm @ref="_mudForm" Validation="@(new DataAnnotationsValidator())">
+            <div class="d-flex align-center gap-3 mb-2">
+                <FshToneIconTile Icon="@Icons.Material.Filled.Business" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
+                <div>
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-semibold" Style="margin: 0;">Tenant details</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">Name, identifier, and billing plan for the new tenant workspace.</MudText>
+                </div>
+            </div>
+            <div style="border-bottom: 1px solid var(--mud-palette-divider); margin-bottom: 16px;"></div>
+
+            <MudGrid GutterSize="GutterSize.Small">
+                <MudItem xs="12" sm="8">
+                    <MudTextField T="string" Value="@_form.Name"
+                                  ValueChanged="@OnNameChangedAsync"
+                                  id="ct-name" Label="Display name"
+                                  For="@(() => _form.Name)"
+                                  HelperText="2-128 characters. Shown across the console."
+                                  Disabled="@_isSubmitting" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudSelect T="string"
+                               Value="@_form.PlanKey"
+                               ValueChanged="@OnPlanKeyChangedAsync"
+                               id="ct-plan" Label="Billing plan"
+                               HelperText="@PlanHelperText"
+                               Disabled="@(_isSubmitting || _plans.Count == 0)">
+                        @foreach (var plan in _plans)
+                        {
+                            <MudSelectItem T="string" Value="@plan.Key">@PlanLabel(plan)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Value="@_form.Id"
+                                  ValueChanged="@OnIdChangedAsync"
+                                  id="ct-id" Label="Identifier"
+                                  For="@(() => _form.Id)"
+                                  ReadOnly="@_idAutoMode"
+                                  HelperText="@IdHelperText"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@(_idAutoMode ? Icons.Material.Filled.Edit : Icons.Material.Filled.AutoMode)"
+                                  AdornmentAriaLabel="@(_idAutoMode ? "Edit identifier" : "Auto-derive identifier")"
+                                  OnAdornmentClick="@ToggleIdMode"
+                                  Disabled="@_isSubmitting" />
+                </MudItem>
+            </MudGrid>
+
+            <div class="d-flex align-center gap-3 mt-4 mb-2">
+                <FshToneIconTile Icon="@Icons.Material.Filled.AdminPanelSettings" Tone="Color.Secondary" TileSize="32px" IconSize="Size.Small" />
+                <div>
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-semibold" Style="margin: 0;">Admin account</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">Seeds the first admin user for this tenant. Can rotate the password after first login.</MudText>
+                </div>
+            </div>
+            <div style="border-bottom: 1px solid var(--mud-palette-divider); margin-bottom: 16px;"></div>
+
+            <MudGrid GutterSize="GutterSize.Small">
+                <MudItem xs="12">
+                    <MudTextField T="string" Value="@_form.AdminEmail"
+                                  ValueChanged="@OnAdminEmailChangedAsync"
+                                  id="ct-adminEmail" Label="Admin email"
+                                  InputType="InputType.Email"
+                                  For="@(() => _form.AdminEmail)"
+                                  HelperText="The tenant's seed admin account."
+                                  Disabled="@_isSubmitting" />
+                </MudItem>
+                <MudItem xs="12">
+                    <div class="d-flex align-center gap-2">
+                        <MudTextField T="string" Value="@_form.AdminPassword"
+                                      ValueChanged="@OnAdminPasswordChangedAsync"
+                                      id="ct-adminPassword" Label="Initial admin password"
+                                      InputType="InputType.Password"
+                                      For="@(() => _form.AdminPassword)"
+                                      HelperText="At least 8 characters."
+                                      Style="flex: 1;"
+                                      Disabled="@_isSubmitting" />
+                        <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.AutoAwesome"
+                                   OnClick="GeneratePassword" Disabled="@_isSubmitting">
+                            Generate
+                        </MudButton>
+                    </div>
+                </MudItem>
+            </MudGrid>
+
+            <MudExpansionPanels Class="mt-4" MultiExpansion="false">
+                <MudExpansionPanel Text="Advanced — issuer, dedicated database">
+                    <MudTextField T="string" Value="@_form.Issuer"
+                                  ValueChanged="@OnIssuerChangedAsync"
+                                  id="ct-issuer" Label="JWT issuer"
+                                  For="@(() => _form.Issuer)"
+                                  HelperText="Mirrors the identifier by default. Issued in tokens to scope sessions."
+                                  Class="pt-4"
+                                  Disabled="@_isSubmitting" />
+                    <MudTextField T="string" Value="@_form.ConnectionString"
+                                  ValueChanged="@OnConnectionStringChangedAsync"
+                                  id="ct-connectionString" Label="Connection string (optional)"
+                                  For="@(() => _form.ConnectionString)"
+                                  HelperText="Leave blank to use the shared catalog database."
+                                  Class="mt-4"
+                                  Disabled="@_isSubmitting" />
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_isSubmitting" OnClick="SaveAsync">
+            @if (_isSubmitting)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" />
+            }
+            Create tenant
+        </MudButton>
+    </DialogActions>
+</MudDialog>
