@@ -176,7 +176,8 @@
 
     // React parity: the single `Permission` (if any) AND at least one of `AnyPermissions` (if any).
     private bool CanSee(NavSpec.NavItem item)
-        => (item.Permission is null || _permissions.Contains(item.Permission))
+        => item.IsImplemented
+           && (item.Permission is null || _permissions.Contains(item.Permission))
            && (item.AnyPermissions is null || item.AnyPermissions.Any(_permissions.Contains));
 
     private Task OnSkipLinkClick()

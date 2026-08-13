@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using FSH.BlazorShared.Auth;
+using FSH.BlazorShared.Components;
 using FSH.BlazorShared.Theming;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -35,13 +36,6 @@ public sealed partial class MainLayout : IDisposable
 
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
         => await EvaluateUserAsync(task);
-
-    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
-    {
-        // Location sync is handled in the .razor @code block via _currentUri
-        // This subscription ensures StateHasChanged is invoked
-        InvokeAsync(StateHasChanged);
-    }
 
     private async Task EvaluateUserAsync(Task<AuthenticationState> task)
     {

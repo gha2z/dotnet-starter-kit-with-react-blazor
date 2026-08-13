@@ -10,7 +10,22 @@ namespace FSH.Hybrid.Shared;
 /// </summary>
 public static class NavSpec
 {
-    public sealed record NavItem(string Href, string Icon, string Label, string? Permission, IReadOnlyList<string>? AnyPermissions);
+    /// <summary>
+    /// Routes that actually have a matching @page implementation in this app.
+    /// Everything in TopItems/Sections that is NOT listed here is hidden from the
+    /// sidebar so users never land on an FshNotFound dead-end.
+    /// </summary>
+    public static readonly IReadOnlySet<string> ImplementedRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "/",
+        "/files",
+        "/login",
+    };
+
+    public sealed record NavItem(string Href, string Icon, string Label, string? Permission, IReadOnlyList<string>? AnyPermissions)
+    {
+        public bool IsImplemented => ImplementedRoutes.Contains(Href);
+    }
 
     public sealed record NavSection(string Id, string Caption, string Icon, IReadOnlyList<NavItem> Items);
 
