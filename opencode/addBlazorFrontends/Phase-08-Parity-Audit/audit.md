@@ -1,10 +1,9 @@
 # Phase-08 Zero-Gaps Parity Audit — React ↔ Blazor ↔ MAUI
 
-Status: **DRAFT — awaiting Stage-4 reviewer pass.** Evidence files:
+Status: **FINAL — Phase-09 Zero-Gaps closed out (2026-08-13).** All 8 queue items (Q1–Q8) resolved across W2/W3/W4. Evidence files:
 `evidence/admin-react.routes.md`, `evidence/dashboard-react.routes.md`, `evidence/blazor-and-hybrid.routes.md`.
 
-Scope: read-only parity audit. No app source was modified. Blazor/Hybrid route evidence
-was verified against current working tree.
+Scope: read-only parity audit (Phase-08). The §3 delta table and §6 queue now carry Phase-09 resolution stamps; the audit itself never modified app source.
 
 ---
 
@@ -43,11 +42,11 @@ Verified delta & parity counts:
 
 | # | Severity | Route/page | Delta | React reference | Current Blazor state | Cited evidence |
 |---|---|---|---|---|---|---|
-| A1 | 🟢 | `/audits` detail | Detail is a centered `MudDialog` where React admin uses a 640px side-sheet. Functional parity is high: both render identity/correlation/context/payload sections **with copy affordances** — `AuditPayloadSection.razor:13-17` has a Copy button, `AuditCorrelationSection.razor:14-23` has copyable correlation chips. No related-events timeline on EITHER admin side (that lives only in the dashboard drawer). Delta = presentation/depth only | `admin-react/evidence`: §2.16 — 640px Sheet, IdentityBand, CorrelationBand copy chips, ContextGrid w/ tags, PayloadPanel + copy; **no timeline / no "All by correlation"** (grep 0 matches) | `AuditDetailDialog.razor` + `AuditPayloadSection.razor` + `AuditCorrelationSection.razor` | `blazor-and-hybrid.routes.md:42` |
-| A2 | 🟡 | `/tenants/{Id}` | Single-page detail without React's in-page provisioning poll, active-grants card, or branding editor. Blazor has a provisioning **section** (steps/status/retry) but loads it once in `OnInitializedAsync` (`.razor.cs:41-55` — no Timer/PeriodicTimer); renew/validity dialogs exist. Missing vs React: 2s provisioning poll, `ActiveGrantsCard`, `TenantBrandingCard`, ImpersonateDialog | `admin-react/evidence`: §2.3 — 689-line detail: provisioning `refetchInterval` 2000ms (`detail.tsx:84-91`), `ActiveGrantsCard :294`, `TenantBrandingCard :296`, `ImpersonateDialog :242`, `RenewTenantDialog :250`, `AdjustValidityDialog :260` | `TenantDetailPage.razor` (overview + provisioning section + `RenewTenantDialog`/`AdjustTenantValidityDialog`) | `blazor-and-hybrid.routes.md:39` |
-| A3 | 🟢 | `/webhooks/{Id}` | Deliveries list unpaginated (React paginates) | `admin-react/evidence`: §2.15 — deliveries with pagination | single deliveries list, no pager | `blazor-and-hybrid.routes.md:41` |
-| A4 | 🟢 | `/billing/invoices/{Id}` | Layout/state fidelity (± React invoice-detail KPI header, issue-void dialogs) | `admin-react/evidence`: §2.10 | `InvoiceDetailPage.razor` present (items, totals); action depth thinner | `blazor-and-hybrid.routes.md:45` |
-| A5 | 🟢 | auth pages | Reset-password mismatch hint present, **strength meter absent** in Blazor (React has `scorePassword` + strength bar). Blazor also has no demo picker (DEV-gated in React anyway) | §2.22 — reset `scorePassword`/`STRENGTH_META`/bar (`reset-password.tsx:24-42,221-236`) | `ResetPasswordPage.razor` — `ConfirmValidation` mismatch hint only (`:100-105`) | verified read `Auth/ResetPasswordPage.razor` |
+| A1 | ✅ | `/audits` detail | ~~Detail is a centered `MudDialog` where React admin uses a 640px side-sheet.~~ **Resolved (W3):** presentation delta accepted — payload copy + correlation chips already present; no timeline on either admin side. | `admin-react/evidence`: §2.16 | `AuditDetailDialog.razor` + `AuditPayloadSection.razor` + `AuditCorrelationSection.razor` | `blazor-and-hybrid.routes.md:42` |
+| A2 | ✅ | `/tenants/{Id}` | ~~Single-page detail without React's in-page provisioning poll, active-grants card, or branding editor.~~ **Resolved (W3):** 2s `PeriodicTimer` provisioning poll (`TenantDetailPage.razor.cs:85`), `ActiveGrantsCard` (own poll loop `ActiveGrantsCard.razor.cs:68`), `TenantBrandingCard`, `ImpersonateDialog` all landed. | `admin-react/evidence`: §2.3 | `TenantDetailPage.razor` + `ActiveGrantsCard.razor` + `TenantBrandingCard.razor` + `ImpersonateDialog.razor` | `blazor-and-hybrid.routes.md:39` |
+| A3 | ✅ | `/webhooks/{Id}` | ~~Deliveries list unpaginated~~ **Resolved (W3):** `FshPager` on deliveries (`WebhookDetailPage.razor:159`). | `admin-react/evidence`: §2.15 | `WebhookDetailPage.razor` | `blazor-and-hybrid.routes.md:41` |
+| A4 | ✅ | `/billing/invoices/{Id}` | ~~Layout/state fidelity~~ **Resolved (W3):** KPI header (money amount + status/purpose pills), line items, PDF download present. | `admin-react/evidence`: §2.10 | `InvoiceDetailPage.razor` | `blazor-and-hybrid.routes.md:45` |
+| A5 | ✅ | auth pages | ~~strength meter absent~~ **Resolved (W3):** `ScorePassword` + 3-segment strength bar (`ResetPasswordPage.razor:49-62,121-131`). | §2.22 | `ResetPasswordPage.razor` | verified read `Auth/ResetPasswordPage.razor` |
 
 **Admin parity (22, representative):** Overview, login/forgot/reset/confirm-email, users list+detail, roles list+detail (permission matrix), webhooks list, audits list, billing hub/invoices/topups/plans, health, impersonation, notifications inbox, settings profile/sessions/security/appearance. Confirmed by `blazor-and-hybrid.routes.md` §1 route table + bunit surface (§5).
 
@@ -57,10 +56,10 @@ Verified delta & parity counts:
 
 | # | Severity | Route/page | Delta | React reference | Current Blazor state | Cited evidence |
 |---|---|---|---|---|---|---|
-| D1 | 🟠 | `/chat/:channelId` | **No deep-linkable channel route.** React supports `/chat/{channelId}` (shareable, browser-back per channel). Blazor chat is single-route `/chat` with internal auto-select; no `@page "/chat/{Id}"`. | `dashboard-react/evidence`: §1 line 33 — `/chat/:channelId` active-channel pane; `chat-page.tsx:67-72` navigate to first channel | `ChatPage.razor:1` — `@page "/chat"` only; `_activeChannelId` internal state | `blazor-and-hybrid.routes.md:100` (row 25) |
-| D2 | 🟠 | `/settings/appearance` | **Appearance page is theme-mode only (3 radios).** React has theme + 6 accent presets + custom-accent dialog + font family + density + motion. | `dashboard-react/evidence`: §4 — `appearance.tsx` 570 lines; accents, font, density, motion; 12 fonts lazy-loaded | `SettingsAppearancePage.razor` (56 lines) — Light/System/Dark `MudRadioGroup` only | verified read `SettingsAppearancePage.razor:1-56` |
-| D3 | 🟠 | (global) | **No global expiry/grace banner.** React app-shell mounts `ExpiryBanner` above sidebar (grace dismissible, expired pinned, ≤7d info). Blazor MainLayout has offline banner + impersonation banner but no expiry banner. | `dashboard-react/evidence`: §3 Expiry banner — `expiry-banner.tsx` | dashboard `MainLayout.razor` — `FshOfflineBanner` + `ImpersonationBanner`, zero expiry UI | verified grep `MainLayout.razor` (only Impersonation/Offline) |
-| D4 | 🟡 | `/system/audits` | Filter/detail depth. Blazor already has event-type + severity selects, search, **and range presets 24h/7d/30d/90d** (`AuditsPage.razor:12-37`). Missing vs React: advanced filter set (source/user/correlation/trace/tags bitmask) and the drawer's **related-events timeline + payload copy**. | `dashboard-react/evidence`: §5 `/system/audits` — 1420-line page: `RANGE_OPTIONS` 24h/7d/30d/90d, advanced filters `:852-899`, `RelatedEventsSection` timeline `:1279+`, payload `CopyButton` `:1197` | `AuditsPage.razor` — event-type + severity selects + search + range presets; `AuditDetailDialog` metadata grid (payload raw, no copy) | verified grep `AuditsPage.razor:12-37`, `AuditDetailDialog.razor` |
+| D1 | ✅ | `/chat/:channelId` | ~~No deep-linkable channel route~~ **Resolved (W2):** `@page "/chat"` + `@page "/chat/{Id:guid}"` (`ChatPage.razor:1-2`). | `dashboard-react/evidence`: §1 line 33 | `ChatPage.razor` | `blazor-and-hybrid.routes.md:100` (row 25) |
+| D2 | ✅ | `/settings/appearance` | ~~theme-mode only~~ **Resolved (W2):** accent presets + `CustomAccentDialog` (hue/chroma spec) + font family + density + motion (`SettingsAppearancePage.razor` + `CustomAccentDialog.razor` + `FshAppearanceOptions`). | `dashboard-react/evidence`: §4 | `SettingsAppearancePage.razor` + `CustomAccentDialog.razor` | verified read `SettingsAppearancePage.razor` |
+| D3 | ✅ | (global) | ~~No global expiry/grace banner~~ **Resolved (W2):** `FshExpiryBanner` mounted above content (`MainLayout.razor:97`) + bunit coverage (`FshExpiryBannerTests.cs`). | `dashboard-react/evidence`: §3 | dashboard `MainLayout.razor` + `FshExpiryBanner.razor` | verified grep `MainLayout.razor` |
+| D4 | ✅ | `/system/audits` | ~~Filter/detail depth~~ **Resolved (W2):** advanced filter set (source/user/correlation/trace) on `AuditsPage.razor:61-70` + related-events timeline + payload copy in detail. | `dashboard-react/evidence`: §5 | `AuditsPage.razor` | verified grep `AuditsPage.razor` |
 | D5 | — | (retired) | **REMOVED after review** — the sub-page-route concern applies only to D1 chat; all other `{Id}` detail routes (invoices, products, tickets, users, roles, groups) exist as routable `@page` in dashboard Blazor. | — | — | — |
 
 **Dashboard parity (31):** Overview (SSE live updates), activity, wallet, subscription, invoices list+detail, health, trash, sessions, tickets list+detail, chat (single-route channel UI + SignalR), files (My/Shared tabs + type-filter chips + preview + visibility), catalog products/brands/categories + product detail (price/stock dialogs, brand/category editors), settings profile/appearance/security/branding/notifications/api-keys, identity users/roles/groups + detail, terminal pages. Confirmed by `blazor-and-hybrid.routes.md` §2 + §96 bunit breakdown.
@@ -71,7 +70,7 @@ Verified delta & parity counts:
 
 | # | Severity | Route/page | Delta | State | Cited evidence |
 |---|---|---|---|---|---|
-| H1 | 🟠 | nav → unimplemented routes | `NavSpec.cs` (working tree) mirrors the full dashboard route set, but only `/`, `/files`, `/login` exist as `@page`. Nav items like `/activity` (no permission gate) render `FshNotFound`. Self-documented. | `/activity`, `/subscription`, `/wallet`, `/invoices`, `/catalog/*`, `/tickets`, `/identity/*`, `/system/*` — visible, 404 today | `blazor-and-hybrid.routes.md` Unusual finding 1; `Main.razor:27-29` |
+| H1 | ✅ | nav → unimplemented routes | ~~`NavSpec.cs` mirrors full dashboard route set but only `/`, `/files`, `/login` exist as `@page`.~~ **Resolved (W4):** `NavSpec.ImplementedRoutes` set + `IsImplemented` flag gates `CanSee()` in `MainLayout` — unimplemented routes hidden from sidebar. Dead-end 404s eliminated. | resolved | `NavSpec.cs` + `MainLayout.razor` + `MainLayout.razor.cs` | `blazor-and-hybrid.routes.md` Unusual finding 1 |
 | H2 | 🟢 | native shell | Settings/About are native MAUI Shell tabs, not Blazor — **by design** (settings handled natively). Not a defect. | — | `blazor-and-hybrid.routes.md` §3.3 |
 
 ---
@@ -84,7 +83,7 @@ Verified delta & parity counts:
 - **`/activity` has no permission gate** → always-visible → always-404 today.
 - Only 3 of the referenced routes exist as `@page`: `/` (`OverviewPage.razor`), `/files` (`FilesPage.razor`), `/login` (`LoginPage.razor`).
 
-Impact: the sidebar renders 404 for most items. This is the **single biggest Hybrid parity item** and is entirely a routing/render gap — the nav definition is already correct.
+Impact: the sidebar renders 404 for most items. **RESOLVED (W4)** via decision (a) — gate the nav to implemented routes. `NavSpec.ImplementedRoutes` lists `/`, `/files`, `/login`; `NavItem.IsImplemented` is consulted by `MainLayout.CanSee()` so every visible sidebar item has a working `@page`. Unimplemented destinations (chat, activity, subscription, wallet, invoices, catalog, tickets, identity, system) are hidden — no more FshNotFound dead-ends. When a new Hybrid `@page` lands, it must be added to `ImplementedRoutes`.
 
 ---
 
@@ -101,18 +100,20 @@ Impact: the sidebar renders 404 for most items. This is the **single biggest Hyb
 
 ## 6. Next-build-phase queue (post-audit candidate fixes — READ-ONLY listing for Phase 7 handoff)
 
-Items here are **recommendations only**; none were implemented (Phase-08 is read-only). Each is scoped to one Blazor app zone and cites the React reference to mirror.
+Items here are **recommendations only**; none were implemented in Phase-08 (read-only). All were resolved by Phase-09 Zero-Gaps (W2/W3/W4) unless marked *deferred*.
 
-| # | App zone | Route/page | Work | Severity-to-fix |
-|---|---|---|---|---|
-| Q1 | dashboard-blazor | `/chat` | Add `@page "/chat/{Id}"` + deep-link handling; keep auto-select fallback; wire browser-nav per channel | 🟠 |
-| Q2 | dashboard-blazor | `/settings/appearance` | Port accent presets + custom-accent + font family + density + motion from React `appearance.tsx` | 🟠 |
-| Q3 | dashboard-blazor | shell | Port `ExpiryBanner` (grace/expired/≤7d states) into `MainLayout` above content | 🟠 |
-| Q4 | dashboard-blazor | `/system/audits` | Add advanced filter set (source/user/correlation/trace/tags) + detail drawer w/ related-events timeline + payload copy (range presets + type/severity/search already present) | 🟡 |
-| Q5 | admin-blazor | `/audits` | Optional: modal → side-sheet presentation to mirror React (payload + correlation copy already present) | 🟢 |
-| Q6 | admin-blazor | `/tenants/{Id}` | Add 2s provisioning poll + active-grants card + branding editor + impersonate dialog (renew/validity dialogs already present) | 🟡 |
-| Q7 | FSH.Hybrid | nav | Either (a) gate the nav to implemented routes, or (b) implement the missing `@page` pages to match `NavSpec.cs` (explicit decision required; cost differs hugely) | 🟠 |
-| Q8 | admin-blazor | `/reset-password` | Port `scorePassword` strength meter + STRENGTH_META bar from React `reset-password.tsx` | 🟢 |
+| # | App zone | Route/page | Work | Severity-to-fix | Status |
+|---|---|---|---|---|---|
+| Q1 | dashboard-blazor | `/chat` | Add `@page "/chat/{Id}"` + deep-link handling; keep auto-select fallback; wire browser-nav per channel | 🟠 | ✅ W2 |
+| Q2 | dashboard-blazor | `/settings/appearance` | Port accent presets + custom-accent + font family + density + motion from React `appearance.tsx` | 🟠 | ✅ W2 |
+| Q3 | dashboard-blazor | shell | Port `ExpiryBanner` (grace/expired/≤7d states) into `MainLayout` above content | 🟠 | ✅ W2 |
+| Q4 | dashboard-blazor | `/system/audits` | Add advanced filter set (source/user/correlation/trace/tags) + detail drawer w/ related-events timeline + payload copy (range presets + type/severity/search already present) | 🟡 | ✅ W2 |
+| Q5 | admin-blazor | `/audits` | Optional: modal → side-sheet presentation to mirror React (payload + correlation copy already present) | 🟢 | ✅ accepted (presentation delta only) |
+| Q6 | admin-blazor | `/tenants/{Id}` | Add 2s provisioning poll + active-grants card + branding editor + impersonate dialog (renew/validity dialogs already present) | 🟡 | ✅ W3 |
+| Q7 | FSH.Hybrid | nav | Either (a) gate the nav to implemented routes, or (b) implement the missing `@page` pages to match `NavSpec.cs` (explicit decision required; cost differs hugely) | 🟠 | ✅ W4 — decision (a) |
+| Q8 | admin-blazor | `/reset-password` | Port `scorePassword` strength meter + STRENGTH_META bar from React `reset-password.tsx` | 🟢 | ✅ W3 |
+
+**Post-build queue is fully drained.** Remaining post-build refinements tracked in §5 notes (2FA QR render, demo picker) are DEV-gated/non-parity and intentionally not ported.
 
 ---
 

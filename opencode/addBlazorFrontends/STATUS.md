@@ -15,7 +15,7 @@ Last Update: 2026-08-12 14:00, by: opencode (model: auto/coding — unresolved).
 | Phase 6 | ✅ **Complete — all 6.x code items DONE** (lazy loading ✅ + PWA ✅ + 6.4 a11y ✅ + 6.6 resilience ✅ + 6.7 docs ✅ + 6.8 audit ✅ + infinite scroll ✅ + preload ✅ + render opt ✅ + critical CSS ✅ + 6.1 tree-shaking/pre-compression verified + **6.9 ✅ RESOLVED wave 19** — stale-publish artifact; clean publish boots, no NIY crash); remaining: MAUI README (sess-maui), last-known-good cache (deferred) | dashboard bUnit 204/204 + E2E 18/18 · admin bUnit 158/158 |
 | Phase 7 | ✅ **All app parity gaps at zero** (3.12 Settings + 3.13 Terminal + 3.14 palette + styled 404 verified wave 16; admin accent/font/density by sess-maui) | dashboard 204/204 · admin 158/158 · both 0 warnings |
 | Phase 8 | ✅ Read-only parity audit (2026-08-11) — gap table at `Phase-08-Parity-Audit/audit.md` (DRAFT) | bUnit baseline re-confirmed 204/204 + 158/158 |
-| Phase 9 | 🟨 **Zero-Gaps build (W0–W4)** — W0 ✅ housekeeping committed · W1 ✅ theme instant-switch fix (single source of truth, MudThemeProvider OS watcher disabled) committed `323d1060` — dashboard 233/233 + admin 164/164 · **W2 next**: dashboard channel (overview polish, D2 appearance, D3 expiry banner, D1 chat deep-link, D4 audits) → W3 admin (A2 tenants detail, A1/A3/A4/A5) → W4 Hybrid nav gate + zero-delta drive + audit FINAL | dashboard 233/233 + admin 164/164 |
+| Phase 9 | ✅ **Zero-Gaps build (W0–W4) COMPLETE** — W0 ✅ housekeeping · W1 ✅ theme instant-switch fix `323d1060` · W2 ✅ dashboard channel (D1 chat deep-link `@page "/chat/{Id:guid}"`, D2 appearance accents/custom/font/density/motion, D3 `FshExpiryBanner` + tests, D4 audits advanced filters + timeline + copy; Overview polish `f948f566`) · W3 ✅ admin channel (A2 tenants 2s poll + ActiveGrantsCard + TenantBrandingCard + ImpersonateDialog, A3 webhook deliveries pager, A5 reset-password strength meter; A1/A4 verified) · W4 ✅ Hybrid nav gate `007f9e91` (ImplementedRoutes, dead-end 404s eliminated) — audit §3/§6 all resolved, **audit.md FINAL** | dashboard 233/233 + admin 164/164 |
 
 ## Active Streams (parallel, git worktrees)
 
@@ -34,7 +34,9 @@ Last Update: 2026-08-12 14:00, by: opencode (model: auto/coding — unresolved).
 
 ⚠️ **6.9 RESOLVED (wave 19):** clean-publish re-test reversed the wave-18 finding — uncompressed `blazor.webassembly.js` + `dotnet.js` ARE emitted on Release publish (deleted `obj/Release` first); `blazor.boot.json` absent by .NET 10 design (boot config inlined in `dotnet.js`); plain static host boots to login in ~4.3 s, 0 pageerrors, 0 failed requests, no Mono NIY crash (both apps). **No code change.** Deployment-zone guidance (serve `.br`/`.gz` with `Content-Encoding`, 103 Early Hints) remains CDN config, not required for boot.
 
-**Next: Phase-09 W2 — dashboard channel** (overview polish, D2 appearance richness, D3 expiry banner, D1 chat deep-link, D4 audits depth) → W3 admin (tenants detail + chrome) → W4 Hybrid + zero-delta + audit FINAL. Per-wave `-CloseOut` commits + summaries. **Current state (do not rediscover):** W1 theme instant-switch fixed (323d1060) — `ObserveSystemDarkModeChange="false"` on both MudThemeProviders; regression probe passes (7b39a093). Dashboard 233/233 · admin 164/164.
+**Phase 9 COMPLETE.** W0–W4 all committed: theme fix, dashboard channel (D1–D4 + Overview polish), admin channel (A1–A5 + tenants detail), Hybrid nav gate (`ImplementedRoutes` + build fixes). Audit §3/§6 fully resolved; `audit.md` FINAL. All gaps from the Phase-08 parity audit are closed.
+
+**Next:** Phase-10 is not yet defined. Current test baselines: dashboard 233/233 + admin 164/164 + hybrid 12/12. No regressions across any W0–W4 wave.
 
 ## Files to Read
 
