@@ -157,6 +157,7 @@ Configure in `.opencode/opencode-swarm.json` → `agents.<name>.model`.
 | SAST | `sast_scan` (Semgrep + built-in) | Phase complete | Block phase |
 | Mutation test | `mutation_test` (80% kill) | Phase complete (opt-in) | Warn / Block |
 | Drift verify | `critic_drift_verifier` agent | Phase complete | Block phase |
+| **Browser walkthrough** | Playwright driver in `walkthrough/` (real clicks, console/network/visual checks) | Any Blazor/Hybrid page added or changed | Block commit — bUnit is necessary but not sufficient (AGENTS.md GR#11) |
 | Review council | `reviewer` + `test_engineer` (min) | Phase complete | Block phase |
 | **Summary close-out** | `coordination.ps1 -CloseOut` (manual mode) | Wave/phase complete | Block commit |
 
