@@ -11,6 +11,9 @@
 #   pwsh coordination.ps1 -Session <sid> -LockCheck      # report lock state only
 #   pwsh coordination.ps1 -Session <sid> -CloseOut       # stage-A wave close-out gate (verifies summary
 #                                                          + Lessons section + STATUS.md refresh)
+#   pwsh coordination.ps1 -Session <sid> -Lessons        # print the tail of live/lessons.md (turn start)
+#   pwsh coordination.ps1 -Session <sid> -Lesson "..."   # append one lesson line (turn end) — the
+#                                                          continuous-improvement ledger (rule 13)
 #
 # Exit code 1 on any violation. Run from the repo root.
 
@@ -24,6 +27,9 @@ param(
     [switch]$UnlockVerify,
     [switch]$LockCheck,
     [switch]$CloseOut,
+    [switch]$Lessons,
+    [string]$Lesson,
+    [int]$LessonCount = 10,
     [int]$StaleHours = 12
 )
 
@@ -34,6 +40,7 @@ $liveDir = Join-Path $root 'opencode\addBlazorFrontends\live'
 $locksDir = Join-Path $liveDir 'locks'
 $lockFile = Join-Path $locksDir 'verify.lock'
 $sessionFile = Join-Path $liveDir "sess-$Session.md"
+$lessonsFile = Join-Path $liveDir 'lessons.md'
 $summaryDir = Join-Path $root 'opencode\addBlazorFrontends\00_summary'
 $statusFile = Join-Path $root 'opencode\addBlazorFrontends\STATUS.md'
 $failures = @()
@@ -203,6 +210,27 @@ if ($LockCheck) {
     }
 }
 
+# Continuous-improvement ritual (rule 13): -Lessons reads the shared ledger, -Lesson appends one line.
+if ($Lessons) {
+    Write-Host "=== coordination: lessons tail (last $LessonCount) ==="
+    if (-not (Test-Path $lessonsFile)) {
+        Write-Host "  (no lessons yet — add the first with -Lesson '...' at turn end)"
+    }
+    else {
+        Get-Content $lessonsFile | Select-Object -Last $LessonCount | ForEach-Object { Write-Host "  $_" }
+    }
+}
+
+if ($Lesson) {
+    if (-not (Test-Path $lessonsFile)) {
+        "@ lessons.md — session lesson ledger (append-only, rule 13). `n# Read the tail at every turn start; append exactly one line at every turn end. Each line: <timestamp> sess-<id> :: <failure -> root cause -> remedy -> proof>. The Gate refuses to pass while this file is missing." |
+            Set-Content -Path $lessonsFile -Encoding UTF8
+    }
+    $entry = "- $(Get-Date -Format 'yyyy-MM-dd HH:mm') sess-$Session :: $Lesson"
+    Add-Content -Path $lessonsFile -Value $entry -Encoding UTF8
+    Write-Host "  lesson appended: $entry"
+}
+
 if ($Gate) {
     Write-Host "=== coordination: gate ($Session) ==="
 
@@ -215,6 +243,11 @@ if ($Gate) {
     }
     else {
         Write-Host "  heartbeat OK ($($hb.ToString('yyyy-MM-dd HH:mm')))."
+    }
+
+    # Continuous-improvement ritual (rule 13): the lesson ledger must exist before staging.
+    if (-not (Test-Path $lessonsFile)) {
+        $failures += 'live/lessons.md is missing - append a lesson before staging: coordination.ps1 -Session <sid> -Lesson "..." (rule 13)'
     }
 
     if (Test-Path $lockFile) {

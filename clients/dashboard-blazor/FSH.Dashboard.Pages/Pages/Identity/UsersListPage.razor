@@ -106,7 +106,7 @@ else
     {
         var user = _items[i];
         var isLast = i == _items.Count - 1;
-        <div class="fsh-users-grid fsh-list-row @(isLast ? "" : "fsh-row-border")" @onclick="() => OpenDetail(user)" style="cursor: pointer;">
+        <div class="fsh-users-grid fsh-list-row @(isLast ? "" : "fsh-row-border")" @onclick="() => OpenDetail(user)" @onclick:stopPropagation="true" role="button" tabindex="0" aria-label="Open user @(DisplayName(user))" @onkeydown="@((e) => OnRowKeyDownAsync(e, user))" style="cursor: pointer;">
             <div class="d-flex align-center gap-3 min-w-0">
                 <FshMonogram Seed="@(user.UserName ?? user.Email)" Name="@DisplayName(user)" PixelSize="36" />
                 <div class="min-w-0">

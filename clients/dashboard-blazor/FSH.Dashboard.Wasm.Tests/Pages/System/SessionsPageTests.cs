@@ -109,4 +109,71 @@ public sealed class SessionsPageTests : TestSetup
 
         cut.WaitForAssertion(() => cut.Markup.ShouldContain("You"));
     }
+
+    [Fact]
+    public void Shows_revoke_all_button_for_active_session()
+    {
+        var sessions = new List<UserSessionDto>
+        {
+            new(
+                Id: Guid.NewGuid(),
+                UserId: Guid.NewGuid().ToString(),
+                UserName: "Alice",
+                UserEmail: "alice@acme.com",
+                IpAddress: "192.168.1.1",
+                DeviceType: "Desktop",
+                Browser: "Chrome",
+                BrowserVersion: "120",
+                OperatingSystem: "Windows",
+                OsVersion: "11",
+                CreatedAt: DateTime.UtcNow.AddDays(-1),
+                LastActivityAt: DateTime.UtcNow.AddMinutes(-5),
+                ExpiresAt: DateTime.UtcNow.AddHours(1),
+                IsActive: true,
+                IsCurrentSession: false),
+        };
+
+        _sessionService.GetTenantSessionsAsync(
+                Arg.Any<string?>(), Arg.Any<bool?>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<UserSessionDto>(sessions, 1, 25, 1, 1, false, false));
+
+        var cut = Render<SessionsPage>();
+
+        cut.WaitForAssertion(() => cut.FindAll("button[aria-label='Sign out all devices']").Count.ShouldBe(1));
+        cut.FindAll("button[aria-label='Revoke session']").Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void Hides_revoke_buttons_for_current_session()
+    {
+        var sessions = new List<UserSessionDto>
+        {
+            new(
+                Id: Guid.NewGuid(),
+                UserId: Guid.NewGuid().ToString(),
+                UserName: "Current",
+                UserEmail: "current@acme.com",
+                IpAddress: "10.0.0.1",
+                DeviceType: "Desktop",
+                Browser: "Firefox",
+                BrowserVersion: "121",
+                OperatingSystem: "Linux",
+                OsVersion: "6.5",
+                CreatedAt: DateTime.UtcNow.AddHours(-2),
+                LastActivityAt: DateTime.UtcNow.AddMinutes(-1),
+                ExpiresAt: DateTime.UtcNow.AddHours(1),
+                IsActive: true,
+                IsCurrentSession: true),
+        };
+
+        _sessionService.GetTenantSessionsAsync(
+                Arg.Any<string?>(), Arg.Any<bool?>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<UserSessionDto>(sessions, 1, 25, 1, 1, false, false));
+
+        var cut = Render<SessionsPage>();
+
+        cut.WaitForAssertion(() => cut.Markup.ShouldContain("You"));
+        cut.FindAll("button[aria-label='Sign out all devices']").Count.ShouldBe(0);
+        cut.FindAll("button[aria-label='Revoke session']").Count.ShouldBe(0);
+    }
 }

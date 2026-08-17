@@ -50,7 +50,13 @@ This is not optional — it is the protocol. The human should never need to say 
 
 **During work** (every user turn):
 1. `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Heartbeat`
-2. If the task touches files in another session's zone → stop; post on `board.md`; take another task
+2. Read the lesson ledger tail: `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Lessons`
+   — check the failure-pattern registry for a match BEFORE acting; a matching event gets `[RECUR]` on append
+3. If the task touches files in another session's zone → stop; post on `board.md`; take another task
+4. **At turn end, append exactly one lesson line** (what failed / what I learned → root cause → remedy →
+   proof): `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Lesson "<text>"`. If nothing
+   went wrong, write one improvement or one verified pattern — the ledger never gets an empty turn.
+   (This is the Continuous Improvement Ritual — rule 13; -Gate refuses to pass while the ledger is missing.)
 
 **Wave close-out** (after each verified unit of work — the "two-call" ritual):
 1. Write summary to `00_summary/implementation-summary-<ts>-<sid>.md` per `_template.md`
@@ -163,6 +169,14 @@ live/
     - Lost board row (concurrent append) → re-read, re-append with the same ID + `(re-appended)`.
     - Stale verify.lock → remove after checking creator heartbeat, announce on `board.md`.
     - Wrong identity in docs → fix the header only after re-verifying (never copy from memory).
+13. **Continuous Improvement Ritual** — every session must improve the workflow every turn:
+    - `live/lessons.md` is the append-only lesson ledger (shared, one line per turn: failure → root cause →
+      remedy → proof). Read its tail at turn start (**before** acting) and append exactly one line at turn end.
+    - `live/lessons.md` top section is the **failure-pattern registry** — recurring failure classes with
+      standing remedies. When a new event matches a registered pattern, the appended line carries `[RECUR]`
+      and follows the registered remedy (that is the enforcement: patterns are never re-litigated).
+    - `-Gate` fails closed while the ledger is missing; `-CloseOut` already requires the `## Lessons` section
+      in the wave summary. A session that never records a lesson cannot stage.
 
 ## Coordination Gate Script
 
@@ -185,6 +199,10 @@ pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Heartbeat
 
 # wave close-out (Stage A): summary + ## Lessons section + refreshed STATUS.md (exit code 1 = block commit)
 pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -CloseOut
+
+# continuous improvement (rule 13): read the ledger at turn start, append one line at turn end
+pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Lessons
+pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Lesson "<failure -> root cause -> remedy -> proof>"
 ```
 
 The zone→session map lives at the top of the script (keep it in sync with `Scope Restriction`

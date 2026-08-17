@@ -24,6 +24,8 @@
                 <span class="fsh-mono-label">MOBILE: <span class="fsh-mono-medium">@_stats.MobileCount</span></span>
             </div>
         }
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                       OnClick="RefreshAsync" aria-label="Refresh sessions" />
     </div>
 </MudPaper>
 
@@ -90,6 +92,11 @@ else
             <MudTd>
                 @if (context.IsActive && !context.IsCurrentSession)
                 {
+                    @if (!string.IsNullOrEmpty(context.UserId))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Security" Size="Size.Small"
+                                       OnClick="() => RevokeAllForUserAsync(context)" aria-label="Sign out all devices" />
+                    }
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                    OnClick="() => RevokeSessionAsync(context)" aria-label="Revoke session" />
                 }
@@ -169,6 +176,38 @@ else
         finally
         {
             _loading = false;
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task RevokeAllForUserAsync(UserSessionDto session)
+    {
+        if (!Guid.TryParse(session.UserId, out var userId)) return;
+
+        var parameters = new DialogParameters
+        {
+            { "Message", $"Sign {session.UserName ?? session.UserEmail} out of all devices?" },
+            { "ConfirmText", "Sign out all" },
+            { "CancelText", "Cancel" },
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<FshConfirmDialogContent>("Revoke all sessions", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return;
+
+        try
+        {
+            await SessionService.AdminRevokeAllUserSessionsAsync(userId);
+            Snackbar.Add("All sessions revoked.", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to revoke sessions: {ex.Message}", Severity.Error);
         }
     }
 

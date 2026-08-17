@@ -89,6 +89,7 @@ public class IdentityModule : IModule
         var services = builder.Services;
         services.AddScoped<RolePermissionSyncer>();
         services.AddHostedService<RolePermissionSyncHostedService>();
+        services.AddHostedService<SessionCleanupHostedService>();
         services.AddSingleton<IAuthorizationMiddlewareResultHandler, PathAwareAuthorizationHandler>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<ICurrentUserService>());

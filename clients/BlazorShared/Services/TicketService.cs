@@ -89,13 +89,13 @@ public sealed class TicketService(HttpClient http) : ITicketService
     public async Task<PagedResult<TicketDto>> ListTrashedTicketsAsync(int pageNumber = 1, int pageSize = 20, CancellationToken ct = default)
     {
         var query = QueryString(("pageNumber", pageNumber.ToString()), ("pageSize", pageSize.ToString()));
-        return await http.GetFromJsonAsync<PagedResult<TicketDto>>($"{Base}/tickets/trash?{query}", ct)
+        return await http.GetFromJsonAsync<PagedResult<TicketDto>>($"{Base}/trash?{query}", ct)
             ?? new PagedResult<TicketDto>([], pageNumber, pageSize, 0, 0, false, false);
     }
 
     public async Task RestoreTicketAsync(Guid ticketId, CancellationToken ct = default)
     {
-        var response = await http.PostAsync($"{Base}/tickets/{ticketId}/restore", null, ct);
+        var response = await http.PostAsync($"{Base}/{ticketId}/restore", null, ct);
         response.EnsureSuccessStatusCode();
     }
 }

@@ -1,7 +1,6 @@
 @page "/settings/notifications"
 @attribute [Authorize]
-@layout SettingsLayout
-
+<SettingsLayout>
 <FshPageHeader Title="Notification preferences" Icon="@Icons.Material.Filled.Notifications"
                Description="Choose which events you want delivered as email or in-app notifications." />
 
@@ -17,3 +16,4 @@
         </MudText>
     </MudStack>
 </MudPaper>
+</SettingsLayout>

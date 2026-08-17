@@ -1,11 +1,11 @@
 @page "/settings/appearance"
 @attribute [Authorize]
-@layout SettingsLayout
 @implements IDisposable
 @using FSH.BlazorShared.Theming
 @inject FshThemeService ThemeService
 @inject IDialogService Dialog
 
+<SettingsLayout>
 <FshPageHeader Title="Appearance" Icon="@Icons.Material.Filled.Palette"
                Description="Theme, accent, typography and motion preferences." />
 
@@ -187,3 +187,4 @@
         }
     }
 }
+</SettingsLayout>

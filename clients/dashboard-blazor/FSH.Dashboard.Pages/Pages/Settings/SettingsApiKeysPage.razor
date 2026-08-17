@@ -1,7 +1,6 @@
 @page "/settings/api-keys"
 @attribute [Authorize]
-@layout SettingsLayout
-
+<SettingsLayout>
 <FshPageHeader Title="API keys" Icon="@Icons.Material.Filled.Key"
                Description="Personal access tokens." />
 
@@ -16,3 +15,4 @@
         </MudText>
     </MudStack>
 </MudPaper>
+</SettingsLayout>

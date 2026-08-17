@@ -3,6 +3,7 @@ using FSH.BlazorShared.Models;
 using FSH.BlazorShared.Models.Identity;
 using FSH.BlazorShared.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using MudBlazor;
 
 namespace FSH.Dashboard.Wasm.Pages.Identity;
@@ -146,6 +147,16 @@ public sealed partial class UsersListPage
     }
 
     private void OpenDetail(UserDto user) => Nav.NavigateTo($"/identity/users/{user.Id}");
+
+    private Task OnRowKeyDownAsync(KeyboardEventArgs e, UserDto user)
+    {
+        if (e.Key is "Enter" or " ")
+        {
+            OpenDetail(user);
+        }
+
+        return Task.CompletedTask;
+    }
 
     private async Task OpenCreateAsync()
     {
