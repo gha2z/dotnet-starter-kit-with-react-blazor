@@ -1,0 +1,111 @@
+@namespace FSH.Dashboard.Wasm.Pages.Settings
+@using FSH.BlazorShared.Models.Tenants
+@using MudBlazor
+
+<div class="overflow-hidden rounded" style="border: 1px solid var(--mud-palette-lines-default);">
+    <div class="d-flex align-center justify-space-between px-3 py-2" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+        <MudText Typo="Typo.subtitle1" Style="margin: 0;">@Title</MudText>
+        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="ResetToDefaults">
+            Reset palette
+        </MudButton>
+    </div>
+    <div class="pa-3" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 16px;">
+        @foreach (var field in PaletteFields)
+        {
+            var value = Get(field.Key);
+            var valid = IsValidHex(value);
+            <div class="d-flex align-center" style="gap: 10px; min-width: 0;">
+                <label title="Pick @field.Label color" class="d-inline-flex align-center justify-center" style="cursor: pointer; width: 32px; height: 32px; flex-shrink: 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--mud-palette-lines-default); background-color: @(valid ? value : "transparent");">
+                    <input type="color"
+                           value="@(valid ? value : "#000000")"
+                           class="sr-only"
+                           aria-label="@field.Label color"
+                           @onchange="@(e => Set(field.Key, (e.Value as string)?.ToUpperInvariant() ?? string.Empty))" />
+                </label>
+                <div style="flex: 1; min-width: 0;">
+                    <div class="mud-input-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em;">@field.Label</div>
+                    <MudTextField T="string"
+                                  Value="@Get(field.Key)"
+                                  ValueChanged="@(v => Set(field.Key, v?.ToUpperInvariant() ?? string.Empty))"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  MaxLength="9"
+                                  Class="font-mono"
+                                  Error="@(!valid)"
+                                  ErrorText="@(valid ? null : "Invalid hex")" />
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public PaletteDto Palette { get; set; } = default!;
+    [Parameter] public PaletteDto Defaults { get; set; } = default!;
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private static readonly (string Key, string Label)[] PaletteFields =
+    [
+        (nameof(PaletteDto.Primary), "Primary"),
+        (nameof(PaletteDto.Secondary), "Secondary"),
+        (nameof(PaletteDto.Tertiary), "Tertiary"),
+        (nameof(PaletteDto.Background), "Background"),
+        (nameof(PaletteDto.Surface), "Surface"),
+        (nameof(PaletteDto.Error), "Error"),
+        (nameof(PaletteDto.Warning), "Warning"),
+        (nameof(PaletteDto.Success), "Success"),
+        (nameof(PaletteDto.Info), "Info"),
+    ];
+
+    private string Get(string key) => key switch
+    {
+        nameof(PaletteDto.Primary) => Palette.Primary,
+        nameof(PaletteDto.Secondary) => Palette.Secondary,
+        nameof(PaletteDto.Tertiary) => Palette.Tertiary,
+        nameof(PaletteDto.Background) => Palette.Background,
+        nameof(PaletteDto.Surface) => Palette.Surface,
+        nameof(PaletteDto.Error) => Palette.Error,
+        nameof(PaletteDto.Warning) => Palette.Warning,
+        nameof(PaletteDto.Success) => Palette.Success,
+        nameof(PaletteDto.Info) => Palette.Info,
+        _ => string.Empty,
+    };
+
+    private void Set(string key, string value)
+    {
+        switch (key)
+        {
+            case nameof(PaletteDto.Primary): Palette.Primary = value; break;
+            case nameof(PaletteDto.Secondary): Palette.Secondary = value; break;
+            case nameof(PaletteDto.Tertiary): Palette.Tertiary = value; break;
+            case nameof(PaletteDto.Background): Palette.Background = value; break;
+            case nameof(PaletteDto.Surface): Palette.Surface = value; break;
+            case nameof(PaletteDto.Error): Palette.Error = value; break;
+            case nameof(PaletteDto.Warning): Palette.Warning = value; break;
+            case nameof(PaletteDto.Success): Palette.Success = value; break;
+            case nameof(PaletteDto.Info): Palette.Info = value; break;
+        }
+
+        _ = OnChanged.InvokeAsync();
+    }
+
+    private void ResetToDefaults()
+    {
+        Palette.Primary = Defaults.Primary;
+        Palette.Secondary = Defaults.Secondary;
+        Palette.Tertiary = Defaults.Tertiary;
+        Palette.Background = Defaults.Background;
+        Palette.Surface = Defaults.Surface;
+        Palette.Error = Defaults.Error;
+        Palette.Warning = Defaults.Warning;
+        Palette.Success = Defaults.Success;
+        Palette.Info = Defaults.Info;
+        _ = OnChanged.InvokeAsync();
+    }
+
+    private static bool IsValidHex(string? value) =>
+        value is not null && value.Length == 7 && value[0] == '#' &&
+        value.Skip(1).All(c => Uri.IsHexDigit(c));
+}

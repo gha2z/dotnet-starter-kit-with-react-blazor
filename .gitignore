@@ -536,3 +536,4 @@ opencode/Next apps/
 
 # Coordination lock files (transient — created/deleted by coordination.ps1).
 opencode/addBlazorFrontends/live/locks/
+/opencode/addBlazorFrontends/walkthrough/evidence

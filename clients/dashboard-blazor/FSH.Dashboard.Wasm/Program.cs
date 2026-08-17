@@ -52,6 +52,7 @@ builder.Services.AddHttpClient("FSH.Auth", (sp, client) =>
 
 // Auth service
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ITenantThemeService, TenantThemeService>();
 
 // Tenant-scoped data services
 builder.Services.AddScoped<IBillingService, BillingService>();

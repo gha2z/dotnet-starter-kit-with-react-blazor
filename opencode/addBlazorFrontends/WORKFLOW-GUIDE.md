@@ -10,6 +10,11 @@ Read `readme.md` first for protocol overview. This file is the detailed task→t
 
 ## 1. Task → Skill Map (FSH-flavored)
 
+> **Canonical task→skill map: `workflows/current/task-skills.md`** (FSH recipes vs the dotnet-skills
+> plugin suite, FSH wins structurally) plus the repo's own `AGENTS.md` "Adding things" pointers.
+> The table below is retained for the Blazor/MAUI task families this track acts on; keep it in sync
+> with the canonical map, not the other way around.
+
 | Task | Skill | When to use |
 |---|---|---|
 | **Add API endpoint / business op** | `add-feature` | Vertical slice in existing module: command/query + handler + validator + endpoint |
@@ -68,8 +73,8 @@ Read `readme.md` first for protocol overview. This file is the detailed task→t
 ### B. Manual Multi-Session Mode (this protocol)
 
 **No plugin required**. Single opencode session, state in `live/` + `board.md` + `00-Index.md`.
-**Ritual is self-starting** — see `AGENTIC-GUIDE.md` §2.1 and `readme.md` "Self-starting" section.
-The human should never need to say "follow the ritual."
+**Ritual is self-starting** — see `workflows/current/session-protocol.md` (canonical) and
+`readme.md` "Self-starting" section. The human should never need to say "follow the ritual."
 
 | Step | Command / Action | Artifact updated |
 |---|---|---|
@@ -196,6 +201,11 @@ parameterization is replaced by the rename ritual above; the protocol core
 
 ## 6. File Inventory (Protocol Core)
 
+> The **tool-agnostic protocol core now ships in `workflows/`** — `workflows/current/`
+> (this environment's canonical package: session-protocol, coordination.ps1 v2, task-skills,
+> verify contract, adapt bridges) and `workflows/neutral/` (same, for the original repo / any
+> tool). This track's files below are its working instance of the same protocol.
+
 | File | Purpose |
 |---|---|
 | `readme.md` | Protocol overview + quick start |
@@ -212,7 +222,7 @@ parameterization is replaced by the rename ritual above; the protocol core
 | `STATUS.md` | One-line handoff state |
 | `99-Glossary.md` | Project terms |
 | `00-Setup.md` | Environment setup checklist |
-| `AGENTIC-GUIDE.md` | Standalone user guide |
+| `AGENTIC-GUIDE.md` | Standalone user guide (repo-level; protocol details canonical in `workflows/current/session-protocol.md`) |
 
 ---
 

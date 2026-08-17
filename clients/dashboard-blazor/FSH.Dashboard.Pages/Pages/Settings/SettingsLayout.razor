@@ -6,9 +6,11 @@
     }
 </style>
 
-@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Routing
+@using FSH.BlazorShared.Auth
+@using FSH.BlazorShared.Permissions
 @using MudBlazor
+@inject IPermissionsProvider PermissionsProvider
 
 <div class="space-y-6">
     <FshPageHeader Title="Settings" Icon="@Icons.Material.Filled.Settings" Tone="Color.Primary"
@@ -26,8 +28,11 @@
                                 Match="NavLinkMatch.Prefix">Security</MudNavLink>
                     <MudNavLink Href="/settings/appearance" Icon="@Icons.Material.Filled.Palette"
                                 Match="NavLinkMatch.Prefix">Appearance</MudNavLink>
-                    <MudNavLink Href="/settings/branding" Icon="@Icons.Material.Filled.Brush"
-                                Match="NavLinkMatch.Prefix">Branding</MudNavLink>
+                    @if (_canBranding)
+                    {
+                        <MudNavLink Href="/settings/branding" Icon="@Icons.Material.Filled.Brush"
+                                    Match="NavLinkMatch.Prefix">Branding</MudNavLink>
+                    }
                     <MudNavLink Href="/settings/notifications" Icon="@Icons.Material.Filled.Notifications"
                                 Match="NavLinkMatch.Prefix">Notifications</MudNavLink>
                     <MudNavLink Href="/settings/api-keys" Icon="@Icons.Material.Filled.Key"
@@ -40,14 +45,29 @@
                 <SettingsPillTab Href="/settings/profile" Icon="@Icons.Material.Filled.AccountCircle" Label="Profile" />
                 <SettingsPillTab Href="/settings/security" Icon="@Icons.Material.Filled.Shield" Label="Security" />
                 <SettingsPillTab Href="/settings/appearance" Icon="@Icons.Material.Filled.Palette" Label="Appearance" />
-                <SettingsPillTab Href="/settings/branding" Icon="@Icons.Material.Filled.Brush" Label="Branding" />
+                @if (_canBranding)
+                {
+                    <SettingsPillTab Href="/settings/branding" Icon="@Icons.Material.Filled.Brush" Label="Branding" />
+                }
                 <SettingsPillTab Href="/settings/notifications" Icon="@Icons.Material.Filled.Notifications" Label="Notifications" />
                 <SettingsPillTab Href="/settings/api-keys" Icon="@Icons.Material.Filled.Key" Label="API keys" />
             </div>
         </nav>
 
         <div class="flex-grow-1 min-w-0">
-            @Body
+            @ChildContent
         </div>
     </div>
 </div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _canBranding;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var permissions = await PermissionsProvider.GetPermissionsAsync();
+        _canBranding = permissions.Contains(MultitenancyPermissions.Tenants.UpdateTheme);
+    }
+}

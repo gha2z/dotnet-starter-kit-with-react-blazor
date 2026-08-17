@@ -40,4 +40,24 @@ public sealed class TenantThemeService(HttpClient http) : ITenantThemeService
         var response = await http.SendAsync(request, ct).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
     }
+
+    public async Task<TenantThemeDto> GetCurrentThemeAsync(CancellationToken ct = default)
+    {
+        var response = await http.GetAsync(ThemeBase, ct).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<TenantThemeDto>(ct).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Null tenant theme response");
+    }
+
+    public async Task UpdateCurrentThemeAsync(TenantThemeDto theme, CancellationToken ct = default)
+    {
+        var response = await http.PutAsJsonAsync(ThemeBase, theme, ct).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task ResetCurrentThemeAsync(CancellationToken ct = default)
+    {
+        var response = await http.PostAsync($"{ThemeBase}/reset", null, ct).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+    }
 }

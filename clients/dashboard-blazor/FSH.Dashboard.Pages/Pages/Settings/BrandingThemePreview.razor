@@ -1,0 +1,38 @@
+@namespace FSH.Dashboard.Wasm.Pages.Settings
+@using FSH.BlazorShared.Models.Tenants
+
+<div class="overflow-hidden rounded" style="background-color: @Palette.Background;">
+    <div class="d-flex align-center justify-space-between px-4 py-2"
+         style="border-bottom: 1px solid @HalveAlpha(Palette.Surface); background-color: @Palette.Surface;">
+        <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.6; color: @Palette.Secondary;">@Label</span>
+        <span class="px-2" style="font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; background-color: @Palette.Success; color: @Palette.Surface; border-radius: 8px;">live</span>
+    </div>
+    <div class="pa-4">
+        <div class="rounded pa-4" style="background-color: @Palette.Surface;">
+            <div class="d-flex align-center justify-space-between mb-3" style="gap: 8px;">
+                <span style="font-size: 13px; font-weight: 600; color: @Palette.Secondary;">Sample tenant page</span>
+                <span class="px-2" style="font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; background-color: @Palette.Success; color: @Palette.Surface; border-radius: 8px;">active</span>
+            </div>
+            <p class="mb-4" style="font-size: 12.5px; line-height: 1.5; color: @Palette.Secondary; opacity: 0.72;">
+                A short paragraph rendered with the chosen body color over the chosen
+                surface, on the chosen page background. Action buttons use the primary token.
+            </p>
+            <div class="d-flex flex-wrap" style="gap: 8px;">
+                <span class="px-3 py-1" style="font-size: 12px; font-weight: 500; background-color: @Palette.Primary; color: @Palette.Surface; border-radius: 8px;">Primary action</span>
+                <span class="px-3 py-1" style="font-size: 12px; font-weight: 500; border: 1px solid @Palette.Primary; color: @Palette.Primary; background-color: transparent; border-radius: 8px;">Secondary</span>
+                <span class="px-2 py-1 font-mono" style="font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; background-color: @Palette.Warning; color: @Palette.Background; border-radius: 8px;">warn</span>
+                <span class="px-2 py-1 font-mono" style="font-size: 10.5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; background-color: @Palette.Error; color: @Palette.Surface; border-radius: 8px;">error</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public PaletteDto Palette { get; set; } = default!;
+    [Parameter] public string Label { get; set; } = string.Empty;
+
+    private static string HalveAlpha(string hex)
+        => hex.Length == 7 && hex[0] == '#'
+            ? $"{hex}55"
+            : hex;
+}

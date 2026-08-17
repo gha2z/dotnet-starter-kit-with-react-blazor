@@ -1,17 +1,239 @@
 @page "/settings/branding"
 @attribute [Authorize]
-@layout SettingsLayout
+@using System.Text.Json
+@using FSH.BlazorShared.Models.Tenants
+@using FSH.BlazorShared.Services
+@using MudBlazor
+@inject ITenantThemeService ThemeService
+@inject ISnackbar Snackbar
 
+<SettingsLayout>
 <FshPageHeader Title="Branding" Icon="@Icons.Material.Filled.Brush"
                Description="Tenant colours and logos." />
 
-<MudPaper Class="pa-6" Elevation="0" Outlined="true">
-    <MudStack AlignItems="AlignItems.Center" Class="py-10">
-        <MudIcon Icon="@Icons.Material.Filled.Brush" Size="Size.Large" Color="Color.Default" />
-        <MudText Typo="Typo.h6">Branding settings aren't available yet.</MudText>
-        <MudText Typo="Typo.body2" Class="mud-text-secondary text-center" Style="max-width: 380px;">
-            Tenant-wide theme and logo management is on the v1.1 roadmap.
-            For now, your tenant admin can manage branding through the operator console.
+@if (_error is not null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+}
+else if (_theme is null)
+{
+    <MudPaper Class="pa-6" Elevation="0" Outlined="true">
+        <div class="d-flex justify-center py-6">
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+        </div>
+    </MudPaper>
+}
+else
+{
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-4">
+        Theme tokens consumed by your tenant's apps on sign-in. Live preview reflects the
+        primary action with the chosen palette.
+    </MudAlert>
+
+    <div class="d-flex align-center gap-2 mb-4">
+        @if (_theme.IsDefault && !IsDirty)
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="font-mono"
+                     Style="text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px;">
+                default
+            </MudChip>
+        }
+        @if (IsDirty)
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning"
+                     Class="font-mono" Style="text-transform: uppercase; letter-spacing: 0.14em; font-size: 10px;">
+                unsaved
+            </MudChip>
+        }
+    </div>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+        <BrandingThemePreview Palette="_theme.LightPalette" Label="Light preview" />
+    </MudPaper>
+
+    <div class="d-flex flex-wrap" style="gap: 20px;">
+        <div style="flex: 1 1 320px; min-width: 280px;">
+            <BrandingPaletteEditor Title="Light palette"
+                                   Palette="_theme.LightPalette"
+                                   Defaults="PaletteDto.DefaultLight"
+                                   OnChanged="OnChanged" />
+        </div>
+        <div style="flex: 1 1 320px; min-width: 280px;">
+            <BrandingPaletteEditor Title="Dark palette"
+                                   Palette="_theme.DarkPalette"
+                                   Defaults="PaletteDto.DefaultDark"
+                                   OnChanged="OnChanged" />
+        </div>
+    </div>
+
+    <MudPaper Class="mt-4 pa-4" Elevation="0" Outlined="true">
+        <MudText Typo="Typo.subtitle1" Style="margin: 0 0 2px;">Brand assets</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+            URLs to your hosted brand assets. Upload via the Files module first, then paste
+            the resulting public URL here.
         </MudText>
-    </MudStack>
-</MudPaper>
+        <div class="d-flex align-center" style="gap: 10px;">
+            <div class="flex-grow-1">
+                <MudTextField T="string" Label="Logo URL" Class="font-mono"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="https://cdn.example.com/logo.svg"
+                              Value="_theme.BrandAssets.LogoUrl"
+                              ValueChanged="@(v => SetAsset(v ?? string.Empty, setLogo: true))" />
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_theme.BrandAssets.LogoUrl) && !_logoHidden)
+            {
+                <img src="@_theme.BrandAssets.LogoUrl" alt="" role="presentation"
+                     @onerror="OnLogoError"
+                     style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain; border: 1px solid var(--mud-palette-lines-default); background-color: var(--mud-palette-background); flex-shrink: 0;" />
+            }
+        </div>
+        <div class="d-flex align-center" style="gap: 10px;">
+            <div class="flex-grow-1">
+                <MudTextField T="string" Label="Logo URL (dark mode)" Class="font-mono"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="https://cdn.example.com/logo-dark.svg"
+                              Value="_theme.BrandAssets.LogoDarkUrl"
+                              ValueChanged="@(v => SetAsset(v ?? string.Empty, setLogoDark: true))" />
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_theme.BrandAssets.LogoDarkUrl) && !_logoDarkHidden)
+            {
+                <img src="@_theme.BrandAssets.LogoDarkUrl" alt="" role="presentation"
+                     @onerror="OnLogoDarkError"
+                     style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain; border: 1px solid var(--mud-palette-lines-default); background-color: var(--mud-palette-background); flex-shrink: 0;" />
+            }
+        </div>
+        <div class="d-flex align-center" style="gap: 10px;">
+            <div class="flex-grow-1">
+                <MudTextField T="string" Label="Favicon URL" Class="font-mono"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Placeholder="https://cdn.example.com/favicon.ico"
+                              Value="_theme.BrandAssets.FaviconUrl"
+                              ValueChanged="@(v => SetAsset(v ?? string.Empty, setFavicon: true))" />
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_theme.BrandAssets.FaviconUrl) && !_faviconHidden)
+            {
+                <img src="@_theme.BrandAssets.FaviconUrl" alt="" role="presentation"
+                     @onerror="OnFaviconError"
+                     style="width: 36px; height: 36px; border-radius: 8px; object-fit: contain; border: 1px solid var(--mud-palette-lines-default); background-color: var(--mud-palette-background); flex-shrink: 0;" />
+            }
+        </div>
+    </MudPaper>
+
+    <div class="d-flex align-center justify-space-between mt-4 flex-wrap gap-2">
+        <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Refresh"
+                   Disabled="@(_isResetting || _isSaving)"
+                   OnClick="ResetToDefaultsAsync">
+            @(_isResetting ? "Resetting…" : "Reset to defaults")
+        </MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Save"
+                   Disabled="@(!IsDirty || _isSaving)"
+                   OnClick="SaveAsync">
+            @(_isSaving ? "Saving…" : "Save branding")
+        </MudButton>
+    </div>
+}
+</SettingsLayout>
+
+@code {
+    private TenantThemeDto? _theme;
+    private TenantThemeDto? _snapshot;
+    private string? _error;
+    private bool _isSaving;
+    private bool _isResetting;
+    private bool _logoHidden;
+    private bool _logoDarkHidden;
+    private bool _faviconHidden;
+
+    private bool IsDirty => _theme is not null && _snapshot is not null &&
+        JsonSerializer.Serialize(_theme) != JsonSerializer.Serialize(_snapshot);
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _error = null;
+        try
+        {
+            _theme = await ThemeService.GetCurrentThemeAsync();
+            _snapshot = JsonSerializer.Deserialize<TenantThemeDto>(JsonSerializer.Serialize(_theme));
+            _logoHidden = false;
+            _logoDarkHidden = false;
+            _faviconHidden = false;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load branding: {ex.Message}";
+        }
+    }
+
+    private void OnChanged() => StateHasChanged();
+
+    private void OnLogoError() => _logoHidden = true;
+
+    private void OnLogoDarkError() => _logoDarkHidden = true;
+
+    private void OnFaviconError() => _faviconHidden = true;
+
+    private void SetAsset(string value, bool setLogo = false, bool setLogoDark = false, bool setFavicon = false)
+    {
+        if (setLogo)
+        {
+            _theme!.BrandAssets.LogoUrl = string.IsNullOrWhiteSpace(value) ? null : value;
+            _theme.BrandAssets.DeleteLogo = string.IsNullOrWhiteSpace(value);
+            _logoHidden = false;
+        }
+        else if (setLogoDark)
+        {
+            _theme!.BrandAssets.LogoDarkUrl = string.IsNullOrWhiteSpace(value) ? null : value;
+            _theme.BrandAssets.DeleteLogoDark = string.IsNullOrWhiteSpace(value);
+            _logoDarkHidden = false;
+        }
+        else if (setFavicon)
+        {
+            _theme!.BrandAssets.FaviconUrl = string.IsNullOrWhiteSpace(value) ? null : value;
+            _theme.BrandAssets.DeleteFavicon = string.IsNullOrWhiteSpace(value);
+            _faviconHidden = false;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task SaveAsync()
+    {
+        _isSaving = true;
+        try
+        {
+            await ThemeService.UpdateCurrentThemeAsync(_theme!);
+            Snackbar.Add("Branding saved", Severity.Success);
+            _snapshot = JsonSerializer.Deserialize<TenantThemeDto>(JsonSerializer.Serialize(_theme));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Save failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task ResetToDefaultsAsync()
+    {
+        _isResetting = true;
+        try
+        {
+            await ThemeService.ResetCurrentThemeAsync();
+            Snackbar.Add("Branding reset to defaults", Severity.Success);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Reset failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isResetting = false;
+        }
+    }
+}

@@ -3,8 +3,10 @@
 **Last updated: 2026-08-12, by: opencode (model: auto/coding — unresolved).**
 
 The single source of truth for driving agentic coding on this repo **and** for bootstrapping
-future SaaS projects from it. Read this before starting any session; the per-project protocol
-details live in `opencode/addBlazorFrontends/readme.md` (session ritual, coordination rules).
+future SaaS projects from it. Read this before starting any session. The **session ritual,
+coordination rules, and close-out are canonical in `workflows/current/session-protocol.md`**
+(self-starting, tool-agnostic); this repo's live track keeps its own protocol details in
+`opencode/addBlazorFrontends/readme.md`.
 
 **Requirements live in `docs/spec/`** — one file per app/stream, authored by the human. Plans trace
 to `FR-###` ids from those files. Never invent requirements in a session; read the spec.
@@ -21,8 +23,9 @@ consumer, operator) start from `opencode/_tracks-template/`.
 > **New track = new owner + disjoint zone + (spec | index | status | live).** If any of those isn't
 > real, it's a **phase**, not a track.
 
-One session = one feature (or one planning pass), never a whole phase. See `HUMAN-GUIDE.md` for the
-six-verb driving loop from the human's side.
+One session = one feature (or one planning pass), never a whole phase. The human-facing driving
+loop is described in the session protocol (`workflows/current/session-protocol.md` §1–§3) —
+this file's successor to the retired `HUMAN-GUIDE.md`.
 
 ---
 
@@ -74,38 +77,19 @@ pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Start   # manu
 
 **When you receive any task prompt, do the following BEFORE starting work. No human reminder needed.**
 
-```
-1. READ FRESH (whole files, no offset-tunneling)
-   AGENTS.md → opencode/AGENTIC-GUIDE.md (this file) → opencode/addBlazorFrontends/readme.md
-   → opencode/addBlazorFrontends/STATUS.md → all opencode/addBlazorFrontends/live/*.md
-   → latest opencode/addBlazorFrontends/00_summary/implementation-summary-*.md
+> **Canonical protocol: `workflows/current/session-protocol.md`** — read it + the track's
+> `STATUS.md` + `live/*.md` fresh, then run `pwsh workflows/current/coordination.ps1 -Session <sid> -Start`.
+> For this repo's active track (`opencode/addBlazorFrontends/`), use that track's
+> `coordination.ps1` with the same flags.
 
-2. SESSION IDENTITY
-   Record your session id, model identity (verify fresh, never copy), scope, and heartbeat
-   in live/sess-<sid>.md (create from live/_template.md if missing).
-
-3. HEARTBEAT (every user turn, not only task boundaries)
-   pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Heartbeat
-
-4. OVERLAP CHECK
-   Is the task claimed by another session? Does it touch files in another session's zone?
-   If yes → post a request on board.md or take another task.
-
-5. WORK → VERIFY → CLOSE OUT (per wave)
-   a. Build + test: pwsh opencode/addBlazorFrontends/verify.ps1 (with verify lock)
-   b. Write summary file in 00_summary/ (implementation-summary-<ts>-sid.md, with ## Lessons)
-   c. Append one line to STATUS.md (wave + commit + test counts — append-only, never edit in place)
-   d. Update board row status cell only if a board row exists (cross-session work only)
-   e. pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -CloseOut
-   f. Stage by EXPLICIT PATHS (never git add -A), show git diff --cached --stat, wait for approval.
-```
-
-**Key rules baked into this ritual:**
+Key rules baked into the ritual (enforced by the canonical protocol + `coordination.ps1`):
 - Verification numbers in docs ALWAYS come from a real run THIS SESSION — never from memory.
 - Summary file in `00_summary/` is the **single tracking artifact** per wave (carries Lessons, file diff, verification).
 - `STATUS.md` is an **append-only one-line ledger** — never edit existing rows; append one line per wave.
 - `board.md` rows are for **cross-session coordination only** — single-session work does not add rows.
 - Whole-file reads only — no offset-tunneling (causes pattern-escalation stops).
+- Heartbeat every user turn; one lesson line per turn; close-out is fail-closed (`-CloseOut`).
+- Stage by explicit paths only — never `git add -A`; never `git push`.
 
 ---
 
@@ -260,6 +244,10 @@ What it does (each step prints + can be skipped with a switch):
 
 ## 5. Skill catalog quick reference
 
+> **Canonical task→skill map: `workflows/current/task-skills.md`** (FSH recipes vs dotnet-skills
+> plugin suite, with the conflict rule). The table below is the historical quick view — add new
+> skills only to the canonical map.
+
 | Skill | Use for | Source |
 |---|---|---|
 | `add-module` | New bounded context (runtime + Contracts + registration) | `.agents/skills/` |
@@ -323,4 +311,4 @@ Golden Rules), FSH wins. dotnet-skills may inform *how* (query shape, test comma
 - Keep this file, `STATUS.md`, `00-Index.md`, phase plans, and `.agents/rules/frontend/*` in sync
   with the code — docs travel with the change.
 - Workflow-authoring edits (this file, `_tracks-template/`, `docs/spec/`,
-  `HUMAN-GUIDE.md`) are sess-main zone, additive, user-approved — see readme.md "Scope Restriction".
+  `workflows/current/`) are sess-main zone, additive, user-approved — see readme.md "Scope Restriction".

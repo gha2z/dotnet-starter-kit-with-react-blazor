@@ -1,6 +1,6 @@
 # Current Status
 
-Last Update: 2026-08-12 14:00, by: opencode (model: auto/coding — unresolved).
+Last Update: 2026-08-15 14:26, by: opencode (model: opencode/deepseek-v4-flash-free).
 
 ## Progress
 
@@ -16,6 +16,7 @@ Last Update: 2026-08-12 14:00, by: opencode (model: auto/coding — unresolved).
 | Phase 7 | ✅ **All app parity gaps at zero** (3.12 Settings + 3.13 Terminal + 3.14 palette + styled 404 verified wave 16; admin accent/font/density by sess-maui) | dashboard 204/204 · admin 158/158 · both 0 warnings |
 | Phase 8 | ✅ Read-only parity audit (2026-08-11) — gap table at `Phase-08-Parity-Audit/audit.md` (DRAFT) | bUnit baseline re-confirmed 204/204 + 158/158 |
 | Phase 9 | ✅ **Zero-Gaps build (W0–W4) COMPLETE** — W0 ✅ housekeeping · W1 ✅ theme instant-switch fix `323d1060` · W2 ✅ dashboard channel (D1 chat deep-link `@page "/chat/{Id:guid}"`, D2 appearance accents/custom/font/density/motion, D3 `FshExpiryBanner` + tests, D4 audits advanced filters + timeline + copy; Overview polish `f948f566`) · W3 ✅ admin channel (A2 tenants 2s poll + ActiveGrantsCard + TenantBrandingCard + ImpersonateDialog, A3 webhook deliveries pager, A5 reset-password strength meter; A1/A4 verified) · W4 ✅ Hybrid nav gate `007f9e91` (ImplementedRoutes, dead-end 404s eliminated) — audit §3/§6 all resolved, **audit.md FINAL** | dashboard 233/233 + admin 164/164 |
+| WF | ✅ **Workflow canonicalization WAVE-2** — `workflows/current/` + `workflows/neutral/` packages live; canonical gate = `workflows/current/coordination.ps1` (zones.md-driven, default track `opencode/addBlazorFrontends`); zones.md = ownership authority (v1 map converted); AGENTS.md adapted (protocol track pointer + resources → Session protocol bullet); neutral package copy-ready for the original fullstackhero repo | parse checks 2/2 OK · gate Start PASS |
 
 ## Active Streams (parallel, git worktrees)
 
