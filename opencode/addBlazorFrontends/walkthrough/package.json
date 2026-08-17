@@ -1,0 +1,9 @@
+{
+  "name": "fsh-browser-walkthrough-driver",
+  "private": true,
+  "type": "module",
+  "description": "Real-browser parity walkthrough driver for React vs Blazor WASM pairs. Zero install: playwright + pngjs imported from clients/admin/node_modules.",
+  "scripts": {
+    "walk": "node driver/index.mjs"
+  }
+}
