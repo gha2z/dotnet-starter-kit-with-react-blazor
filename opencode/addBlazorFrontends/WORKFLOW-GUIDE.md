@@ -145,7 +145,7 @@ Critical path: t1.1 → t1.3 → t1.5   (longest dependency chain — gate here 
 
 | Tier | Models | Agents | Max tokens/session |
 |---|---|---|---|
-| **Reasoning** | `auto/coding` (omniroute, unresolved — verify fresh per session) | architect, critic | 200k |
+| **Reasoning** | `auto/smart` (omniroute, unresolved — verify fresh per session) | architect, critic | 200k |
 | **Standard** | `auto/coding` (omniroute, unresolved) | coder, reviewer, test_engineer, explorer | 128k |
 | **Lite** | gemini-flash / gpt-4o-mini | docs, summarization, grep | 64k |
 

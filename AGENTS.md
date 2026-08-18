@@ -120,7 +120,10 @@ Single long-lived branch: **`main`** (the default) — there is **no `develop`**
 8. **Every command handler + paginated query handler needs a validator** (`{Name}Validator`). Enforced by `Architecture.Tests`.
 9. **Frontend: pass per-call data through `mutate(arg)`**, never via state the mutation callbacks close over (execute-time race). See `frontend/shared.md`.
 10. **Docs + changelog travel with the change** — a user-facing change (feature, endpoint, config, infra, breaking change) isn't done until the **separate docs repo** (`github.com/fullstackhero/docs`, the Astro site) is updated to match **and** a changelog entry is added (`src/content/docs/changelog/`). Don't let the docs drift from the code.
-11. **React pairs are FROZEN — never modify `clients/admin` or `clients/dashboard`** (except by explicit user instruction). They are the reference standard. All parity work lives in the Blazor twins (`clients/admin-blazor`, `clients/dashboard-blazor`) and the MAUI Hybrid (`clients/FSH.Hybrid`). Every Blazor/Hybrid screen must be validated with a **real-browser walkthrough** (Playwright driver in `opencode/addBlazorFrontends/walkthrough/`) — real clicks, real navigation, visual + console + network inspection — not just bUnit or grep. Unit tests are necessary but not sufficient; React = minimum parity, better = bonus. See `opencode/addBlazorFrontends/WORKFLOW-GUIDE.md` §4.
+11. **React pairs are FROZEN — never modify `clients/admin` or `clients/dashboard`** 
+	(except by explicit user instruction). They are the reference standard. All parity work lives in the Blazor twins (`clients/admin-blazor`, `clients/dashboard-blazor`) 
+	and the MAUI Hybrid (`clients/FSH.Hybrid`). Every Blazor/Hybrid screen must be validated with a **real-browser walkthrough** (Playwright driver in `opencode/addBlazorFrontends/walkthrough/`) — 
+	real clicks, real navigation, visual + console + network inspection — not just bUnit or grep. Unit tests are necessary but not sufficient; React = minimum parity, better = bonus. See `opencode/addBlazorFrontends/WORKFLOW-GUIDE.md` §4.
 
 ## Rules index — read the relevant file before you work
 
