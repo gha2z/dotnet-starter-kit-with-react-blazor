@@ -13,7 +13,7 @@
 <div class="fsh-bell">
     <MudMenu Class="fsh-bell-menu" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" @bind-Open="MenuOpen">
         <ActivatorContent Context="bellActivator">
-            <div class="fsh-bell-button">
+            <div class="fsh-bell-button" data-notification-bell>
                 <MudIconButton Icon="@Icons.Material.Filled.NotificationsNone" Size="Size.Medium" aria-label="Notifications" />
                 @if (_unreadCount > 0)
                 {
