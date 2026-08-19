@@ -1,6 +1,8 @@
-// FSH Blazor WASM Service Worker — v1.0
-// Cache strategy: _framework assets are content-hashed (immutable), app shell is precached.
-const CACHE_NAME = 'fsh-pwa-v1.0';
+// FSH Blazor WASM Service Worker — v2.0
+// Cache strategy: network-first with cache fallback for everything. _framework
+// URLs are NOT content-hashed (boot.json + dll names are stable across builds),
+// so a cache-first strategy pins stale builds until the cache is purged.
+const CACHE_NAME = 'fsh-pwa-v2.0';
 const OFFLINE_URL = 'offline.html';
 const PRECACHE_URLS = [
   './',
@@ -40,21 +42,8 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // _framework assets: cache-first (content-hashed = immutable)
-  if (url.pathname.startsWith('/_framework/') || url.pathname.startsWith('_framework/')) {
-    e.respondWith(
-      caches.match(e.request).then((cached) => {
-        if (cached) return cached;
-        return fetch(e.request).then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
-          return response;
-        });
-      })
-    );
-    return;
-  }
-
+  // _framework assets: network-first with cache fallback (see header comment
+  // — cache-first pins stale builds because these URLs are not content-hashed).
   // Everything else: network-first with cache fallback
   e.respondWith(
     fetch(e.request)
