@@ -60,6 +60,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IUserService, UserService>();
+  builder.Services.AddScoped<ITwoFactorService, TwoFactorService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
@@ -141,6 +142,10 @@ builder.Services.AddHttpClient("FSH.Api", (sp, client) =>
 .AddHttpMessageHandler<RetryAfterHandler>();
 builder.Services.AddScoped(sp =>
     sp.GetRequiredService<IHttpClientFactory>().CreateClient("FSH.Api"));
+
+// Storage client — no base address: presigned upload/download URLs are absolute
+// (MinIO endpoint) and must be used verbatim.
+builder.Services.AddHttpClient("FSH.Storage");
 
 // MudBlazor
 builder.Services.AddMudServices(config =>

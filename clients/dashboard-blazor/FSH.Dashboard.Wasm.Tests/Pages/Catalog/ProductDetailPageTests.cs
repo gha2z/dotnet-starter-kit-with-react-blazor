@@ -5,6 +5,7 @@ using FSH.BlazorShared.Services;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Shouldly;
+using System.Net.Http;
 using Xunit;
 
 namespace FSH.Dashboard.Wasm.Tests.Pages.Catalog;
@@ -16,6 +17,8 @@ public sealed class ProductDetailPageTests : TestSetup
     public ProductDetailPageTests()
     {
         Services.AddSingleton(_catalog);
+        Services.AddSingleton<IFileService>(Substitute.For<IFileService>());
+        Services.AddSingleton<IHttpClientFactory>(Substitute.For<IHttpClientFactory>());
     }
 
     private static ProductDto SampleProduct(Guid? id = null, string name = "Camping Stove", string sku = "CS-001",
@@ -155,6 +158,28 @@ public sealed class ProductDetailPageTests : TestSetup
             .Add(p => p.Id, productId.ToString()));
 
         cut.WaitForAssertion(() => cut.Markup.ShouldContain("No images"));
+    }
+
+    [Fact]
+    public void Shows_upload_images_button_with_hint()
+    {
+        var productId = Guid.NewGuid();
+        _catalog.GetProductByIdAsync(productId, Arg.Any<CancellationToken>())
+            .Returns(SampleProduct(productId));
+        _catalog.SearchBrandsAsync(null, 1, 500, "name", "asc", Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<BrandDto>([], 1, 500, 0, 1, false, false));
+        _catalog.SearchCategoriesAsync(null, null, 1, 500, "name", "asc", Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<CategoryDto>([], 1, 500, 0, 1, false, false));
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Catalog.ProductDetailPage>(parameters => parameters
+            .Add(p => p.Id, productId.ToString()));
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Markup.ShouldContain("Upload images");
+            cut.Markup.ShouldContain("JPG / PNG / WebP / GIF");
+            cut.Markup.ShouldContain("up to 10 MB");
+        });
     }
 
     [Fact]

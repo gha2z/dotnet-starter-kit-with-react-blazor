@@ -167,6 +167,14 @@ public sealed class CatalogService(HttpClient http) : ICatalogService
         return result?.Stock ?? 0;
     }
 
+    public async Task<ProductImageDto> AddProductImageAsync(Guid productId, AddProductImageRequest request, CancellationToken ct = default)
+    {
+        var response = await http.PostAsJsonAsync($"{CatalogBase}/products/{productId}/images", request, ct);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ProductImageDto>(ct)
+               ?? throw new InvalidOperationException("Failed to add image.");
+    }
+
     public async Task DeleteProductImageAsync(Guid productId, Guid imageId, CancellationToken ct = default)
     {
         var response = await http.DeleteAsync($"{CatalogBase}/products/{productId}/images/{imageId}", ct);

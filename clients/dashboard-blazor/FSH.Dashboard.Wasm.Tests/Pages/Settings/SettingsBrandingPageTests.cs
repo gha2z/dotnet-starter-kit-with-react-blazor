@@ -83,7 +83,7 @@ public sealed class SettingsBrandingPageTests : TestSetup
 
         var textInputs = cut.FindAll("input[type='text']");
         var favicon = textInputs[^1];
-        favicon.Change("https://cdn.example.com/favicon.ico");
+        favicon.Input("https://cdn.example.com/favicon.ico");
 
         cut.WaitForAssertion(() => cut.Markup.ShouldContain("unsaved"));
         var save = cut.FindAll("button").First(b => b.TextContent.Contains("Save branding"));

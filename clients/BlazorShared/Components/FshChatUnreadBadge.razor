@@ -1,0 +1,95 @@
+@namespace FSH.BlazorShared.Components
+@implements IDisposable
+@using FSH.BlazorShared.Realtime
+@using FSH.BlazorShared.Services
+@using Microsoft.AspNetCore.SignalR.Client
+@using MudBlazor
+@inject IChatService Chat
+@inject IHubConnectionService Hub
+@inject NavigationManager Nav
+
+@* React parity: topbar pill that sums unread chat messages across every channel;
+   brand-primary chip to distinguish from the destructive-red notification bell. *@
+<div class="fsh-chat-unread">
+    <MudIconButton Icon="@Icons.Material.Outlined.ChatBubbleOutline" Size="Size.Medium" aria-label="Chat"
+                   title="@BadgeTitle"
+                   OnClick='() => Nav.NavigateTo("/chat")' />
+    @if (_unreadCount > 0)
+    {
+        <span class="fsh-chat-unread-badge">@(_unreadCount > 99 ? "99+" : _unreadCount.ToString())</span>
+    }
+</div>
+
+@code {
+    private int _unreadCount;
+    private IDisposable? _hubSub;
+
+    private string BadgeTitle => _unreadCount > 0
+        ? $"{_unreadCount} unread chat message{(_unreadCount == 1 ? "" : "s")}"
+        : "Chat";
+
+    protected override void OnInitialized()
+    {
+        Hub.StateChanged += OnHubStateChanged;
+        Nav.LocationChanged += OnLocationChanged;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        TrySubscribeHub();
+        await RefreshAsync();
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => _ = RefreshAsync();
+
+    private void OnHubStateChanged(HubConnectionState state)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            if (state == HubConnectionState.Connected)
+            {
+                TrySubscribeHub();
+            }
+            else
+            {
+                _hubSub?.Dispose();
+                _hubSub = null;
+            }
+
+            await RefreshAsync();
+            StateHasChanged();
+        });
+    }
+
+    private void TrySubscribeHub()
+    {
+        if (_hubSub is not null || Hub.State != HubConnectionState.Connected)
+        {
+            return;
+        }
+
+        _hubSub = Hub.On<object>("ChatMessageCreated", _ => InvokeAsync(RefreshAsync));
+    }
+
+    private async Task RefreshAsync()
+    {
+        try
+        {
+            var channels = await Chat.ListMyChannelsAsync(pageSize: 100);
+            _unreadCount = channels.Sum(c => c.UnreadCount);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // Best-effort: the API may be unreachable while the shell renders.
+        }
+    }
+
+    public void Dispose()
+    {
+        Hub.StateChanged -= OnHubStateChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+        _hubSub?.Dispose();
+    }
+}

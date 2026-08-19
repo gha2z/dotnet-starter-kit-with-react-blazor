@@ -1,0 +1,213 @@
+@namespace FSH.BlazorShared.Components
+@using FSH.BlazorShared.Models.Files
+@using FSH.BlazorShared.Services
+@using MudBlazor
+
+<div class="@Class">
+    @* Mode toggle (React parity: Upload / Paste URL) *@
+    <div class="d-flex gap-1">
+        <button type="button" class="fsh-image-mode @(_mode == ImageInputMode.Upload ? "fsh-image-mode-active" : string.Empty)"
+                @onclick="() => SetMode(ImageInputMode.Upload)">
+            <MudIcon Icon="@Icons.Material.Outlined.Upload" Size="Size.Small" />
+            Upload
+        </button>
+        <button type="button" class="fsh-image-mode @(_mode == ImageInputMode.Url ? "fsh-image-mode-active" : string.Empty)"
+                @onclick="() => SetMode(ImageInputMode.Url)">
+            <MudIcon Icon="@Icons.Material.Outlined.Link" Size="Size.Small" />
+            Paste URL
+        </button>
+    </div>
+
+    @* Preview + controls row *@
+    <div class="d-flex align-start gap-4 mt-3">
+        <div class="fsh-image-tile @(Shape == "circle" ? "fsh-image-tile-circle" : string.Empty)">
+            @if (HasImage)
+            {
+                <img src="@Value" alt="" class="fsh-image-preview" />
+            }
+            else if (_uploading)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            }
+            else
+            {
+                <MudIcon Icon="@Icons.Material.Outlined.Image" Size="Size.Small" />
+            }
+        </div>
+
+        <div class="flex-grow-1">
+            @if (_mode == ImageInputMode.Upload)
+            {
+                <div class="d-flex flex-wrap align-center gap-2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               StartIcon="@(_uploading ? null : Icons.Material.Outlined.Upload)"
+                               Disabled="_uploading" OnClick="OpenFilePicker">
+                        @if (_uploading)
+                        {
+                            <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-1" />
+                        }
+                        @(HasImage ? "Replace image" : "Choose image")
+                    </MudButton>
+                    @if (HasImage && !_uploading)
+                    {
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="RemoveImage">
+                            <MudIcon Icon="@Icons.Material.Outlined.Close" Size="Size.Small" Class="mr-1" />
+                            Remove
+                        </MudButton>
+                    }
+                    @if (_uploading && _progressPercent > 0)
+                    {
+                        <MudText Typo="Typo.caption" Class="fsh-image-progress">@_progressPercent% · @FormatBytes(_bytesTotal)</MudText>
+                    }
+                </div>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">JPG/PNG/WebP/GIF · up to @FormatBytes(MaxBytes)</MudText>
+            }
+            else
+            {
+                <MudTextField T="string" Value="@Value" ValueChanged="OnUrlChanged" Placeholder="https://…"
+                              MaxLength="512" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">Direct link to an image you host elsewhere.</MudText>
+            }
+        </div>
+    </div>
+
+    <InputFile id="@_inputId" OnChange="HandleFileSelected" accept="image/*" style="display:none;" />
+</div>
+
+@code {
+    [Inject] private IFileService FileService { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    /// <summary>Current image URL (or empty). The component is fully controlled.</summary>
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    /// <summary>Owner binding for the upload. For user avatars, ownerType="User" + the user id.</summary>
+    [Parameter] public string OwnerType { get; set; } = string.Empty;
+    [Parameter] public string? OwnerId { get; set; }
+
+    /// <summary>Allowed extensions (lower-case with leading dot). Server enforces too.</summary>
+    [Parameter] public string[] AllowedExtensions { get; set; } = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+    [Parameter] public long MaxBytes { get; set; } = 10 * 1024 * 1024;
+
+    /// <summary>Visual treatment for the preview tile — "square" for general images, "circle" for avatars.</summary>
+    [Parameter] public string Shape { get; set; } = "square";
+    [Parameter] public string? Class { get; set; }
+
+    private enum ImageInputMode { Upload, Url }
+
+    private ImageInputMode _mode = ImageInputMode.Upload;
+    private bool _uploading;
+    private int _progressPercent;
+    private long _bytesTotal;
+    private readonly string _inputId = $"fsh-image-input-{Guid.NewGuid():N}";
+
+    private bool HasImage => !string.IsNullOrWhiteSpace(Value);
+
+    private Guid? ParsedOwnerId => Guid.TryParse(OwnerId, out var id) ? id : null;
+
+    private void SetMode(ImageInputMode mode) => _mode = mode;
+
+    private void OpenFilePicker()
+    {
+        if (_uploading)
+        {
+            return;
+        }
+
+        _ = JS.InvokeVoidAsync($"document.getElementById('{_inputId}').click");
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null)
+        {
+            return;
+        }
+
+        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+        if (!AllowedExtensions.Contains(extension))
+        {
+            Snackbar.Add($"File type {extension} is not allowed. Allowed: {string.Join(", ", AllowedExtensions)}", Severity.Error);
+            return;
+        }
+
+        if (file.Size > MaxBytes)
+        {
+            Snackbar.Add($"File is too large. Maximum size is {FormatBytes(MaxBytes)}.", Severity.Error);
+            return;
+        }
+
+        _uploading = true;
+        _progressPercent = 0;
+        _bytesTotal = file.Size;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            // Step 1: Request presigned URL (public so we get a durable URL we can persist on the entity)
+            var presigned = await FileService.RequestUploadUrlAsync(new RequestUploadUrlRequest(
+                OwnerType: OwnerType,
+                OwnerId: ParsedOwnerId,
+                FileName: file.Name,
+                ContentType: file.ContentType,
+                SizeBytes: file.Size,
+                Visibility: FileVisibility.Public,
+                Category: "Image"));
+
+            // Step 2: Upload directly to storage via JS interop (PUT presigned URL)
+            _progressPercent = 50;
+            await InvokeAsync(StateHasChanged);
+
+            using var stream = file.OpenReadStream(maxAllowedSize: MaxBytes);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var bytes = ms.ToArray();
+
+            await JS.InvokeVoidAsync("fshFileUpload", presigned.UploadUrl.ToString(), bytes, presigned.RequiredHeaders);
+
+            // Step 3: Finalize and resolve the durable public URL
+            _progressPercent = 90;
+            await InvokeAsync(StateHasChanged);
+
+            var dto = await FileService.FinalizeUploadAsync(presigned.FileAssetId);
+            var publicUrl = dto.PublicUrl;
+            if (string.IsNullOrWhiteSpace(publicUrl))
+            {
+                publicUrl = (await FileService.GetFileMetadataAsync(presigned.FileAssetId)).PublicUrl;
+            }
+
+            if (string.IsNullOrWhiteSpace(publicUrl))
+            {
+                throw new InvalidOperationException("Server returned no public URL for this file.");
+            }
+
+            _progressPercent = 100;
+            await ValueChanged.InvokeAsync(publicUrl);
+            Snackbar.Add("Image uploaded", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _uploading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RemoveImage() => await ValueChanged.InvokeAsync(string.Empty);
+
+    private async Task OnUrlChanged(string value) => await ValueChanged.InvokeAsync(value);
+
+    private static string FormatBytes(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
+        _ => $"{bytes / (1024.0 * 1024 * 1024):F2} GB"
+    };
+}

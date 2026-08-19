@@ -4,12 +4,13 @@
 @using FSH.BlazorShared.Services
 @inject IUserService UserService
 @inject ISessionService SessionService
+@inject ITwoFactorService TwoFactorService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
 <SettingsLayout>
 <FshPageHeader Title="Security" Icon="@Icons.Material.Filled.Shield"
-               Description="Password and active sessions." />
+               Description="Password, two-factor and active sessions." />
 
 <MudPaper Class="pa-6 mb-6" Elevation="0" Outlined="true">
     <MudText Typo="Typo.h6" Class="mb-2">Password</MudText>
@@ -19,6 +20,10 @@
     <MudButton Variant="Variant.Outlined" OnClick="OpenChangePasswordAsync">
         Change password
     </MudButton>
+</MudPaper>
+
+<MudPaper Class="pa-6 mb-6" Elevation="0" Outlined="true">
+    <TwoFactorSection Enabled="@(_profile?.TwoFactorEnabled ?? false)" OnChanged="OnTwoFactorChanged" />
 </MudPaper>
 
 <MudPaper Class="pa-6" Elevation="0" Outlined="true">
@@ -71,12 +76,22 @@
 </MudPaper>
 
 @code {
+    private UserDto? _profile;
     private List<UserSessionDto> _sessions = [];
     private bool _loadingSessions = true;
     private readonly DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
 
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            _profile = await UserService.GetMyProfileAsync();
+        }
+        catch
+        {
+            // 2FA section still renders with the disabled state.
+        }
+
         try
         {
             _sessions = await SessionService.GetMySessionsAsync();
@@ -88,6 +103,18 @@
         finally
         {
             _loadingSessions = false;
+        }
+    }
+
+    private async Task OnTwoFactorChanged()
+    {
+        try
+        {
+            _profile = await UserService.GetMyProfileAsync();
+        }
+        catch
+        {
+            // 2FA section surfaces its own errors.
         }
     }
 

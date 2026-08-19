@@ -1,5 +1,6 @@
 using Bunit;
 using FSH.Admin.Wasm.Pages.Settings;
+using FSH.BlazorShared.Components;
 using FSH.BlazorShared.Models.Identity;
 using FSH.BlazorShared.Services;
 using Microsoft.AspNetCore.Components;

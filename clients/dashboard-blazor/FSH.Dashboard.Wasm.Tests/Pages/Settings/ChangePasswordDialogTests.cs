@@ -45,11 +45,11 @@ public sealed class ChangePasswordDialogTests : TestSetup
         var (_, dialog) = ShowDialog();
 
         var inputs = dialog.FindAll("input");
-        inputs[0].Change("old-pass");
+        inputs[0].Input("old-pass");
         inputs = dialog.FindAll("input");
-        inputs[1].Change("new-pass-123");
+        inputs[1].Input("new-pass-123");
         inputs = dialog.FindAll("input");
-        inputs[2].Change("different-pass");
+        inputs[2].Input("different-pass");
 
         dialog.FindAll("button").First(b => b.TextContent.Contains("Update password")).Click();
 
@@ -63,11 +63,11 @@ public sealed class ChangePasswordDialogTests : TestSetup
         var (_, dialog) = ShowDialog();
 
         var inputs = dialog.FindAll("input");
-        inputs[0].Change("old-pass");
+        inputs[0].Input("old-pass");
         inputs = dialog.FindAll("input");
-        inputs[1].Change("short");
+        inputs[1].Input("short");
         inputs = dialog.FindAll("input");
-        inputs[2].Change("short");
+        inputs[2].Input("short");
 
         dialog.FindAll("button").First(b => b.TextContent.Contains("Update password")).Click();
 
@@ -81,11 +81,11 @@ public sealed class ChangePasswordDialogTests : TestSetup
         var (_, dialog) = ShowDialog();
 
         var inputs = dialog.FindAll("input");
-        inputs[0].Change("old-pass");
+        inputs[0].Input("old-pass");
         inputs = dialog.FindAll("input");
-        inputs[1].Change("new-pass-123");
+        inputs[1].Input("new-pass-123");
         inputs = dialog.FindAll("input");
-        inputs[2].Change("new-pass-123");
+        inputs[2].Input("new-pass-123");
 
         dialog.FindAll("button").First(b => b.TextContent.Contains("Update password")).Click();
 

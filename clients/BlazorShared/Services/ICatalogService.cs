@@ -48,6 +48,7 @@ public interface ICatalogService
     Task DeleteProductAsync(Guid id, CancellationToken ct = default);
     Task<Guid> ChangeProductPriceAsync(Guid id, ChangeProductPriceRequest request, CancellationToken ct = default);
     Task<int> AdjustProductStockAsync(Guid id, AdjustProductStockRequest request, CancellationToken ct = default);
+    Task<ProductImageDto> AddProductImageAsync(Guid productId, AddProductImageRequest request, CancellationToken ct = default);
     Task DeleteProductImageAsync(Guid productId, Guid imageId, CancellationToken ct = default);
     Task SetProductThumbnailAsync(Guid productId, Guid imageId, CancellationToken ct = default);
 

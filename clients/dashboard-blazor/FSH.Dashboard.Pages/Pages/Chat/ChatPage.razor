@@ -105,70 +105,87 @@
                 }
                 else
                 {
-                    @foreach (var msg in _messages)
+                    @foreach (var item in _renderItems)
                     {
-                        var isOwn = msg.AuthorUserId == _currentUserId;
-                        <div @key="msg.Id" class="fsh-chat-message @(isOwn ? "fsh-chat-message-own" : "fsh-chat-message-other")">
-                            @if (!isOwn)
-                            {
-                                <MudAvatar Size="Size.Small" Color="Color.Primary" Class="mr-2">
-                                    @msg.AuthorUserId[..2].ToUpper()
-                                </MudAvatar>
-                            }
-                            <div class="fsh-chat-message-bubble">
-                                @if (!isOwn)
-                                {
-                                    <MudText Typo="Typo.caption" Color="Color.Primary" Style="font-weight: 600;">@msg.AuthorUserId</MudText>
-                                }
-                                @if (msg.DeletedAtUtc.HasValue)
-                                {
-                                    <MudText Typo="Typo.body2" Style="font-style: italic;" Color="Color.Secondary">Message deleted</MudText>
-                                }
-                                else
-                                {
-                                    <MudText Typo="Typo.body2">@msg.Body</MudText>
-                                }
-                                @if (msg.Attachments.Count > 0)
-                                {
-                                    <div class="mt-1">
-                                        @foreach (var att in msg.Attachments)
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Outlined.Attachment"
-                                                     Href="@att.Url" Target="_blank">@att.OriginalFileName</MudChip>
-                                        }
-                                    </div>
-                                }
-                                @if (msg.Reactions.Count > 0)
-                                {
-                                    <div class="d-flex flex-wrap gap-1 mt-1">
-                                        @foreach (var reaction in msg.Reactions.GroupBy(r => r.Emoji))
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                                     OnClick="() => ToggleReaction(msg.Id, reaction.Key)">
-                                                @reaction.Key @reaction.Count()
-                                            </MudChip>
-                                        }
-                                    </div>
-                                }
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                                    @FshFormat.DateRelative(msg.CreatedAtUtc)
-                                    @if (msg.EditedAtUtc.HasValue)
-                                    {
-                                        <span> (edited)</span>
-                                    }
-                                    @if (msg.IsPinned)
-                                    {
-                                        <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" Class="ml-1" />
-                                    }
-                                </MudText>
+                        if (item is DaySeparatorItem day)
+                        {
+                            <div class="d-flex justify-center my-2">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="fsh-chat-day-separator">
+                                    @day.Label
+                                </MudChip>
                             </div>
-                            @if (isOwn)
-                            {
-                                <MudAvatar Size="Size.Small" Color="Color.Secondary" Class="ml-2">
-                                    @msg.AuthorUserId[..2].ToUpper()
-                                </MudAvatar>
-                            }
-                        </div>
+                        }
+                        else if (item is MessageBlockItem block)
+                        {
+                            var first = block.Messages[0];
+                            <div @key="first.Id" class="fsh-chat-message @(block.IsOwn ? "fsh-chat-message-own" : "fsh-chat-message-other")">
+                                @if (!block.IsOwn)
+                                {
+                                    <MudAvatar Size="Size.Small" Color="Color.Primary" Class="mr-2">@InitialsFor(block.Author, block.AuthorId)</MudAvatar>
+                                }
+                                <div class="fsh-chat-message-bubble">
+                                    @if (!block.IsOwn)
+                                    {
+                                        <div class="d-flex align-baseline flex-wrap">
+                                            <MudText Typo="Typo.caption" Color="Color.Primary" Style="font-weight: 600; margin-right: 6px;">@block.DisplayName</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-right: 6px;">@block.Handle</MudText>
+                                        </div>
+                                    }
+                                    @foreach (var msg in block.Messages)
+                                    {
+                                        <div class="fsh-chat-message-row">
+                                            @if (msg.DeletedAtUtc.HasValue)
+                                            {
+                                                <MudText Typo="Typo.body2" Style="font-style: italic;" Color="Color.Secondary">Message deleted</MudText>
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.body2">@msg.Body</MudText>
+                                            }
+                                            @if (msg.Attachments.Count > 0)
+                                            {
+                                                <div class="mt-1">
+                                                    @foreach (var att in msg.Attachments)
+                                                    {
+                                                        <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Outlined.Attachment"
+                                                                 Href="@att.Url" Target="_blank">@att.OriginalFileName</MudChip>
+                                                    }
+                                                </div>
+                                            }
+                                            @if (msg.Reactions.Count > 0)
+                                            {
+                                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                                    @foreach (var reaction in msg.Reactions.GroupBy(r => r.Emoji))
+                                                    {
+                                                        var isMine = reaction.Any(r => r.UserId == _currentUserId);
+                                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                                                 Class="@ReactionClass(isMine)"
+                                                                 OnClick="() => ToggleReaction(msg.Id, reaction.Key)">
+                                                            @reaction.Key @reaction.Count()
+                                                        </MudChip>
+                                                    }
+                                                </div>
+                                            }
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                                @TimeFor(msg.CreatedAtUtc)
+                                                @if (msg.EditedAtUtc.HasValue)
+                                                {
+                                                    <span> (edited)</span>
+                                                }
+                                                @if (msg.IsPinned)
+                                                {
+                                                    <MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" Class="ml-1" />
+                                                }
+                                            </MudText>
+                                        </div>
+                                    }
+                                </div>
+                                @if (block.IsOwn)
+                                {
+                                    <MudAvatar Size="Size.Small" Color="Color.Secondary" Class="ml-2">@InitialsFor(block.Author, block.AuthorId)</MudAvatar>
+                                }
+                            </div>
+                        }
                     }
                 }
             </div>
@@ -177,7 +194,7 @@
             @if (_typingUsers.Count > 0)
             {
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="px-3 py-1">
-                    @string.Join(", ", _typingUsers) @(_typingUsers.Count == 1 ? "is" : "are") typing...
+                    @TypingNames @(_typingUsers.Count == 1 ? "is" : "are") typing...
                 </MudText>
             }
 

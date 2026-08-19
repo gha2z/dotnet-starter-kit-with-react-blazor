@@ -165,9 +165,25 @@ else
                     Images
                     <span class="fsh-count-chip" style="margin-left: 2px;">@_product.Images.Count</span>
                 </div>
+
+                <div class="d-flex align-center gap-2 mb-3">
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.UploadFile"
+                               Disabled="@_uploading"
+                               OnClick="OpenImagePickerAsync">
+                        @(_uploading ? "Uploading…" : "Upload images")
+                    </MudButton>
+                    <span class="fsh-muted-copy" style="font-size: 12px;">
+                        @_product.Images.Count image@(_product.Images.Count == 1 ? "" : "s") · JPG / PNG / WebP / GIF · up to 10 MB
+                    </span>
+                </div>
+                <MudFileUpload @ref="_fileUpload" T="IReadOnlyList<IBrowserFile>" @bind-Files="_pickedFiles"
+                               Hidden="true" Accept=".jpg,.jpeg,.png,.webp,.gif"
+                               OnFilesChanged="UploadImagesAsync" />
+
                 @if (_product.Images.Count == 0)
                 {
-                    <div class="fsh-muted-copy" style="font-size: 13px;">No images for this product yet.</div>
+                    <div class="fsh-muted-copy" style="font-size: 13px;">No images yet — upload one to set the product's cover.</div>
                 }
                 else
                 {

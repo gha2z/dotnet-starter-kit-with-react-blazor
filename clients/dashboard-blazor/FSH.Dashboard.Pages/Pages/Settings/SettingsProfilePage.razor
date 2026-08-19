@@ -36,16 +36,8 @@ else if (_profile is not null)
             {
                 <FshMonogram Name="@DisplayName" PixelSize="56" />
             }
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit"
-                       Disabled="@_savingImage" OnClick="OpenImageDialog">
-                Change avatar
-            </MudButton>
-            @if (!string.IsNullOrEmpty(_profile.ImageUrl))
-            {
-                <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@_savingImage" OnClick="ClearImageAsync">
-                    Clear
-                </MudButton>
-            }
+            <FshImageInput Value="@(_profile.ImageUrl ?? string.Empty)" ValueChanged="OnImageChanged"
+                           OwnerType="User" OwnerId="@_profile.Id" Shape="circle" Class="flex-grow-1" />
         </div>
     </MudPaper>
 
@@ -80,18 +72,6 @@ else if (_profile is not null)
             </MudItem>
         </MudGrid>
     </MudPaper>
-
-    <MudDialog @bind-Visible="_imageDialogOpen" Options="new DialogOptions { FullWidth = true, MaxWidth = MaxWidth.Small }">
-        <DialogContent>
-            <MudTextField Label="Image URL" @bind-Value="_imageUrl" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
-        </DialogContent>
-        <DialogActions>
-            <MudButton Variant="Variant.Text" OnClick="CloseImageDialog">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_savingImage" OnClick="SaveImageAsync">
-                @(_savingImage ? "Saving…" : "Save")
-            </MudButton>
-        </DialogActions>
-    </MudDialog>
 }
 
 @code {
@@ -102,9 +82,6 @@ else if (_profile is not null)
     private bool _loading = true;
     private bool _saving;
     private string? _error;
-    private bool _imageDialogOpen;
-    private bool _savingImage;
-    private string _imageUrl = "";
 
     private string DisplayName
     {
@@ -180,45 +157,17 @@ else if (_profile is not null)
         }
     }
 
-    private void OpenImageDialog()
+    private async Task OnImageChanged(string imageUrl)
     {
-        _imageUrl = _profile?.ImageUrl ?? string.Empty;
-        _imageDialogOpen = true;
-    }
-
-    private void CloseImageDialog() => _imageDialogOpen = false;
-
-    private async Task SaveImageAsync()
-    {
-        _savingImage = true;
         try
         {
-            await UserService.SetProfileImageAsync(string.IsNullOrWhiteSpace(_imageUrl) ? null : _imageUrl.Trim());
-            _imageDialogOpen = false;
-            Snackbar.Add("Profile image updated", Severity.Success);
+            await UserService.SetProfileImageAsync(string.IsNullOrWhiteSpace(imageUrl) ? null : imageUrl.Trim());
+            Snackbar.Add(string.IsNullOrWhiteSpace(imageUrl) ? "Profile image cleared" : "Profile image updated", Severity.Success);
             await LoadAsync();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Failed to update profile image: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _savingImage = false;
-        }
-    }
-
-    private async Task ClearImageAsync()
-    {
-        try
-        {
-            await UserService.SetProfileImageAsync(null);
-            Snackbar.Add("Profile image cleared", Severity.Success);
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Failed to clear profile image: {ex.Message}", Severity.Error);
         }
     }
 }

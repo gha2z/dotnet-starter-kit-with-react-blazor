@@ -1,7 +1,10 @@
+using FSH.BlazorShared.Formatting;
 using FSH.BlazorShared.Models.Chat;
+using FSH.BlazorShared.Models.Identity;
 using FSH.BlazorShared.Realtime;
 using FSH.BlazorShared.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
@@ -13,11 +16,14 @@ public sealed partial class ChatPage : IAsyncDisposable
 {
     private const int InitialPageSize = 100;
     private const int OlderPageSize = 50;
+    private static readonly TimeSpan MergeWindow = TimeSpan.FromMinutes(5);
 
     [Parameter] public Guid Id { get; set; }
 
     [Inject] private IChatService ChatService { get; set; } = default!;
     [Inject] private IHubConnectionService Hub { get; set; } = default!;
+    [Inject] private IUserService Users { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider Auth { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
     [Inject] private IDialogService DialogService { get; set; } = default!;
@@ -26,6 +32,13 @@ public sealed partial class ChatPage : IAsyncDisposable
     private readonly List<ChannelDto> _channels = [];
     private readonly List<MessageDto> _messages = [];
     private readonly HashSet<string> _typingUsers = [];
+    private readonly Dictionary<string, UserDto?> _userCache = new(StringComparer.Ordinal);
+
+    private List<ChatRenderItem> _renderItems = [];
+
+    private string TypingNames => string.Join(", ", _typingUsers
+        .OrderBy(id => id)
+        .Select(id => DisplayNameFor(GetOrResolveUser(id), id)));
 
     private string? _searchChannels;
     private Guid? _activeChannelId;
@@ -45,6 +58,7 @@ public sealed partial class ChatPage : IAsyncDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        await ResolveCurrentUserAsync();
         await LoadChannels();
         await EnsureHubConnected();
         SubscribeToSignalREvents();
@@ -56,9 +70,179 @@ public sealed partial class ChatPage : IAsyncDisposable
     }
 
     /// <summary>
-    /// Mirrors the React chat route (/chat[:channelId]): a channel id in the URL opens
-    /// that channel; without one, the first channel is auto-selected and the URL replaced.
+    /// Resolves the signed-in user's id from the "sub" claim (React parity:
+    /// the JWT subject). Everything downstream — own-message alignment, reaction
+    /// highlighting, typing filters — keys off this value.
     /// </summary>
+    private async Task ResolveCurrentUserAsync()
+    {
+        try
+        {
+            var state = await Auth.GetAuthenticationStateAsync();
+            _currentUserId = state.User.FindFirst("sub")?.Value ?? string.Empty;
+            if (!string.IsNullOrEmpty(_currentUserId))
+            {
+                try
+                {
+                    var profile = await Users.GetMyProfileAsync();
+                    _userCache[_currentUserId] = profile;
+                }
+                catch
+                {
+                    // Profile fetch is best-effort; display names still resolve per-message.
+                }
+            }
+        }
+        catch
+        {
+            // Auth state unavailable (prerender/tests) — treat as anonymous.
+        }
+    }
+
+    private UserDto? GetOrResolveUser(string userId)
+        => _userCache.TryGetValue(userId, out var cached) ? cached : null;
+
+    /// <summary>
+    /// Fetches any uncached author profiles off the UI thread (fire-and-forget
+    /// callers re-render when the names arrive). Never blocks on the Blazor
+    /// thread — WASM interop would deadlock on a synchronous wait.
+    /// </summary>
+    private async Task EnsureUsersResolvedAsync(IEnumerable<string> userIds)
+    {
+        var missing = userIds
+            .Where(id => !string.IsNullOrEmpty(id) && !_userCache.ContainsKey(id))
+            .Distinct()
+            .ToList();
+        if (missing.Count == 0)
+        {
+            return;
+        }
+
+        var added = false;
+        foreach (var userId in missing)
+        {
+            try
+            {
+                _userCache[userId] = await Users.GetAsync(userId);
+                added = true;
+            }
+            catch
+            {
+                _userCache[userId] = null;
+            }
+        }
+
+        if (added)
+        {
+            RebuildRenderItems();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private static string DisplayNameFor(UserDto? user, string userId)
+    {
+        if (user is not null)
+        {
+            var name = string.Join(' ', new[] { user.FirstName, user.LastName }).Trim();
+            if (!string.IsNullOrEmpty(name))
+            {
+                return name;
+            }
+
+            if (!string.IsNullOrEmpty(user.UserName))
+            {
+                return user.UserName;
+            }
+
+            if (!string.IsNullOrEmpty(user.Email))
+            {
+                return user.Email;
+            }
+        }
+
+        return ShortId(userId);
+    }
+
+    private static string HandleFor(UserDto? user, string userId)
+    {
+        var handle = user?.UserName ?? user?.Email ?? ShortId(userId);
+        return $"@{handle}";
+    }
+
+    private static string ShortId(string userId)
+        => userId.Length > 8 ? userId[..8] : userId;
+
+    private static string TimeFor(DateTime utc) => utc.ToLocalTime().ToString("h:mm tt");
+
+    private string InitialsFor(UserDto? user, string userId)
+    {
+        var name = DisplayNameFor(user, userId);
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+            : (name.Length > 0 ? name[..Math.Min(2, name.Length)].ToUpperInvariant() : "?");
+    }
+
+    /// <summary>
+    /// Rebuilds the flattened render list (day separators + message blocks).
+    /// Consecutive messages from the same author within <see cref="MergeWindow"/>
+    /// collapse into one block so the avatar/name header appears once (React
+    /// parity: chat message merge window is 5 minutes).
+    /// </summary>
+    private void RebuildRenderItems()
+    {
+        var items = new List<ChatRenderItem>(_messages.Count);
+        MessageBlockItem? currentBlock = null;
+        DateTime? lastDate = null;
+
+        foreach (var msg in _messages)
+        {
+            var localDate = msg.CreatedAtUtc.ToLocalTime().Date;
+            if (lastDate is null || localDate != lastDate)
+            {
+                items.Add(new DaySeparatorItem(DayLabel(localDate)));
+                lastDate = localDate;
+            }
+
+            var canMerge = !msg.DeletedAtUtc.HasValue
+                && currentBlock is not null
+                && currentBlock.AuthorId == msg.AuthorUserId
+                && currentBlock.Messages[^1].CreatedAtUtc >= msg.CreatedAtUtc - MergeWindow
+                && msg.ParentMessageId == currentBlock.ParentMessageId;
+
+            if (canMerge && currentBlock is not null)
+            {
+                currentBlock.Messages.Add(msg);
+            }
+            else
+            {
+                var author = GetOrResolveUser(msg.AuthorUserId);
+                currentBlock = new MessageBlockItem(
+                    msg.AuthorUserId,
+                    msg.AuthorUserId == _currentUserId,
+                    author,
+                    DisplayNameFor(author, msg.AuthorUserId),
+                    HandleFor(author, msg.AuthorUserId),
+                    msg.ParentMessageId,
+                    [msg]);
+                items.Add(currentBlock);
+            }
+        }
+
+        _renderItems = items;
+    }
+
+    private static string DayLabel(DateTime date)
+    {
+        var today = DateTime.Today;
+        var yesterday = today.AddDays(-1);
+        return date.Date == today ? "Today"
+            : date.Date == yesterday ? "Yesterday"
+            : date.Year == today.Year ? date.ToString("MMMM d")
+            : date.ToString("MMMM d, yyyy");
+    }
+
+    /// <summary>Mirrors the React chat route (/chat[:channelId]): a channel id in the URL opens</summary>
     private async Task SyncChannelFromRouteAsync()
     {
         if (_loadingChannels || _channels.Count == 0)
@@ -74,6 +258,7 @@ public sealed partial class ChatPage : IAsyncDisposable
                 Nav.NavigateTo($"/chat/{_channels[0].Id}", replace: true);
                 await SelectChannel(_channels[0].Id);
             }
+
             return;
         }
 
@@ -160,6 +345,7 @@ public sealed partial class ChatPage : IAsyncDisposable
                 }
             }
 
+            RebuildRenderItems();
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
@@ -188,7 +374,9 @@ public sealed partial class ChatPage : IAsyncDisposable
             if (msg.ChannelId == _activeChannelId)
             {
                 _messages.Add(msg);
+                RebuildRenderItems();
                 await InvokeAsync(StateHasChanged);
+                _ = EnsureUsersResolvedAsync([msg.AuthorUserId]);
                 await ScrollToBottom();
             }
             else
@@ -241,6 +429,7 @@ public sealed partial class ChatPage : IAsyncDisposable
             {
                 _typingUsers.Add(evt.UserId);
                 await InvokeAsync(StateHasChanged);
+                _ = EnsureUsersResolvedAsync([evt.UserId]);
 
                 // Auto-remove after 3s
                 _ = Task.Run(async () =>
@@ -321,8 +510,10 @@ public sealed partial class ChatPage : IAsyncDisposable
             Snackbar.Add($"Failed to load messages: {ex.Message}", Severity.Error);
         }
 
+        RebuildRenderItems();
         _loadingMessages = false;
         await InvokeAsync(StateHasChanged);
+        _ = EnsureUsersResolvedAsync(_messages.Select(m => m.AuthorUserId));
         await ScrollToBottom();
     }
 
@@ -341,7 +532,9 @@ public sealed partial class ChatPage : IAsyncDisposable
             if (!_messages.Any(m => m.Id == sent.Id))
             {
                 _messages.Add(sent);
+                RebuildRenderItems();
             }
+
             await ScrollToBottom();
         }
         catch (Exception ex)
@@ -443,6 +636,8 @@ public sealed partial class ChatPage : IAsyncDisposable
     private static string ChannelTextWeight(bool isActive) =>
         $"font-weight: {(isActive ? "600" : "400")}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
 
+    private static string ReactionClass(bool isMine) => isMine ? "fsh-chat-reaction mine" : "fsh-chat-reaction";
+
     public async ValueTask DisposeAsync()
     {
         foreach (var sub in _signalrSubscriptions)
@@ -466,4 +661,17 @@ public sealed partial class ChatPage : IAsyncDisposable
     }
 
     private sealed record TypingEvent(Guid ChannelId, string UserId);
+
+    private abstract record ChatRenderItem;
+
+    private sealed record DaySeparatorItem(string Label) : ChatRenderItem;
+
+    private sealed record MessageBlockItem(
+        string AuthorId,
+        bool IsOwn,
+        UserDto? Author,
+        string DisplayName,
+        string Handle,
+        Guid? ParentMessageId,
+        List<MessageDto> Messages) : ChatRenderItem;
 }

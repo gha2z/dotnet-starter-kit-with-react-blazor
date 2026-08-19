@@ -12,10 +12,12 @@ namespace FSH.Dashboard.Wasm.Tests.Pages.Settings;
 public sealed class SettingsProfilePageTests : TestSetup
 {
     private readonly IUserService _userService = Substitute.For<IUserService>();
+    private readonly IFileService _fileService = Substitute.For<IFileService>();
 
     public SettingsProfilePageTests()
     {
         Services.AddSingleton(_userService);
+        Services.AddSingleton(_fileService);
     }
 
     [Fact]
@@ -52,9 +54,11 @@ public sealed class SettingsProfilePageTests : TestSetup
             .Returns(profile);
 
         var cut = Render<SettingsProfilePage>();
-        cut.WaitForAssertion(() => cut.FindAll("input").Count.ShouldBe(4));
+        cut.WaitForAssertion(() => cut.FindAll("input").Count.ShouldBe(5));
 
-        cut.FindAll("input")[0].Change("Janet");
+        // The first text input is the file picker from the image input; the first
+        // non-file input is the "First name" field.
+        cut.FindAll("input").First(i => i.GetAttribute("type") != "file").Input("Janet");
         cut.WaitForAssertion(() => cut.FindAll("button").Any(b => b.TextContent.Contains("Save changes")));
         cut.FindAll("button").First(b => b.TextContent.Contains("Save changes")).Click();
 

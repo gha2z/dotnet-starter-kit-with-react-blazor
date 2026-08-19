@@ -1,25 +1,36 @@
+using System.Net.Http.Headers;
 using FSH.BlazorShared.Components;
 using FSH.BlazorShared.Formatting;
 using FSH.BlazorShared.Models.Catalog;
+using FSH.BlazorShared.Models.Files;
 using FSH.BlazorShared.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using MudBlazor;
 
 namespace FSH.Dashboard.Wasm.Pages.Catalog;
 
 public sealed partial class ProductDetailPage
 {
+    private const long MaxImageBytes = 10 * 1024 * 1024;
+    private static readonly string[] AllowedImageExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+
     [Inject] private ICatalogService Catalog { get; set; } = default!;
+    [Inject] private IFileService Files { get; set; } = default!;
+    [Inject] private IHttpClientFactory HttpFactory { get; set; } = default!;
     [Inject] private IDialogService DialogService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
     [Parameter] public string Id { get; set; } = string.Empty;
 
+    private MudFileUpload<IReadOnlyList<IBrowserFile>>? _fileUpload;
+    private IReadOnlyList<IBrowserFile> _pickedFiles = [];
     private ProductDto? _product;
     private BrandDto? _brand;
     private CategoryDto? _category;
     private bool _loading = true;
+    private bool _uploading;
     private string? _error;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
@@ -213,6 +224,109 @@ public sealed partial class ProductDetailPage
             Snackbar.Add($"Could not remove image: {ex.Message}", Severity.Error);
         }
     }
+
+    private async Task OpenImagePickerAsync()
+    {
+        if (_fileUpload is not null)
+        {
+            await _fileUpload.OpenFilePickerAsync();
+        }
+    }
+
+    private async Task UploadImagesAsync()
+    {
+        var entries = _pickedFiles;
+        if (_product is null || entries.Count == 0)
+        {
+            return;
+        }
+
+        _uploading = true;
+        var uploaded = 0;
+        try
+        {
+            foreach (var entry in entries)
+            {
+                try
+                {
+                    var extension = Path.GetExtension(entry.Name).ToLowerInvariant();
+                    if (!AllowedImageExtensions.Contains(extension))
+                    {
+                        Snackbar.Add($"Skipped {entry.Name}: only JPG / PNG / WebP / GIF are allowed", Severity.Error);
+                        continue;
+                    }
+
+                    if (entry.Size > MaxImageBytes)
+                    {
+                        Snackbar.Add($"Skipped {entry.Name}: exceeds the 10 MB limit", Severity.Error);
+                        continue;
+                    }
+
+                    await using var stream = entry.OpenReadStream(MaxImageBytes);
+                    using var buffer = new MemoryStream();
+                    await stream.CopyToAsync(buffer);
+                    var bytes = buffer.ToArray();
+
+                    var upload = await Files.RequestUploadUrlAsync(new RequestUploadUrlRequest(
+                        OwnerType: "Product",
+                        OwnerId: _product.Id,
+                        FileName: entry.Name,
+                        ContentType: ContentTypeFor(extension),
+                        SizeBytes: bytes.LongLength,
+                        Visibility: FileVisibility.Public,
+                        Category: "Image"));
+
+                    using var storageClient = HttpFactory.CreateClient("FSH.Storage");
+                    using var content = new ByteArrayContent(bytes);
+                    content.Headers.ContentType = new MediaTypeHeaderValue(ContentTypeFor(extension));
+                    foreach (var (key, value) in upload.RequiredHeaders)
+                    {
+                        if (!string.Equals(key, "Content-Type", StringComparison.OrdinalIgnoreCase)
+                            && !string.Equals(key, "Content-Length", StringComparison.OrdinalIgnoreCase))
+                        {
+                            content.Headers.TryAddWithoutValidation(key, value);
+                        }
+                    }
+
+                    var putResponse = await storageClient.PutAsync(upload.UploadUrl, content);
+                    putResponse.EnsureSuccessStatusCode();
+
+                    var finalized = await Files.FinalizeUploadAsync(upload.FileAssetId);
+                    var meta = await Files.GetFileMetadataAsync(finalized.Id);
+                    if (string.IsNullOrEmpty(meta.PublicUrl))
+                    {
+                        throw new InvalidOperationException("Server returned no publicUrl for the uploaded image.");
+                    }
+
+                    await Catalog.AddProductImageAsync(_product.Id, new AddProductImageRequest(meta.Id, meta.PublicUrl));
+                    uploaded++;
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Upload failed for {entry.Name}: {ex.Message}", Severity.Error);
+                }
+            }
+        }
+        finally
+        {
+            _uploading = false;
+        }
+
+        if (uploaded > 0)
+        {
+            Snackbar.Add(uploaded == 1 ? "Image uploaded" : $"{uploaded} images uploaded", Severity.Success);
+            await LoadAsync();
+        }
+    }
+
+    private static string ContentTypeFor(string extension) => extension switch
+    {
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".gif" => "image/gif",
+        ".webp" => "image/webp",
+        _ => "application/octet-stream",
+    };
 
     private static RenderFragment StockChipInline(ProductDto product) => builder =>
     {

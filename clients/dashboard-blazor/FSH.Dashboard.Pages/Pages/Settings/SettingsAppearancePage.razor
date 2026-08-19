@@ -58,7 +58,7 @@
         }
         <button type="button" class="@AccentCardClass(FshAppearanceOptions.CustomAccentId)" @onclick="OpenCustomAccentAsync"
                 aria-pressed="@(ThemeService.AccentId == FshAppearanceOptions.CustomAccentId)">
-            <div class="fsh-accent-swatch fsh-accent-custom-swatch">
+            <div class="fsh-accent-swatch fsh-accent-custom-swatch" style="@CustomSwatchStyle()">
                 <MudIcon Icon="@Icons.Material.Filled.Tune" Size="Size.Medium" Class="fsh-accent-custom-icon" />
             </div>
             <div class="fsh-accent-label">Custom</div>
@@ -155,7 +155,31 @@
     }
 
     private static string SwatchStyle(string light, string dark)
-        => $"background: linear-gradient(135deg, {light} 0%, {dark} 100%);";
+    {
+        // React parity: solid primary on top, its soft tint below.
+        var soft = HexToRgba(light, 0.18);
+        return $"background: linear-gradient(180deg, {light} 0%, {light} 65%, {soft} 65%, {soft} 100%);";
+    }
+
+    private string CustomSwatchStyle()
+    {
+        var accent = FshAppearanceOptions.ResolveAccent(
+            FshAppearanceOptions.CustomAccentId, ThemeService.CustomAccent);
+        return SwatchStyle(accent.LightPrimary, accent.DarkPrimary);
+    }
+
+    private static string HexToRgba(string hex, double alpha)
+    {
+        if (hex.Length == 7 && hex[0] == '#'
+            && byte.TryParse(hex.AsSpan(1, 2), System.Globalization.NumberStyles.HexNumber, null, out var r)
+            && byte.TryParse(hex.AsSpan(3, 2), System.Globalization.NumberStyles.HexNumber, null, out var g)
+            && byte.TryParse(hex.AsSpan(5, 2), System.Globalization.NumberStyles.HexNumber, null, out var b))
+        {
+            return $"rgba({r}, {g}, {b}, {alpha.ToString(System.Globalization.CultureInfo.InvariantCulture)})";
+        }
+
+        return hex;
+    }
 
     private static string FontSampleStyle(string family)
         => $"font-family: {family};";

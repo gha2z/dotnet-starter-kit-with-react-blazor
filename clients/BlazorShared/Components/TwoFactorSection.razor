@@ -1,5 +1,7 @@
-@namespace FSH.Admin.Wasm.Pages.Settings
+@namespace FSH.BlazorShared.Components
 @using FSH.BlazorShared.Models.Identity
+@using QRCoder
+@using System.Text
 
 <MudCard Elevation="1" Class="pa-4">
     <div class="d-flex align-center gap-3 mb-3">
@@ -30,10 +32,22 @@
     {
         <div class="mt-4 pa-3" style="border: 1px solid var(--mud-palette-lines-default); border-radius: 8px;">
             <MudText Typo="Typo.body2" Class="mb-2">Scan this with your authenticator app, or manually enter the key:</MudText>
-            <div class="d-flex flex-wrap align-center gap-2 mb-3">
-                <code class="code-chip">@_enrollment.SharedKey</code>
-                <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="CopyKeyAsync">Copy key</MudButton>
+            <div class="d-flex flex-wrap align-center gap-3 mb-3">
+                @if (!string.IsNullOrEmpty(_qrSvg))
+                {
+                    <div class="fsh-qr-tile" role="img" aria-label="Two-factor QR code">
+                        @((MarkupString)_qrSvg)
+                    </div>
+                }
+                <div class="d-flex flex-wrap align-center gap-2">
+                    <code class="code-chip">@_enrollment.SharedKey</code>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ContentCopy" OnClick="CopyKeyAsync">Copy key</MudButton>
+                </div>
             </div>
+            @if (_qrError is not null)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">Could not render the QR code — enter the key above manually.</MudText>
+            }
             <MudTextField Label="Enter the 6-digit code" @bind-Value="_code" Variant="Variant.Outlined" Margin="Margin.Dense" />
             <div class="d-flex align-center gap-2 mt-2">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_verifying" OnClick="VerifyAsync">
@@ -75,6 +89,8 @@
     private TwoFactorEnrollmentResponse? _enrollment;
     private string _code = string.Empty;
     private string? _enrollError;
+    private string? _qrSvg;
+    private string? _qrError;
     private bool _enrolling;
     private bool _verifying;
     private bool _disableOpen;
@@ -88,6 +104,7 @@
         try
         {
             _enrollment = await TwoFactorService.EnrollAsync();
+            BuildQr();
         }
         catch (Exception ex)
         {
@@ -99,11 +116,36 @@
         }
     }
 
+    private void BuildQr()
+    {
+        _qrSvg = null;
+        _qrError = null;
+        if (_enrollment is null || string.IsNullOrWhiteSpace(_enrollment.AuthenticatorUri))
+        {
+            return;
+        }
+
+        try
+        {
+            // Render the otpauth URI as inline SVG. The fill colors use CSS keywords so the
+            // QR tracks the active theme (React parity: currentColor/transparent swap).
+            using var generator = new QRCodeGenerator();
+            var data = generator.CreateQrCode(_enrollment.AuthenticatorUri, QRCodeGenerator.ECCLevel.M);
+            _qrSvg = new SvgQRCode(data).GetGraphic(6, "currentColor", "transparent", true);
+        }
+        catch
+        {
+            _qrError = "QR render failed";
+        }
+    }
+
     private void CancelEnroll()
     {
         _enrollment = null;
         _code = string.Empty;
         _enrollError = null;
+        _qrSvg = null;
+        _qrError = null;
     }
 
     private async Task VerifyAsync()
@@ -128,6 +170,8 @@
             Snackbar.Add("Two-factor enabled. Future logins require a 6-digit code from your authenticator.", Severity.Success);
             _enrollment = null;
             _code = string.Empty;
+            _qrSvg = null;
+            _qrError = null;
             await OnChanged.InvokeAsync();
         }
         catch (Exception ex)

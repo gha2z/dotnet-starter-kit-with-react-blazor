@@ -16,6 +16,7 @@ public sealed class ChatPageTests : TestSetup
 {
     private readonly IChatService _chat = Substitute.For<IChatService>();
     private readonly IHubConnectionService _hub = Substitute.For<IHubConnectionService>();
+    private readonly IUserService _users = Substitute.For<IUserService>();
 
     public ChatPageTests()
     {
@@ -24,6 +25,7 @@ public sealed class ChatPageTests : TestSetup
             .Returns(new DisposableStub());
         Services.AddSingleton(_chat);
         Services.AddSingleton(_hub);
+        Services.AddSingleton(_users);
     }
 
     private static ChannelDto SampleChannel(
@@ -36,9 +38,9 @@ public sealed class ChatPageTests : TestSetup
             lastMessageAt ?? DateTime.UtcNow.AddMinutes(-30), unread,
             [new ChannelMemberDto(Guid.NewGuid(), "user-1", ChannelMemberRole.Admin, DateTime.UtcNow.AddDays(-7), null)]);
 
-    private static MessageDto SampleMessage(string body = "Hello world", string author = "user-1") =>
+    private static MessageDto SampleMessage(string body = "Hello world", string author = "user-1", DateTime? createdAt = null) =>
         new(Guid.NewGuid(), Guid.NewGuid(), author, body, null, 0, null, null,
-            DateTime.UtcNow.AddMinutes(-5), [], []);
+            createdAt ?? DateTime.UtcNow.AddMinutes(-5), [], []);
 
     [Fact]
     public void Renders_channels_and_auto_selects_first_channel()
@@ -205,6 +207,66 @@ public sealed class ChatPageTests : TestSetup
     }
 
     [Fact]
+    public void Consecutive_messages_from_same_author_merge_into_one_block()
+    {
+        var channel = SampleChannel("General");
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([channel]);
+        _chat.ListChannelMessagesAsync(channel.Id, Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([SampleMessage("Hello"), SampleMessage("World")]);
+        _chat.MarkChannelReadAsync(Arg.Any<Guid>(), Arg.Any<MarkChannelReadRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
+        cut.Find(".fsh-chat-channel-item").Click();
+
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-message-row").Count == 2, timeout: TimeSpan.FromSeconds(5));
+        cut.FindAll(".fsh-chat-message").Count.ShouldBe(1);
+        cut.FindAll(".fsh-chat-message-row").Count.ShouldBe(2);
+        cut.Markup.ShouldContain("user-1");
+    }
+
+    [Fact]
+    public void Messages_from_different_authors_render_separate_blocks()
+    {
+        var channel = SampleChannel("General");
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([channel]);
+        _chat.ListChannelMessagesAsync(channel.Id, Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([SampleMessage("Hello", "user-1"), SampleMessage("World", "user-2")]);
+        _chat.MarkChannelReadAsync(Arg.Any<Guid>(), Arg.Any<MarkChannelReadRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
+        cut.Find(".fsh-chat-channel-item").Click();
+
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-message-row").Count == 2, timeout: TimeSpan.FromSeconds(5));
+        cut.FindAll(".fsh-chat-message").Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Messages_on_different_days_show_day_separators()
+    {
+        var channel = SampleChannel("General");
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([channel]);
+        _chat.ListChannelMessagesAsync(channel.Id, Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([
+                SampleMessage("Old", createdAt: DateTime.UtcNow.AddDays(-3)),
+                SampleMessage("New")
+            ]);
+        _chat.MarkChannelReadAsync(Arg.Any<Guid>(), Arg.Any<MarkChannelReadRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.CompletedTask);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
+        cut.Find(".fsh-chat-channel-item").Click();
+
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-day-separator").Count == 2, timeout: TimeSpan.FromSeconds(5));
+        cut.FindAll(".fsh-chat-day-separator").Count.ShouldBe(2);
+        cut.FindAll(".fsh-chat-message").Count.ShouldBe(2);
+    }
+
+    [Fact]
     public void Create_channel_button_exists()
     {
         _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
@@ -230,13 +292,13 @@ public sealed class ChatPageTests : TestSetup
             .Returns(Task.CompletedTask);
 
         var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
-        cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 100, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-message-row").Count == 100, timeout: TimeSpan.FromSeconds(5));
 
         await cut.InvokeAsync(() => cut.Instance.OnScrollTopReached());
 
-        cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 102, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-message-row").Count == 102, timeout: TimeSpan.FromSeconds(5));
         await _chat.Received(1).ListChannelMessagesAsync(channel.Id, firstMessage.Id, 50, Arg.Any<CancellationToken>());
-        cut.FindAll(".fsh-chat-message").First().TextContent.ShouldContain("Ancient 0");
+        cut.FindAll(".fsh-chat-message-row").First().TextContent.ShouldContain("Ancient 0");
     }
 
     [Fact]
@@ -254,10 +316,10 @@ public sealed class ChatPageTests : TestSetup
             .Returns(Task.CompletedTask);
 
         var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
-        cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 100, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-message-row").Count == 100, timeout: TimeSpan.FromSeconds(5));
 
         await cut.InvokeAsync(() => cut.Instance.OnScrollTopReached());
-        cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 101, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-message-row").Count == 101, timeout: TimeSpan.FromSeconds(5));
 
         // Second call: partial page → _hasOlder=false → no further fetch.
         await cut.InvokeAsync(() => cut.Instance.OnScrollTopReached());
@@ -281,7 +343,7 @@ public sealed class ChatPageTests : TestSetup
             .Returns(_ => Task.FromResult(initialPage), _ => gate.Task);
 
         var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
-        cut.WaitForState(() => cut.FindAll(".fsh-chat-message").Count == 100, timeout: TimeSpan.FromSeconds(5));
+        cut.WaitForState(() => cut.FindAll(".fsh-chat-message-row").Count == 100, timeout: TimeSpan.FromSeconds(5));
 
         // First scroll-top call starts the gated older-load; second must be ignored while it's in flight.
         _ = cut.Instance.OnScrollTopReached();
