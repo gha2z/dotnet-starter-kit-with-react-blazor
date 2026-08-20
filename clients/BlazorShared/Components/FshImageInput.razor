@@ -39,15 +39,22 @@
             @if (_mode == ImageInputMode.Upload)
             {
                 <div class="d-flex flex-wrap align-center gap-2">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                               StartIcon="@(_uploading ? null : Icons.Material.Outlined.Upload)"
-                               Disabled="_uploading" OnClick="OpenFilePicker">
+                    @* Picker is a <label for> so the native file dialog opens on click/Enter
+                       (a MudButton's OnClick cannot drive InputFile's hidden input — the
+                       programmatic .click() hack is unreliable under Blazor's event patch). *@
+                    <label for="@_inputId"
+                           class="mud-button-root mud-button mud-button-filled mud-button-filled-primary mud-button-size-small fsh-image-picker @(_uploading ? "mud-button-disabled" : null)"
+                           aria-disabled="@(_uploading ? "true" : null)">
                         @if (_uploading)
                         {
                             <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-1" />
                         }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Outlined.Upload" Size="Size.Small" Class="mr-1" />
+                        }
                         @(HasImage ? "Replace image" : "Choose image")
-                    </MudButton>
+                    </label>
                     @if (HasImage && !_uploading)
                     {
                         <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="RemoveImage">
@@ -71,7 +78,7 @@
         </div>
     </div>
 
-    <InputFile id="@_inputId" OnChange="HandleFileSelected" accept="image/*" style="display:none;" />
+    <InputFile id="@_inputId" OnChange="HandleFileSelected" accept="image/*" class="fsh-input-file-hidden" />
 </div>
 
 @code {
@@ -109,18 +116,13 @@
 
     private void SetMode(ImageInputMode mode) => _mode = mode;
 
-    private void OpenFilePicker()
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
     {
         if (_uploading)
         {
             return;
         }
 
-        _ = JS.InvokeVoidAsync($"document.getElementById('{_inputId}').click");
-    }
-
-    private async Task HandleFileSelected(InputFileChangeEventArgs e)
-    {
         var file = e.File;
         if (file is null)
         {

@@ -164,6 +164,7 @@ else if (_profile is not null)
             await UserService.SetProfileImageAsync(string.IsNullOrWhiteSpace(imageUrl) ? null : imageUrl.Trim());
             Snackbar.Add(string.IsNullOrWhiteSpace(imageUrl) ? "Profile image cleared" : "Profile image updated", Severity.Success);
             await LoadAsync();
+            ProfileEvents.NotifyProfileUpdated();
         }
         catch (Exception ex)
         {

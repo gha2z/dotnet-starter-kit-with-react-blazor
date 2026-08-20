@@ -1,7 +1,6 @@
 @page "/"
 @attribute [Authorize]
 @implements IDisposable
-@using System.Security.Claims
 
 <style>
     .fsh-detail-card {
@@ -15,11 +14,37 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 12px;
         padding: 12px 20px;
         border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
     }
+    .fsh-detail-card-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--mud-palette-text-primary);
+    }
+    .fsh-detail-card-desc {
+        margin-top: 2px;
+        font-size: 11.5px;
+        color: var(--mud-palette-text-secondary);
+    }
     .fsh-detail-card-body {
         padding: 20px;
+    }
+    .fsh-detail-card-action {
+        flex-shrink: 0;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--mud-palette-text-secondary);
+        text-decoration: none;
+        transition: color 0.15s ease;
+    }
+    .fsh-detail-card-action:hover {
+        color: var(--mud-palette-text-primary);
     }
     .fsh-sse-pulse {
         width: 8px;
@@ -34,29 +59,65 @@
         70% { box-shadow: 0 0 0 6px transparent; }
         100% { box-shadow: 0 0 0 0 transparent; }
     }
-    .fsh-greeting-action {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-size: 12px;
+    .fsh-greeting-caption {
+        font-size: 11px;
         font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
         color: var(--mud-palette-text-secondary);
-        border: 1px solid var(--mud-palette-divider);
-        background: transparent;
-        cursor: pointer;
-        transition: background 0.15s ease, color 0.15s ease;
-        text-decoration: none;
     }
-    .fsh-greeting-action:hover {
-        background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
-        color: var(--mud-palette-primary);
-        border-color: var(--mud-palette-primary);
+    .fsh-greeting {
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+    }
+    .fsh-stat-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px 16px;
+        border: 1px solid var(--mud-palette-divider);
+        border-radius: 12px;
+        background: var(--mud-palette-surface);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        height: 100%;
+        transition: border-color 0.2s ease;
+    }
+    .fsh-stat-card:hover {
+        border-color: var(--mud-palette-text-primary);
+    }
+    .fsh-stat-iconplate {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-size: 16px;
+    }
+    .fsh-stat-label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--mud-palette-text-secondary);
+    }
+    .fsh-stat-value {
+        margin-top: 6px;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        font-variant-numeric: tabular-nums;
+        color: var(--mud-palette-text-primary);
+    }
+    .fsh-stat-sub {
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--mud-palette-text-secondary);
     }
     .fsh-quick-action-tile {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 10px;
         padding: 12px;
         border: 1px solid var(--mud-palette-divider);
@@ -64,47 +125,323 @@
         background: var(--mud-palette-surface);
         text-decoration: none;
         color: inherit;
-        transition: border-color 0.15s ease, background 0.15s ease;
         height: 100%;
+        transition: border-color 0.2s ease, background 0.2s ease;
     }
     .fsh-quick-action-tile:hover {
-        border-color: color-mix(in srgb, var(--mud-palette-primary) 40%, var(--mud-palette-divider));
+        border-color: var(--mud-palette-text-primary);
         background: color-mix(in srgb, var(--mud-palette-primary) 5%, transparent);
     }
-    .fsh-overview-icon {
-        width: 28px;
-        height: 28px;
-        min-width: 28px;
-        border-radius: 7px;
+    .fsh-quick-action-iconplate {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        border-radius: 8px;
         display: grid;
         place-items: center;
         font-size: 14px;
     }
-    .fsh-overview-row:hover {
-        background: color-mix(in srgb, var(--mud-palette-primary) 5%, transparent);
+    .fsh-quick-action-title {
+        font-size: 12.5px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--mud-palette-text-primary);
+    }
+    .fsh-quick-action-desc {
+        margin-top: 2px;
+        font-size: 11px;
+        line-height: 1.4;
+        color: var(--mud-palette-text-secondary);
+    }
+    .fsh-quick-action-arrow {
+        margin-left: auto;
+        align-self: center;
+        flex-shrink: 0;
+        opacity: 0;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        color: var(--mud-palette-text-secondary);
+    }
+    .fsh-quick-action-tile:hover .fsh-quick-action-arrow {
+        opacity: 1;
+        transform: translateX(2px);
+    }
+    .fsh-usage-list {
+        list-style: none;
+        margin: -10px 0;
+        padding: 0;
+    }
+    .fsh-usage-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        column-gap: 16px;
+        row-gap: 6px;
+        align-items: center;
+        padding: 10px 0;
+        border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
+    }
+    .fsh-usage-row:first-child {
+        border-top: 0;
+        padding-top: 0;
+    }
+    .fsh-usage-label {
+        font-size: 12.5px;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        color: var(--mud-palette-text-primary);
+    }
+    .fsh-usage-metrics {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--mud-palette-text-primary);
+        white-space: nowrap;
+    }
+    .fsh-usage-limit {
+        margin-left: 4px;
+        font-size: 11.5px;
+        font-weight: 400;
+        color: var(--mud-palette-text-secondary);
+    }
+    .fsh-usage-pct {
+        margin-left: 8px;
+        font-size: 11px;
+        font-weight: 400;
+        color: var(--mud-palette-text-secondary);
+    }
+    .fsh-usage-bar {
+        grid-column: 1 / -1;
+        height: 4px;
+        border-radius: 999px;
+        background: var(--mud-palette-lines-default);
+        overflow: hidden;
+    }
+    .fsh-usage-fill {
+        height: 100%;
+        border-radius: 999px;
+        transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .fsh-overage-badge {
+        padding: 1px 7px;
+        border-radius: 999px;
+        font-size: 10.5px;
+        font-weight: 600;
+        color: var(--mud-palette-error);
+        background: color-mix(in srgb, var(--mud-palette-error) 10%, transparent);
+        flex-shrink: 0;
+    }
+    .fsh-audit-list {
+        list-style: none;
+        margin: -6px -4px;
+        padding: 0;
+    }
+    .fsh-audit-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 4px;
         border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+    .fsh-audit-row:hover {
+        background: color-mix(in srgb, var(--mud-palette-primary) 5%, transparent);
+    }
+    .fsh-audit-iconplate {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        font-size: 14px;
+    }
+    .fsh-audit-title {
+        font-size: 12.5px;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        color: var(--mud-palette-text-primary);
+    }
+    .fsh-audit-meta {
+        margin-top: 2px;
+        font-size: 11px;
+        color: var(--mud-palette-text-secondary);
+    }
+    .fsh-live-list {
+        list-style: none;
+        margin: -10px 0;
+        padding: 0;
+    }
+    .fsh-live-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
+    }
+    .fsh-live-row:first-child {
+        border-top: 0;
+        padding-top: 0;
+    }
+    .fsh-live-clock {
+        font-family: var(--fsh-mono);
+        font-size: 10.5px;
+        font-variant-numeric: tabular-nums;
+        color: var(--mud-palette-text-secondary);
+    }
+    .fsh-live-badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--mud-palette-text-secondary) 12%, transparent);
+        color: var(--mud-palette-text-secondary);
+    }
+    .fsh-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 24px 0;
+        text-align: center;
+    }
+    .fsh-empty-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--mud-palette-text-primary);
+    }
+    .fsh-empty-desc {
+        max-width: 320px;
+        margin: 0;
+        font-size: 11.5px;
+        line-height: 1.5;
+        color: var(--mud-palette-text-secondary);
+    }
+    .fsh-sub-plan {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1;
+        color: var(--mud-palette-text-primary);
+    }
+    .fsh-sub-dl {
+        margin: 16px 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 12px;
+    }
+    .fsh-sub-dl > div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .fsh-sub-dl dt {
+        color: var(--mud-palette-text-secondary);
+    }
+    .fsh-sub-dl dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+        color: var(--mud-palette-text-primary);
+    }
+    .fsh-sub-term {
+        margin-top: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 11px;
+        color: var(--mud-palette-text-secondary);
+    }
+    .fsh-sub-term-value {
+        font-variant-numeric: tabular-nums;
+        color: var(--mud-palette-text-primary);
+    }
+    .fsh-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 9px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--mud-palette-success);
+        background: color-mix(in srgb, var(--mud-palette-success) 10%, transparent);
+        white-space: nowrap;
+    }
+    .fsh-sys-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        text-transform: capitalize;
+        color: var(--mud-palette-text-primary);
+    }
+    .fsh-sys-desc {
+        margin: 2px 0 0;
+        font-size: 11.5px;
+        color: var(--mud-palette-text-secondary);
+    }
+    .fsh-sys-events {
+        margin-top: 16px;
+        padding-top: 12px;
+        border-top: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .fsh-sys-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--mud-palette-text-secondary);
+    }
+    .fsh-sys-count {
+        font-size: 16px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        color: var(--mud-palette-text-primary);
+    }
+    .fsh-live-dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        margin-right: 6px;
+        vertical-align: middle;
     }
 </style>
 
-<!-- Personalized Greeting Header -->
+@{
+    var validity = ValidityView();
+    var planTone = ToneCss(Color.Primary);
+    var validityTone = ToneCss(validity.Tone);
+    var resourcesTone = ToneCss(Color.Warning);
+    var liveTone = ToneCss(Color.Info);
+}
+
+<!-- Editorial greeting header -->
 <div class="fsh-enter">
-    <div class="d-flex flex-column flex-sm-row align-sm-center justify-space-between gap-3 mb-4">
-        <div>
-            <MudText Typo="Typo.h4" Class="font-weight-semibold" Style="letter-spacing: -0.02em;">
+    <div class="d-flex flex-column flex-sm-row align-sm-end justify-space-between gap-3 mb-4">
+        <div class="flex-grow-1" style="min-width: 0;">
+            <div class="fsh-greeting-caption">@_dateCaption · @_tenantLabel</div>
+            <MudText Typo="Typo.h3" Class="font-weight-bold fsh-greeting mt-1">
                 @_greeting
             </MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
-                @_dateCaption . @_tenantLabel
-            </MudText>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
+        <div class="d-flex gap-2 flex-wrap flex-shrink-0">
             <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh"
                        Disabled="@_refreshing" OnClick="RefreshAllAsync">
                 @(_refreshing ? "Refreshing…" : "Refresh")
             </MudButton>
-            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.Sensors"
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Sensors"
                        OnClick="NavigateToActivity">View activity</MudButton>
-            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.Article"
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Description"
                        OnClick="NavigateToAudits">View audits</MudButton>
         </div>
     </div>
@@ -115,85 +452,96 @@
     <FshErrorBand Message="@((_subscriptionError ?? _tenantError)!)" />
 }
 
-<!-- Stat Cards -->
+<!-- Stat cards -->
 <div class="fsh-enter fsh-enter-1">
-    <MudGrid Class="mb-4">
-        <MudItem xs="12" sm="6" xl="3">
-            <FshStatTile Icon="@Icons.Material.Filled.Folder" Label="Plans" Value="@FormatNumber(_planTotal)"
-                         Hint="@(_planTotal is null ? "loading…" : $"{_activePlans} active")" />
+    <MudGrid Spacing="2" Class="mb-4">
+        <MudItem xs="6" sm="6" md="3">
+            <div class="fsh-stat-card">
+                <span class="fsh-stat-iconplate" style="background: @ToneBgCss(planTone); color: @planTone;">
+                    <MudIcon Icon="@Icons.Material.Filled.Dns" Size="Size.Small" />
+                </span>
+                <div class="flex-grow-1" style="min-width: 0;">
+                    <div class="fsh-stat-label">Plan</div>
+                    @if (_loadingPlan)
+                    {
+                        <div class="fsh-skeleton fsh-skeleton-value mt-1"></div>
+                    }
+                    else
+                    {
+                        <div class="fsh-stat-value">@PlanValue</div>
+                        <div class="fsh-stat-sub">@PlanSub</div>
+                    }
+                </div>
+            </div>
         </MudItem>
-        <MudItem xs="12" sm="6" xl="3">
-            <FshStatTile Icon="@Icons.Material.Filled.Receipt" Label="Invoices" Value="@FormatNumber(_invoiceTotal)"
-                         Hint="@(_invoiceTotal is null ? "loading…" : $"{_invoiceLedgerTotal} total ledger")" />
+        <MudItem xs="6" sm="6" md="3">
+            <div class="fsh-stat-card">
+                <span class="fsh-stat-iconplate" style="background: @ToneBgCss(validityTone); color: @validityTone;">
+                    <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Small" />
+                </span>
+                <div class="flex-grow-1" style="min-width: 0;">
+                    <div class="fsh-stat-label">Valid for</div>
+                    @if (_loadingTenant)
+                    {
+                        <div class="fsh-skeleton fsh-skeleton-value mt-1"></div>
+                    }
+                    else
+                    {
+                        <div class="fsh-stat-value" style="@(validity.Tone is Color.Error or Color.Warning ? $"color: {validityTone};" : "")">@validity.Value</div>
+                        <div class="fsh-stat-sub">@validity.Sub</div>
+                    }
+                </div>
+            </div>
         </MudItem>
-        <MudItem xs="12" sm="6" xl="3">
-            <FshStatTile Icon="@Icons.Material.Filled.Pending" Label="Outstanding" Value="@FormatNumber(_outstandingCount)"
-                         Hint="issued, awaiting payment"
-                         Tone="@(_outstandingCount > 0 ? Color.Warning : Color.Inherit)" />
+        <MudItem xs="6" sm="6" md="3">
+            <div class="fsh-stat-card">
+                <span class="fsh-stat-iconplate" style="background: @ToneBgCss(resourcesTone); color: @resourcesTone;">
+                    <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" />
+                </span>
+                <div class="flex-grow-1" style="min-width: 0;">
+                    <div class="fsh-stat-label">Resources</div>
+                    @if (_loadingUsage)
+                    {
+                        <div class="fsh-skeleton fsh-skeleton-value mt-1"></div>
+                    }
+                    else
+                    {
+                        <div class="fsh-stat-value">@ResourcesValue</div>
+                        <div class="fsh-stat-sub">@ResourcesSub</div>
+                    }
+                </div>
+            </div>
         </MudItem>
-        <MudItem xs="12" sm="6" xl="3">
-            <FshStatTile Icon="@Icons.Material.Filled.Speed" Label="Usage" Value="@FormatNumber(_usageSnapshots.Count)"
-                         Hint="tracked resources" />
+        <MudItem xs="6" sm="6" md="3">
+            <div class="fsh-stat-card">
+                <span class="fsh-stat-iconplate" style="background: @ToneBgCss(liveTone); color: @liveTone;">
+                    <MudIcon Icon="@Icons.Material.Filled.Bolt" Size="Size.Small" />
+                </span>
+                <div class="flex-grow-1" style="min-width: 0;">
+                    <div class="fsh-stat-label">Live events</div>
+                    <div class="fsh-stat-value">@LiveEventsValue</div>
+                    <div class="fsh-stat-sub">
+                        <span class="fsh-live-dot" style="background: @LiveStatusColor;"></span>
+                        <span style="text-transform: capitalize;">@LiveStatusText</span>
+                    </div>
+                </div>
+            </div>
         </MudItem>
     </MudGrid>
 </div>
 
-<!-- Quick Actions -->
-<div class="fsh-enter fsh-enter-1" style="animation-delay: 50ms;">
-    <div class="mb-4">
-        <MudText Typo="Typo.caption" Class="fsh-mono-label mb-2" Style="font-size: 11px; letter-spacing: 0.06em;">QUICK ACTIONS</MudText>
-        <MudGrid Spacing="2">
-            <MudItem xs="6" sm="3">
-                <a href="/identity/users" class="fsh-quick-action-tile" style="@TileStyle("var(--mud-palette-info)")">
-                    <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Style="@TileIconStyle("var(--mud-palette-info)")" />
-                    <div>
-                        <div class="fsh-mono-medium" style="font-size: 12px;">Invite users</div>
-                        <div class="fsh-mono-muted" style="font-size: 11px;">Add teammates, assign roles</div>
-                    </div>
-                </a>
-            </MudItem>
-            <MudItem xs="6" sm="3">
-                <a href="/catalog/products" class="fsh-quick-action-tile" style="@TileStyle("var(--mud-palette-success)")">
-                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" Style="@TileIconStyle("var(--mud-palette-success)")" />
-                    <div>
-                        <div class="fsh-mono-medium" style="font-size: 12px;">Browse catalog</div>
-                        <div class="fsh-mono-muted" style="font-size: 11px;">Products, brands, categories</div>
-                    </div>
-                </a>
-            </MudItem>
-            <MudItem xs="6" sm="3">
-                <a href="/subscription" class="fsh-quick-action-tile" style="@TileStyle("var(--mud-palette-primary)")">
-                    <MudIcon Icon="@Icons.Material.Filled.CreditCard" Size="Size.Small" Style="@TileIconStyle("var(--mud-palette-primary)")" />
-                    <div>
-                        <div class="fsh-mono-medium" style="font-size: 12px;">Subscription</div>
-                        <div class="fsh-mono-muted" style="font-size: 11px;">Plan, usage, invoices</div>
-                    </div>
-                </a>
-            </MudItem>
-            <MudItem xs="6" sm="3">
-                <a href="/activity" class="fsh-quick-action-tile" style="@TileStyle("var(--mud-palette-warning)")">
-                    <MudIcon Icon="@Icons.Material.Filled.Insights" Size="Size.Small" Style="@TileIconStyle("var(--mud-palette-warning)")" />
-                    <div>
-                        <div class="fsh-mono-medium" style="font-size: 12px;">Live activity</div>
-                        <div class="fsh-mono-muted" style="font-size: 11px;">Real-time event stream</div>
-                    </div>
-                </a>
-            </MudItem>
-        </MudGrid>
-    </div>
-</div>
-
-<!-- Main Content: Sidebar + Right Grid -->
+<!-- Main grid: Left rail + Right widget grid -->
 <div class="fsh-enter fsh-enter-2">
-    <MudGrid>
-        <!-- Left Sidebar: Subscription + Tenant Status -->
+    <MudGrid Spacing="2">
+        <!-- Left rail: Subscription + System status -->
         <MudItem xs="12" lg="4" xl="3">
             <div class="d-flex flex-column gap-4">
-                <!-- Subscription Card -->
                 <div class="fsh-detail-card">
                     <div class="fsh-detail-card-header">
-                        <MudText Class="fsh-mono-label">SUBSCRIPTION</MudText>
-                        <MudIcon Icon="@Icons.Material.Filled.CardMembership" Size="Size.Small" Color="Color.Secondary" />
+                        <div class="fsh-detail-card-title">
+                            <MudIcon Icon="@Icons.Material.Filled.CreditCard" Size="Size.Small" Color="Color.Secondary" />
+                            Subscription
+                        </div>
                     </div>
                     <div class="fsh-detail-card-body">
                         @if (_loadingSubscription)
@@ -208,221 +556,312 @@
                         }
                         else if (_subscription is null)
                         {
-                            <MudText Typo="Typo.body2" Class="mb-3">No active subscription</MudText>
-                            <MudButton Variant="Variant.Filled" Size="Size.Small" OnClick="NavigateToSubscription">
-                                View plans
-                            </MudButton>
+                            <div class="fsh-empty">
+                                <MudIcon Icon="@Icons.Material.Filled.CreditCard" Size="Size.Small" Color="Color.Secondary" />
+                                <div class="fsh-empty-title">No active subscription</div>
+                                <p class="fsh-empty-desc">Pick a plan to enable billing, quotas, and overage tracking.</p>
+                                <MudButton Variant="Variant.Filled" Size="Size.Small" Class="mt-1" OnClick="NavigateToSubscription">
+                                    View plans
+                                </MudButton>
+                            </div>
                         }
                         else
                         {
-                            <MudText Typo="Typo.h6" Class="font-weight-medium">@(_subscription.PlanKey.ToUpper())</MudText>
-                            <div class="mt-1">
-                                <FshStatusPill Text="@GetSubscriptionStatusText()" Tone="@GetSubscriptionStatusColor()" />
+                            <div class="d-flex align-center justify-space-between gap-3">
+                                <div class="fsh-sub-plan fsh-truncate">@_subscription.PlanKey</div>
+                                <span class="fsh-badge">@_subscription.Status</span>
                             </div>
-                            @if (_subscription.EndUtc.HasValue)
+                            <dl class="fsh-sub-dl">
+                                <div>
+                                    <dt>Started</dt>
+                                    <dd>@_subscription.StartUtc.ToString("MMM d, yyyy")</dd>
+                                </div>
+                                <div>
+                                    <dt>Ends</dt>
+                                    <dd>@(_subscription.EndUtc?.ToString("MMM d, yyyy") ?? "open-ended")</dd>
+                                </div>
+                            </dl>
+                            @if (SubscriptionProgress is { } progress)
                             {
-                                var daysLeft = (_subscription.EndUtc.Value - DateTime.UtcNow).Days;
-                                <MudText Typo="Typo.caption" Color="@(daysLeft < 7 ? Color.Error : Color.Secondary)" Class="mt-3 d-block">
-                                    Renews @_subscription.EndUtc.Value.ToString("MMM d, yyyy") (@daysLeft days left)
-                                </MudText>
+                                <div class="fsh-sub-term">
+                                    <span>Current term</span>
+                                    <span class="fsh-sub-term-value">@((progress * 100).ToString("N0"))% · @(SubscriptionDaysLeft)d left</span>
+                                </div>
+                                <div class="fsh-usage-bar mt-1">
+                                    <div class="fsh-usage-fill" style="width: @((progress * 100).ToString("N0"))%; background: var(--mud-palette-primary);"></div>
+                                </div>
                             }
-                            <div class="mt-3 d-flex gap-2">
+                            <div class="mt-3">
                                 <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="NavigateToSubscription">Manage</MudButton>
-                                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="NavigateToBilling">Billing</MudButton>
                             </div>
                         }
                     </div>
                 </div>
 
-                <!-- Tenant Status Card -->
                 <div class="fsh-detail-card">
                     <div class="fsh-detail-card-header">
-                        <MudText Class="fsh-mono-label">TENANT STATUS</MudText>
-                        <MudIcon Icon="@Icons.Material.Filled.BusinessCenter" Size="Size.Small" Color="Color.Secondary" />
-                    </div>
-                    <div class="fsh-detail-card-body">
-                        @if (_loadingTenant)
-                        {
-                            <div class="d-flex justify-center py-4">
-                                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-                            </div>
-                        }
-                        else if (_tenantError is not null)
-                        {
-                            <MudText Typo="Typo.body2" Color="Color.Error">@_tenantError</MudText>
-                        }
-                        else if (_tenantStatus is not null)
-                        {
-                            <MudText Typo="Typo.h6" Class="font-weight-medium fsh-truncate">@_tenantStatus.Name</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@_tenantStatus.AdminEmail</MudText>
-                            <div class="mt-2">
-                                <FshStatusPill Text="@GetTenantStatusText()" Tone="@GetTenantStatusColor()" />
-                            </div>
-                            @if (_tenantStatus.Plan is not null)
-                            {
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2 d-block">Plan: @_tenantStatus.Plan</MudText>
-                            }
-                        }
-                    </div>
-                </div>
-
-                <!-- System Status / Live Feed Card -->
-                <div class="fsh-detail-card">
-                    <div class="fsh-detail-card-header">
-                        <MudText Class="fsh-mono-label">SYSTEM STATUS</MudText>
-                        @if (_isSseConnected)
-                        {
-                            <MudTooltip Text="Live updates connected">
-                                <span class="d-flex align-center gap-1" style="color: var(--mud-palette-success);">
-                                    <span class="fsh-sse-pulse"></span>
-                                    <MudText Typo="Typo.caption" Color="Color.Success">live</MudText>
-                                </span>
-                            </MudTooltip>
-                        }
-                        else
-                        {
-                            <MudTooltip Text="Stream disconnected">
-                                <span class="d-flex align-center gap-1" style="color: var(--mud-palette-text-disabled);">
-                                    <MudIcon Icon="@Icons.Material.Filled.CloudOff" Size="Size.Small" />
-                                    <MudText Typo="Typo.caption">offline</MudText>
-                                </span>
-                            </MudTooltip>
-                        }
-                    </div>
-                    <div class="fsh-detail-card-body">
-                        <div class="d-flex align-center gap-2 mb-2">
-                            <MudIcon Icon="@Icons.Material.Filled.Sensors" Size="Size.Small" Color="Color.Secondary" />
-                            <MudText Typo="Typo.body2">@(_isSseConnected ? "Stream live" : "Not connected")</MudText>
+                        <div class="fsh-detail-card-title">
+                            <MudIcon Icon="@Icons.Material.Filled.Wifi" Size="Size.Small" Color="Color.Secondary" />
+                            System status
                         </div>
-                        @if (_liveEvents.Count == 0)
-                        {
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Listening for activity…</MudText>
-                        }
-                        else
-                        {
-                            <div class="d-flex flex-column">
-                                @foreach (var ev in _liveEvents.Take(5))
-                                {
-                                    <div class="d-flex align-center justify-space-between py-1"
-                                         style="border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 40%, transparent);">
-                                        <span class="fsh-mono-medium fsh-truncate" style="font-size: 11px;">@ev.EventType</span>
-                                        <span class="fsh-mono-muted" style="font-size: 10px;">@FormatClock(ev.ReceivedAt)</span>
-                                    </div>
-                                }
+                    </div>
+                    <div class="fsh-detail-card-body">
+                        <div class="d-flex align-start gap-3">
+                            <span class="fsh-stat-iconplate" style="background: @ToneBgCss(liveTone); color: @liveTone;">
+                                <MudIcon Icon="@(_isSseConnected ? Icons.Material.Filled.Wifi : Icons.Material.Filled.WifiOff)" Size="Size.Small" />
+                            </span>
+                            <div class="flex-grow-1" style="min-width: 0;">
+                                <div class="fsh-sys-title">
+                                    <span>@(_isSseConnected ? "Stream live" : "Not connected")</span>
+                                    @if (_isSseConnected)
+                                    {
+                                        <span class="fsh-sse-pulse"></span>
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">LIVE</MudChip>
+                                    }
+                                </div>
+                                <p class="fsh-sys-desc">
+                                    @(_isSseConnected
+                                        ? "Backend events are flowing in real time."
+                                        : "Stream disconnected. Events will queue once it recovers.")
+                                </p>
                             </div>
-                        }
+                        </div>
+                        <div class="fsh-sys-events">
+                            <span class="fsh-sys-label">Events this session</span>
+                            <span class="fsh-sys-count">@LiveEventsValue</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </MudItem>
 
-        <!-- Right Grid: Usage + Activity -->
+        <!-- Right widget grid: Recent audits / Usage / Quick actions / Live feed -->
         <MudItem xs="12" lg="8" xl="9">
-            <div class="d-flex flex-column gap-4">
-                <MudGrid>
-                    <!-- Usage Summary -->
-                    <MudItem xs="12" md="6">
-                        <div class="fsh-detail-card h-100">
-                            <div class="fsh-detail-card-header">
-                                <MudText Class="fsh-mono-label">USAGE</MudText>
-                                <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" Color="Color.Secondary" />
+            <MudGrid Spacing="2">
+                <MudItem xs="12" md="6">
+                    <div class="fsh-detail-card h-100">
+                        <div class="fsh-detail-card-header">
+                            <div class="min-w-0">
+                                <div class="fsh-detail-card-title">
+                                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Color="Color.Secondary" />
+                                    Recent audits
+                                </div>
+                                <div class="fsh-detail-card-desc">Last 24 hours, top 5 events.</div>
                             </div>
-                            <div class="fsh-detail-card-body">
-                                @if (_loadingUsage)
-                                {
-                                    <div class="d-flex justify-center py-4">
-                                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-                                    </div>
-                                }
-                                else if (_usageError is not null)
-                                {
-                                    <MudText Typo="Typo.body2" Color="Color.Error">@_usageError</MudText>
-                                }
-                                else if (!_usageSnapshots.Any())
-                                {
-                                    <MudText Typo="Typo.body2">No usage data available</MudText>
-                                }
-                                else
-                                {
-                                    @foreach (var usage in _usageSnapshots.Take(3))
-                                    {
-                                        <div class="d-flex align-center justify-space-between py-2"
-                                             style="border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 40%, transparent);">
-                                            <MudText Typo="Typo.body2">@usage.Resource</MudText>
-                                            <div class="d-flex align-center gap-2">
-                                                <MudText Typo="Typo.body2" Class="font-weight-medium"
-                                                         Style="font-variant-numeric: tabular-nums;">
-                                                    @usage.UsedUnits / @usage.LimitUnits
-                                                </MudText>
-                                                @if (usage.LimitUnits > 0)
-                                                {
-                                                    var pct = (int)(usage.UsedUnits * 100 / usage.LimitUnits);
-                                                    <div style="width: 40px; height: 4px; border-radius: 2px; background: var(--mud-palette-lines-default);">
-                                                        <div style="width: @(Math.Min(pct, 100))%; height: 100%; border-radius: 2px; background: @(pct > 90 ? "var(--mud-palette-error)" : pct > 70 ? "var(--mud-palette-warning)" : "var(--mud-palette-success)");"></div>
-                                                    </div>
-                                                }
-                                            </div>
-                                        </div>
-                                    }
-                                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="mt-2 align-self-start"
-                                               OnClick="NavigateToUsage">View details</MudButton>
-                                }
-                            </div>
+                            <a href="/system/audits" class="fsh-detail-card-action">See all →</a>
                         </div>
-                    </MudItem>
-
-                    <!-- Recent Activity -->
-                    <MudItem xs="12" md="6">
-                        <div class="fsh-detail-card h-100">
-                            <div class="fsh-detail-card-header">
-                                <MudText Class="fsh-mono-label">RECENT ACTIVITY</MudText>
-                                @if (_isSseConnected)
-                                {
-                                    <MudTooltip Text="Live updates connected">
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined">LIVE</MudChip>
-                                    </MudTooltip>
-                                }
-                            </div>
-                            <div class="fsh-detail-card-body">
-                                @if (_loadingAudits)
-                                {
-                                    <div class="d-flex justify-center py-4">
-                                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-                                    </div>
-                                }
-                                else if (_auditError is not null)
-                                {
-                                    <MudText Typo="Typo.body2" Color="Color.Error">@_auditError</MudText>
-                                }
-                                else if (!_recentAudits.Any())
-                                {
-                                    <MudText Typo="Typo.body2">No recent activity</MudText>
-                                }
-                                else
-                                {
+                        <div class="fsh-detail-card-body">
+                            @if (_loadingAudits)
+                            {
+                                <div class="d-flex justify-center py-4">
+                                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                                </div>
+                            }
+                            else if (_auditError is not null)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Error">@_auditError</MudText>
+                            }
+                            else if (!_recentAudits.Any())
+                            {
+                                <div class="fsh-empty">
+                                    <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Color="Color.Secondary" />
+                                    <div class="fsh-empty-title">No recent activity</div>
+                                    <p class="fsh-empty-desc">Audited actions in the last 24 hours will appear here.</p>
+                                </div>
+                            }
+                            else
+                            {
+                                <ul class="fsh-audit-list">
                                     @foreach (var audit in _recentAudits.Take(5))
                                     {
-                                        <div class="d-flex align-center gap-2 py-2 fsh-overview-row"
-                                             style="border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 40%, transparent); cursor: pointer;"
-                                             @onclick="NavigateToAudits">
-                                            <span class="d-flex align-center justify-center fsh-overview-icon"
-                                                  style="background: color-mix(in srgb, @AuditSeverityCssColor(audit.Severity) 12%, transparent); color: @AuditSeverityCssColor(audit.Severity);">
-                                                <MudIcon Icon="@GetAuditIcon(audit.EventType)" Size="Size.Small" />
-                                            </span>
-                                            <div class="d-flex flex-column flex-grow-1" style="min-width: 0;">
-                                                <MudText Typo="Typo.body2" Class="fsh-truncate">@(audit.Source?.Split('.').Last() ?? "Unknown")</MudText>
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                    @(audit.UserName ?? audit.UserId?.Split('@')[0] ?? "system") · @FshFormat.DateRelative(audit.OccurredAtUtc)
-                                                </MudText>
+                                        <li>
+                                            <div class="fsh-audit-row" @onclick="NavigateToAudits">
+                                                <span class="fsh-audit-iconplate"
+                                                      style="background: color-mix(in srgb, @AuditSeverityCssColor(audit.Severity) 10%, transparent); color: @AuditSeverityCssColor(audit.Severity);">
+                                                    <MudIcon Icon="@GetAuditIcon(audit.EventType)" Size="Size.Small" />
+                                                </span>
+                                                <div class="d-flex flex-column flex-grow-1" style="min-width: 0;">
+                                                    <div class="fsh-audit-title fsh-truncate">@(audit.Source?.Split('.').Last() ?? "Unknown")</div>
+                                                    <div class="fsh-audit-meta fsh-truncate">
+                                                        @(audit.UserName ?? audit.UserId?.Split('@')[0] ?? "system") · @FshFormat.DateRelative(audit.OccurredAtUtc)
+                                                    </div>
+                                                </div>
+                                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" Color="Color.Secondary" />
                                             </div>
-                                        </div>
+                                        </li>
                                     }
-                                }
+                                </ul>
+                            }
+                        </div>
+                    </div>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <div class="fsh-detail-card h-100">
+                        <div class="fsh-detail-card-header">
+                            <div class="min-w-0">
+                                <div class="fsh-detail-card-title">
+                                    <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" Color="Color.Secondary" />
+                                    Usage by resource
+                                </div>
+                                <div class="fsh-detail-card-desc">Current-month consumption against plan limits.</div>
+                            </div>
+                            @if (UsageOverage > 0)
+                            {
+                                <span class="fsh-overage-badge">+@UsageOverage.ToString("N0")</span>
+                            }
+                        </div>
+                        <div class="fsh-detail-card-body">
+                            @if (_loadingUsage)
+                            {
+                                <div class="d-flex justify-center py-4">
+                                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                                </div>
+                            }
+                            else if (_usageError is not null)
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Error">@_usageError</MudText>
+                            }
+                            else if (!CurrentMonthUsage.Any())
+                            {
+                                <div class="fsh-empty">
+                                    <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Small" Color="Color.Secondary" />
+                                    <div class="fsh-empty-title">No usage captured yet</div>
+                                    <p class="fsh-empty-desc">Activity will appear here as the backend records snapshots for this period.</p>
+                                </div>
+                            }
+                            else
+                            {
+                                <ul class="fsh-usage-list">
+                                    @foreach (var row in CurrentMonthUsage)
+                                    {
+                                        <li class="fsh-usage-row">
+                                            <div class="d-flex align-center gap-2" style="min-width: 0;">
+                                                <span class="fsh-usage-label fsh-truncate">@row.Resource</span>
+                                                @if (row.Overage > 0)
+                                                {
+                                                    <span class="fsh-overage-badge">+@row.Overage.ToString("N0")</span>
+                                                }
+                                            </div>
+                                            <div class="fsh-usage-metrics">
+                                                <span>@row.UsedUnits.ToString("N0")</span>
+                                                <span class="fsh-usage-limit">/ @row.LimitUnits.ToString("N0")</span>
+                                                <span class="fsh-usage-pct">@UsagePercent(row).ToString("N0")%</span>
+                                            </div>
+                                            <div class="fsh-usage-bar">
+                                                <div class="fsh-usage-fill" style="width: @UsagePercent(row).ToString("N0")%; background: @UsageFillColor(row);"></div>
+                                            </div>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    </div>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <div class="fsh-detail-card h-100">
+                        <div class="fsh-detail-card-header">
+                            <div class="min-w-0">
+                                <div class="fsh-detail-card-title">
+                                    <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small" Color="Color.Secondary" />
+                                    Quick actions
+                                </div>
+                                <div class="fsh-detail-card-desc">Jump into the most-used destinations.</div>
                             </div>
                         </div>
-                    </MudItem>
-                </MudGrid>
-            </div>
+                        <div class="fsh-detail-card-body">
+                            <MudGrid Spacing="2">
+                                <MudItem xs="12" sm="6">
+                                    <a href="/identity/users" class="fsh-quick-action-tile">
+                                        <span class="fsh-quick-action-iconplate" style="background: @ToneBgCss(ToneCss(Color.Info)); color: @ToneCss(Color.Info);">
+                                            <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" />
+                                        </span>
+                                        <div class="flex-grow-1" style="min-width: 0;">
+                                            <div class="fsh-quick-action-title">Invite users</div>
+                                            <div class="fsh-quick-action-desc">Add teammates, assign roles</div>
+                                        </div>
+                                        <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Class="fsh-quick-action-arrow" />
+                                    </a>
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <a href="/catalog/products" class="fsh-quick-action-tile">
+                                        <span class="fsh-quick-action-iconplate" style="background: @ToneBgCss(ToneCss(Color.Success)); color: @ToneCss(Color.Success);">
+                                            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" />
+                                        </span>
+                                        <div class="flex-grow-1" style="min-width: 0;">
+                                            <div class="fsh-quick-action-title">Browse catalog</div>
+                                            <div class="fsh-quick-action-desc">Products, brands, categories</div>
+                                        </div>
+                                        <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Class="fsh-quick-action-arrow" />
+                                    </a>
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <a href="/subscription" class="fsh-quick-action-tile">
+                                        <span class="fsh-quick-action-iconplate" style="background: @ToneBgCss(planTone); color: @planTone;">
+                                            <MudIcon Icon="@Icons.Material.Filled.CreditCard" Size="Size.Small" />
+                                        </span>
+                                        <div class="flex-grow-1" style="min-width: 0;">
+                                            <div class="fsh-quick-action-title">Subscription</div>
+                                            <div class="fsh-quick-action-desc">Plan, usage, invoices</div>
+                                        </div>
+                                        <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Class="fsh-quick-action-arrow" />
+                                    </a>
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <a href="/activity" class="fsh-quick-action-tile">
+                                        <span class="fsh-quick-action-iconplate" style="background: @ToneBgCss(ToneCss(Color.Warning)); color: @ToneCss(Color.Warning);">
+                                            <MudIcon Icon="@Icons.Material.Filled.Insights" Size="Size.Small" />
+                                        </span>
+                                        <div class="flex-grow-1" style="min-width: 0;">
+                                            <div class="fsh-quick-action-title">Live activity</div>
+                                            <div class="fsh-quick-action-desc">Real-time event stream</div>
+                                        </div>
+                                        <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Class="fsh-quick-action-arrow" />
+                                    </a>
+                                </MudItem>
+                            </MudGrid>
+                        </div>
+                    </div>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <div class="fsh-detail-card h-100">
+                        <div class="fsh-detail-card-header">
+                            <div class="min-w-0">
+                                <div class="fsh-detail-card-title">
+                                    <MudIcon Icon="@Icons.Material.Filled.Sensors" Size="Size.Small" Color="Color.Secondary" />
+                                    Live feed
+                                </div>
+                                <div class="fsh-detail-card-desc">Real-time backend events over SSE.</div>
+                            </div>
+                            <a href="/activity" class="fsh-detail-card-action">Open →</a>
+                        </div>
+                        <div class="fsh-detail-card-body">
+                            @if (_liveEvents.Count == 0)
+                            {
+                                <div class="fsh-empty">
+                                    <MudIcon Icon="@Icons.Material.Filled.Sensors" Size="Size.Small" Color="Color.Secondary" />
+                                    <div class="fsh-empty-title">Listening for activity</div>
+                                    <p class="fsh-empty-desc">Events will appear here as the backend publishes them.</p>
+                                </div>
+                            }
+                            else
+                            {
+                                <ul class="fsh-live-list">
+                                    @foreach (var ev in _liveEvents.Take(5))
+                                    {
+                                        <li class="fsh-live-row">
+                                            <span class="fsh-live-clock">@FormatClock(ev.ReceivedAt)</span>
+                                            <span class="fsh-live-badge" style="background: color-mix(in srgb, @EventToneColor(ev.EventType) 12%, transparent); color: @EventToneColor(ev.EventType);">@ev.EventType</span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    </div>
+                </MudItem>
+            </MudGrid>
         </MudItem>
     </MudGrid>
 </div>

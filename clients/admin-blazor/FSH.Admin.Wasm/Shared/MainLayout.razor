@@ -6,9 +6,11 @@
 @inject FshThemeService Theme
 @inject IDialogService DialogService
 @inject IHubConnectionService Hub
+@inject IUserService UserService
 @using FSH.BlazorShared.Components
 @using FSH.BlazorShared.Permissions
 @using FSH.BlazorShared.Realtime
+@using FSH.BlazorShared.Services
 @using FSH.Admin.Wasm.Shared
 @using Microsoft.AspNetCore.SignalR.Client
 
@@ -103,9 +105,16 @@
                                  @onclick:preventDefault="true"
                                  @onkeydown="e => HandleUserMenuKey(e, userMenuActivator)"
                                  role="button" tabindex="0"
-                                 style="padding: 4px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                 class="fsh-user-menu-activator">
                                 <div class="fsh-user-menu-tile" style="background: color-mix(in srgb, var(--mud-palette-primary) 18%, transparent); color: var(--mud-palette-primary);">
-                                    @UserInitials
+                                    @if (!string.IsNullOrEmpty(_profileImageUrl) && !_avatarFailed)
+                                    {
+                                        <img src="@_profileImageUrl" alt="@_userName" class="fsh-user-menu-avatar" @onerror="OnAvatarError" />
+                                    }
+                                    else
+                                    {
+                                        @UserInitials
+                                    }
                                 </div>
                                 @if (!string.IsNullOrEmpty(_userName))
                                 {
@@ -169,6 +178,8 @@
     private string _userEmail = string.Empty;
     private string _tenantName = string.Empty;
     private string _currentUri = "/";
+    private string _profileImageUrl = string.Empty;
+    private bool _avatarFailed;
     private CommandPalette? _palette;
 
     private IEnumerable<NavSpec.NavItem> VisibleTopItems => NavSpec.TopItems.Where(CanSee);
@@ -186,6 +197,7 @@
         // filter must be recomputed on every change, not just once at creation.
         Auth.AuthenticationStateChanged += OnAuthenticationStateChanged;
         Nav.LocationChanged += OnLocationChanged;
+        ProfileEvents.ProfileUpdated += OnProfileUpdated;
     }
 
     protected override async Task OnInitializedAsync()
@@ -201,6 +213,36 @@
         // React parity: every navigation re-syncs the open section (best-prefix match).
         _openSectionId = FindSectionForUri(e.Location);
         InvokeAsync(StateHasChanged);
+    }
+
+    private void OnProfileUpdated()
+        => _ = InvokeAsync(RefreshProfileAsync);
+
+    private async Task RefreshProfileAsync()
+    {
+        try
+        {
+            var state = await Auth.GetAuthenticationStateAsync();
+            if (state.User.Identity?.IsAuthenticated != true)
+            {
+                return;
+            }
+
+            var profile = await UserService.GetMyProfileAsync();
+            _profileImageUrl = profile.ImageUrl ?? string.Empty;
+            _avatarFailed = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // Profile fetch is best-effort; the tile keeps the initials fallback.
+        }
+    }
+
+    private void OnAvatarError()
+    {
+        _avatarFailed = true;
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private string FindSectionForUri(string uri)
@@ -259,6 +301,13 @@
             _tenantName = claims.FirstOrDefault(c => c.Type == "tenant")?.Value ?? string.Empty;
 
             await ManageHubConnectionAsync(user.Identity?.IsAuthenticated == true);
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                _profileImageUrl = string.Empty;
+                _avatarFailed = false;
+                await RefreshProfileAsync();
+            }
+
             await InvokeAsync(StateHasChanged);
         }
         catch
@@ -361,5 +410,6 @@
     {
         Auth.AuthenticationStateChanged -= OnAuthenticationStateChanged;
         Nav.LocationChanged -= OnLocationChanged;
+        ProfileEvents.ProfileUpdated -= OnProfileUpdated;
     }
 }

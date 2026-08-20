@@ -33,6 +33,7 @@ public sealed partial class App : IDisposable
 
     private void OnThemeChanged()
     {
+        _theme = FshMudTheme.CreateAdmin(FshAppearanceOptions.GetFont(Theme.FontId));
         InvokeAsync(StateHasChanged);
     }
 

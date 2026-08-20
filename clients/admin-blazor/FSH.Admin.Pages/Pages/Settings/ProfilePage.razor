@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @namespace FSH.Admin.Wasm.Pages.Settings
 @using FSH.BlazorShared.Models.Identity
+@using FSH.BlazorShared.Services
 
 <SettingsScaffold>
     @if (_error is not null)
@@ -169,6 +170,7 @@
             _imageDialogOpen = false;
             Snackbar.Add("Profile image updated", Severity.Success);
             await LoadAsync();
+            ProfileEvents.NotifyProfileUpdated();
         }
         catch (Exception ex)
         {
@@ -187,6 +189,7 @@
             await UserService.SetProfileImageAsync(null);
             Snackbar.Add("Profile image cleared", Severity.Success);
             await LoadAsync();
+            ProfileEvents.NotifyProfileUpdated();
         }
         catch (Exception ex)
         {

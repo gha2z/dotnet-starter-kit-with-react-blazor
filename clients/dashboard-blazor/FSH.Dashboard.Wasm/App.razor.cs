@@ -33,7 +33,9 @@ public sealed partial class App : IDisposable
 
     private void OnThemeChanged()
     {
-        _theme = FshMudTheme.CreateDashboard(FshAppearanceOptions.ResolveAccent(Theme.AccentId, Theme.CustomAccent));
+        _theme = FshMudTheme.CreateDashboard(
+            FshAppearanceOptions.ResolveAccent(Theme.AccentId, Theme.CustomAccent),
+            FshAppearanceOptions.GetFont(Theme.FontId));
         InvokeAsync(StateHasChanged);
     }
 

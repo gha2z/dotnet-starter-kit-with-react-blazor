@@ -96,6 +96,7 @@ public class FshThemeService : IAsyncDisposable
             }
 
             await LoadAppearanceAsync();
+            await LoadSelectedFontAsync();
         }
         catch
         {
@@ -232,6 +233,27 @@ public class FshThemeService : IAsyncDisposable
         _fontId = fontId;
         Changed?.Invoke();
         await WritePreferenceAsync(FshAppearanceOptions.FontStorageKey, fontId);
+        await LoadSelectedFontAsync();
+    }
+
+    /// <summary>
+    /// Fetches the selected family's stylesheet on demand (React parity: the
+    /// Appearance page lazy-loads the non-boot fonts). Idempotent — re-points a
+    /// single <c>&lt;link&gt;</c> so repeated changes never stack stylesheets.
+    /// Best-effort: if fonts.googleapis.com is unreachable the CSS stacks fall
+    /// back to Inter/Segoe UI.
+    /// </summary>
+    private async Task LoadSelectedFontAsync()
+    {
+        try
+        {
+            _module ??= await _js.InvokeAsync<IJSObjectReference>("import", "./_content/FSH.BlazorShared/js/fshTheme.js");
+            await _module.InvokeVoidAsync("loadFont", FshAppearanceOptions.GetFont(_fontId).GoogleQuery);
+        }
+        catch
+        {
+            // Offline / CSP-blocked: the fallback stacks still render.
+        }
     }
 
     public async Task SetDensityAsync(FshDensityMode density)

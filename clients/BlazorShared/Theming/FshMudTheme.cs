@@ -12,12 +12,15 @@ public static class FshMudTheme
     private const string DarkPrimary = "#FB7185";
 
     public static MudTheme CreateAdmin()
+        => CreateAdmin(FshAppearanceOptions.GetFont(FshAppearanceOptions.DefaultFontId));
+
+    public static MudTheme CreateAdmin(FshFontOption font)
     {
         return new MudTheme
         {
             Typography = new Typography
             {
-                Default = new DefaultTypography { FontFamily = ["Inter", "Segoe UI", "sans-serif"] },
+                Default = new DefaultTypography { FontFamily = [font.FamilyName, "Inter", "Segoe UI", "sans-serif"] },
                 H1 = new H1Typography { FontFamily = ["Outfit", "Inter", "sans-serif"] },
                 H2 = new H2Typography { FontFamily = ["Outfit", "Inter", "sans-serif"] },
                 H3 = new H3Typography { FontFamily = ["Outfit", "Inter", "sans-serif"] },
@@ -74,8 +77,11 @@ public static class FshMudTheme
         => CreateDashboard(FshAppearanceOptions.GetAccent(FshAppearanceOptions.DefaultAccentId));
 
     public static MudTheme CreateDashboard(FshAccentOption accent)
+        => CreateDashboard(accent, FshAppearanceOptions.GetFont(FshAppearanceOptions.DefaultFontId));
+
+    public static MudTheme CreateDashboard(FshAccentOption accent, FshFontOption font)
     {
-        var theme = CreateAdmin();
+        var theme = CreateAdmin(font);
         theme.PaletteLight.Primary = accent.LightPrimary;
         theme.PaletteDark.Primary = accent.DarkPrimary;
         return theme;

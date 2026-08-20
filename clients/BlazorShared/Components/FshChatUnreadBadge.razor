@@ -22,7 +22,7 @@
 
 @code {
     private int _unreadCount;
-    private IDisposable? _hubSub;
+    private readonly List<IDisposable> _hubSubs = [];
 
     private string BadgeTitle => _unreadCount > 0
         ? $"{_unreadCount} unread chat message{(_unreadCount == 1 ? "" : "s")}"
@@ -53,8 +53,12 @@
             }
             else
             {
-                _hubSub?.Dispose();
-                _hubSub = null;
+                foreach (var sub in _hubSubs)
+                {
+                    sub.Dispose();
+                }
+
+                _hubSubs.Clear();
             }
 
             await RefreshAsync();
@@ -64,12 +68,17 @@
 
     private void TrySubscribeHub()
     {
-        if (_hubSub is not null || Hub.State != HubConnectionState.Connected)
+        if (_hubSubs.Count > 0 || Hub.State != HubConnectionState.Connected)
         {
             return;
         }
 
-        _hubSub = Hub.On<object>("ChatMessageCreated", _ => InvokeAsync(RefreshAsync));
+        _hubSubs.Add(Hub.On<object>("ChatMessageCreated", _ => InvokeAsync(RefreshAsync)));
+        // The server pushes this to the user's group after MarkChannelRead —
+        // mirrors React's markChannelRead invalidating my-channels, so the
+        // badge clears the moment a channel is read instead of waiting for
+        // the next navigation.
+        _hubSubs.Add(Hub.On<object>("ChatChannelRead", _ => InvokeAsync(RefreshAsync)));
     }
 
     private async Task RefreshAsync()
@@ -90,6 +99,11 @@
     {
         Hub.StateChanged -= OnHubStateChanged;
         Nav.LocationChanged -= OnLocationChanged;
-        _hubSub?.Dispose();
+        foreach (var sub in _hubSubs)
+        {
+            sub.Dispose();
+        }
+
+        _hubSubs.Clear();
     }
 }

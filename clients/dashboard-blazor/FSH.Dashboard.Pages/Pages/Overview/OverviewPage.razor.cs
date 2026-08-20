@@ -1,13 +1,13 @@
-using System.Text.Json;
+using System.Globalization;
+using System.Security.Claims;
 using FSH.BlazorShared.Models;
+using FSH.BlazorShared.Models.Audits;
+using FSH.BlazorShared.Models.Dashboard;
 using FSH.BlazorShared.Services;
 using FSH.BlazorShared.Sse;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor;
-using FSH.BlazorShared.Models.Audits;
-using FSH.BlazorShared.Models.Dashboard;
-using System.Security.Claims;
 
 namespace FSH.Dashboard.Wasm.Pages.Overview;
 
@@ -15,13 +15,12 @@ public sealed partial class OverviewPage : IDisposable
 {
     private const int LiveFeedCap = 5;
 
-    [Inject] private IBillingService BillingService { get; set; } = default!;
     [Inject] private IDashboardService DashboardService { get; set; } = default!;
     [Inject] private ISseService SseService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private AuthenticationStateProvider AuthProvider { get; set; } = default!;
 
-    // Subscription data
+    // Data
     private SubscriptionDto? _subscription;
     private TenantStatusDto? _tenantStatus;
     private List<UsageSnapshotDto> _usageSnapshots = new();
@@ -47,16 +46,9 @@ public sealed partial class OverviewPage : IDisposable
     private string? _usageError;
     private string? _auditError;
 
-    // Stats for overview cards
-    private int? _planTotal;
-    private int? _activePlans;
-    private int? _invoiceTotal;
-    private int _invoiceLedgerTotal;
-    private int _outstandingCount;
-
     // Greeting
     private string _greeting = "Overview";
-    private string _dateCaption = DateTime.Now.ToString("dddd, MMMM d");
+    private string _dateCaption = DateTime.Now.ToString("dddd, MMMM d, yyyy");
     private string _tenantLabel = string.Empty;
 
     // Event subscription — the App root owns the SSE connection lifecycle
@@ -75,8 +67,7 @@ public sealed partial class OverviewPage : IDisposable
             LoadTenantStatusAsync(),
             LoadSubscriptionAsync(),
             LoadUsageSnapshotsAsync(),
-            LoadRecentAuditsAsync(),
-            LoadBillingStatsAsync()
+            LoadRecentAuditsAsync()
         };
 
         await Task.WhenAll(loadTasks);
@@ -101,7 +92,7 @@ public sealed partial class OverviewPage : IDisposable
             _greeting = "Good day!";
         }
 
-        _dateCaption = DateTime.Now.ToString("dddd, MMMM d");
+        _dateCaption = DateTime.Now.ToString("dddd, MMMM d, yyyy");
     }
 
     private void OnSseConnectionChanged()
@@ -155,8 +146,7 @@ public sealed partial class OverviewPage : IDisposable
                 LoadTenantStatusAsync(),
                 LoadSubscriptionAsync(),
                 LoadUsageSnapshotsAsync(),
-                LoadRecentAuditsAsync(),
-                LoadBillingStatsAsync()
+                LoadRecentAuditsAsync()
             };
             await Task.WhenAll(loadTasks);
         }
@@ -217,34 +207,164 @@ public sealed partial class OverviewPage : IDisposable
         }
     }
 
-    private async Task LoadBillingStatsAsync()
+    // ── Stat card views (React parity: clients/dashboard/src/pages/overview.tsx) ──
+
+    private bool _loadingPlan => _loadingSubscription;
+
+    private string PlanValue => _subscriptionError is not null || _subscription is null ? "—" : _subscription.PlanKey;
+
+    private string PlanSub => _subscriptionError is not null ? "Unavailable" : _subscription is null ? "No subscription" : _subscription.Status;
+
+    /// <summary>
+    /// Tenant expiry view for the "Valid for" card — same source of truth the
+    /// Subscription page reads (validUpto / graceEndsUtc), so an in-grace or
+    /// expired tenant sees the warning/danger tone instead of a healthy count.
+    /// </summary>
+    private (string Value, string Sub, Color Tone) ValidityView()
     {
-        var plansTask = BillingService.GetPlansAsync(includeInactive: true);
-        var invoicesTask = BillingService.GetInvoicesAsync(pageNumber: 1, pageSize: 50);
-
-        try
+        if (_tenantError is not null || _tenantStatus is null)
         {
-            var plans = await plansTask;
-            _planTotal = plans.Count;
-            _activePlans = plans.Count(p => p.IsActive);
-        }
-        catch (Exception ex)
-        {
-            _subscriptionError = $"Failed to load plan stats: {ex.Message}";
+            return ("—", "Status unavailable", Color.Primary);
         }
 
-        try
+        return _tenantStatus.ExpiryState switch
         {
-            var invoices = await invoicesTask;
-            _invoiceTotal = invoices.Items.Count;
-            _invoiceLedgerTotal = invoices.TotalCount;
-            _outstandingCount = invoices.Items.Count(i => i.Status == "Issued");
+            "Expired" => ("Expired", "Contact your operator to renew", Color.Error),
+            "InGrace" when string.IsNullOrWhiteSpace(_tenantStatus.GraceEndsUtc)
+                => ("0", "in grace period", Color.Warning),
+            "InGrace" => (DaysUntil(_tenantStatus.GraceEndsUtc).ToString("N0"),
+                          $"grace ends {FormatShortDate(_tenantStatus.GraceEndsUtc)}", Color.Warning),
+            _ when string.IsNullOrWhiteSpace(_tenantStatus.ValidUpto)
+                => ("Open-ended", "no end date", Color.Success),
+            _ => (DaysUntil(_tenantStatus.ValidUpto).ToString("N0"),
+                  $"until {FormatShortDate(_tenantStatus.ValidUpto)}", Color.Success),
+        };
+    }
+
+    private static int DaysUntil(string isoUtc)
+    {
+        if (!DateTimeOffset.TryParse(isoUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var target))
+        {
+            return 0;
         }
-        catch (Exception ex)
+
+        return Math.Max(0, (int)Math.Ceiling((target.UtcDateTime - DateTime.UtcNow).TotalDays));
+    }
+
+    private static string FormatShortDate(string isoUtc) =>
+        DateTimeOffset.TryParse(isoUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dto)
+            ? dto.UtcDateTime.ToString("MMM d, yyyy", CultureInfo.InvariantCulture)
+            : isoUtc;
+
+    /// <summary>React parity: usage rows are the current calendar month only.</summary>
+    private List<UsageSnapshotDto> CurrentMonthUsage
+    {
+        get
         {
-            _subscriptionError = $"{_subscriptionError}{Environment.NewLine}Failed to load invoice stats: {ex.Message}".TrimStart('\n');
+            var now = DateTime.UtcNow;
+            return _usageSnapshots
+                .Where(s => s.PeriodYear == now.Year && s.PeriodMonth == now.Month)
+                .OrderByDescending(s => s.LimitUnits > 0 ? (double)s.UsedUnits / s.LimitUnits : 0)
+                .ToList();
         }
     }
+
+    private string ResourcesValue => _loadingUsage ? string.Empty : CurrentMonthUsage.Count.ToString("N0");
+
+    private string ResourcesSub
+    {
+        get
+        {
+            if (_loadingUsage)
+            {
+                return string.Empty;
+            }
+
+            if (_usageError is not null)
+            {
+                return "Unavailable";
+            }
+
+            var rows = CurrentMonthUsage;
+            if (rows.Count == 0)
+            {
+                return "no current-month activity";
+            }
+
+            var avg = (int)Math.Round(rows.Average(s => s.LimitUnits > 0 ? Math.Min(100, (double)s.UsedUnits * 100 / s.LimitUnits) : 0));
+            var overage = rows.Sum(s => s.Overage);
+            return overage > 0 ? $"{avg}% avg utilization · {overage:N0} overage" : $"{avg}% avg utilization";
+        }
+    }
+
+    private long UsageOverage => CurrentMonthUsage.Sum(s => s.Overage);
+
+    private static double UsagePercent(UsageSnapshotDto snapshot) =>
+        snapshot.LimitUnits > 0 ? Math.Min(100, (double)snapshot.UsedUnits * 100 / snapshot.LimitUnits) : 0;
+
+    private static string UsageFillColor(UsageSnapshotDto snapshot)
+    {
+        if (snapshot.Overage > 0)
+        {
+            return "var(--mud-palette-error)";
+        }
+
+        return UsagePercent(snapshot) >= 80 ? "var(--mud-palette-warning)" : "var(--mud-palette-primary)";
+    }
+
+    private string LiveEventsValue => _sseEventCount.ToString("N0");
+
+    private string LiveStatusText => _isSseConnected ? "connected" : "offline";
+
+    private string LiveStatusColor => _isSseConnected ? "var(--mud-palette-success)" : "var(--mud-palette-error)";
+
+    private double? SubscriptionProgress
+    {
+        get
+        {
+            if (_subscription is null || !_subscription.EndUtc.HasValue)
+            {
+                return null;
+            }
+
+            var end = _subscription.EndUtc.Value;
+            if (end <= _subscription.StartUtc)
+            {
+                return null;
+            }
+
+            return Math.Clamp((DateTime.UtcNow - _subscription.StartUtc).TotalDays / (end - _subscription.StartUtc).TotalDays, 0, 1);
+        }
+    }
+
+    private int? SubscriptionDaysLeft => _subscription?.EndUtc is { } end
+        ? Math.Max(0, (int)Math.Ceiling((end - DateTime.UtcNow).TotalDays))
+        : null;
+
+    // ── Shared tone helpers ──
+
+    private static string ToneCss(Color tone) => tone switch
+    {
+        Color.Warning => "var(--mud-palette-warning)",
+        Color.Error => "var(--mud-palette-error)",
+        Color.Success => "var(--mud-palette-success)",
+        Color.Info => "var(--mud-palette-info)",
+        _ => "var(--mud-palette-primary)",
+    };
+
+    private static string ToneBgCss(string toneColor) => $"color-mix(in srgb, {toneColor} 10%, transparent)";
+
+    private static string EventToneColor(string type)
+    {
+        var t = type.ToLowerInvariant();
+        if (t.Contains("fail") || t.Contains("error") || t.Contains("revoke")) return "var(--mud-palette-error)";
+        if (t.Contains("warn") || t.Contains("retry")) return "var(--mud-palette-warning)";
+        if (t.Contains("login") || t.Contains("issued") || t.Contains("created")) return "var(--mud-palette-success)";
+        if (t.Contains("token") || t.Contains("auth")) return "var(--mud-palette-info)";
+        return "var(--mud-palette-text-secondary)";
+    }
+
+    // ── Audit helpers ──
 
     private string GetAuditIcon(AuditEventType eventType)
     {
@@ -258,17 +378,6 @@ public sealed partial class OverviewPage : IDisposable
         };
     }
 
-    /// <summary>React parity: severity tint on the audit icon background.</summary>
-    private Color AuditSeverityTone(AuditSeverity severity) => severity switch
-    {
-        AuditSeverity.Critical => Color.Error,
-        AuditSeverity.Error => Color.Error,
-        AuditSeverity.Warning => Color.Warning,
-        _ => Color.Info,
-    };
-
-    private static string FormatClock(DateTime dt) => dt.ToString("HH:mm:ss");
-
     /// <summary>React parity: severity-tinted icon background for audit rows.</summary>
     private static string AuditSeverityCssColor(AuditSeverity severity) => severity switch
     {
@@ -278,77 +387,11 @@ public sealed partial class OverviewPage : IDisposable
         _ => "var(--mud-palette-info)",
     };
 
-    private static string TileStyle(string toneColor) => $"border-left: 3px solid {toneColor};";
-
-    private static string TileIconStyle(string toneColor) => $"color: {toneColor}; font-size: 18px;";
-
-    private string FormatCurrency(decimal? amount)
-    {
-        return amount?.ToString("C") ?? "-";
-    }
-
-    private string FormatNumber(int? number)
-    {
-        return number?.ToString("N0") ?? "-";
-    }
-
-    private string GetSubscriptionStatusText()
-    {
-        return _subscription?.Status switch
-        {
-            "Active" => "Active",
-            "Suspended" => "Suspended",
-            "Cancelled" => "Cancelled",
-            _ => "No subscription"
-        };
-    }
-
-    private Color GetSubscriptionStatusColor()
-    {
-        return _subscription?.Status switch
-        {
-            "Active" => Color.Success,
-            "Suspended" => Color.Warning,
-            "Cancelled" => Color.Error,
-            _ => Color.Default
-        };
-    }
-
-    private string GetTenantStatusText()
-    {
-        return _tenantStatus?.ExpiryState switch
-        {
-            "Active" => "Active",
-            "InGrace" => "In Grace Period",
-            "Expired" => "Expired",
-            _ => "Unknown"
-        };
-    }
-
-    private Color GetTenantStatusColor()
-    {
-        return _tenantStatus?.ExpiryState switch
-        {
-            "Active" => Color.Success,
-            "InGrace" => Color.Warning,
-            "Expired" => Color.Error,
-            _ => Color.Default
-        };
-    }
+    private static string FormatClock(DateTime dt) => dt.ToString("HH:mm:ss");
 
     private void NavigateToSubscription()
     {
         Navigation.NavigateTo("/subscription");
-    }
-
-    private void NavigateToInvoices()
-    {
-        Navigation.NavigateTo("/invoices");
-    }
-
-    private void NavigateToUsage()
-    {
-        Navigation.NavigateTo("/usage");
     }
 
     private void NavigateToAudits()
@@ -356,26 +399,10 @@ public sealed partial class OverviewPage : IDisposable
         Navigation.NavigateTo("/system/audits");
     }
 
-    private void NavigateToBilling()
+    private void NavigateToActivity()
     {
-        Navigation.NavigateTo("/billing");
+        Navigation.NavigateTo("/activity");
     }
-
-    private void NavigateToWallet()
-    {
-        Navigation.NavigateTo("/wallet");
-    }
-
-    private void NavigateToProfile()
-    {
-        Navigation.NavigateTo("/settings/profile");
-    }
-
-    private void NavigateToUsers() => Navigation.NavigateTo("/identity/users");
-
-    private void NavigateToCatalog() => Navigation.NavigateTo("/catalog/products");
-
-    private void NavigateToActivity() => Navigation.NavigateTo("/activity");
 
     public void Dispose()
     {

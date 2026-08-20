@@ -395,6 +395,7 @@ public sealed partial class ChatPage : IAsyncDisposable
                 await InvokeAsync(StateHasChanged);
                 _ = EnsureUsersResolvedAsync([msg.AuthorUserId]);
                 await ScrollToBottom();
+                await MarkActiveChannelReadAsync();
             }
             else
             {
@@ -492,28 +493,51 @@ public sealed partial class ChatPage : IAsyncDisposable
         _activeChannel = _channels.FirstOrDefault(c => c.Id == channelId);
         _typingUsers.Clear();
 
-        // Mark as read
-        if (_activeChannel?.UnreadCount > 0)
-        {
-            try
-            {
-                var lastMsg = _messages.LastOrDefault();
-                if (lastMsg is not null)
-                {
-                    await ChatService.MarkChannelReadAsync(channelId, new MarkChannelReadRequest(lastMsg.Id));
-                }
-
-                var idx = _channels.IndexOf(_channels.First(c => c.Id == channelId));
-                _channels[idx] = _channels[idx] with { UnreadCount = 0 };
-            }
-            catch
-            {
-                // Best effort — don't block UI
-            }
-        }
-
+        // Load THIS channel's messages first. The mark-read watermark below
+        // must reference the last message of the channel being opened — reading
+        // _messages before the load would use the previously-selected channel's
+        // list, and the server rejects a message id that isn't in the target
+        // channel (NotFoundException), leaving the unread count stuck forever.
         await LoadMessages(channelId);
         Nav.NavigateTo($"/chat/{channelId}");
+        await MarkActiveChannelReadAsync();
+    }
+
+    /// <summary>
+    /// Advances the server-side read watermark for the active channel to its
+    /// latest loaded message, then zeroes the local unread count. Called when
+    /// a channel is opened and whenever a new message lands in the active
+    /// channel (React parity: chat-page's mark-read effect fires on every
+    /// latest-message change). Best-effort — never blocks the UI.
+    /// </summary>
+    private async Task MarkActiveChannelReadAsync()
+    {
+        if (_activeChannelId is null)
+        {
+            return;
+        }
+
+        var lastMsg = _messages.LastOrDefault();
+        if (lastMsg is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await ChatService.MarkChannelReadAsync(_activeChannelId.Value, new MarkChannelReadRequest(lastMsg.Id));
+
+            var idx = _channels.FindIndex(c => c.Id == _activeChannelId.Value);
+            if (idx >= 0 && _channels[idx].UnreadCount > 0)
+            {
+                _channels[idx] = _channels[idx] with { UnreadCount = 0 };
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch
+        {
+            // Best effort — the watermark is housekeeping, never block the UI.
+        }
     }
 
     private async Task LoadMessages(Guid channelId)

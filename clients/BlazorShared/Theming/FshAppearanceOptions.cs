@@ -14,9 +14,16 @@ public sealed record FshAccentOption(string Id, string Label, string Description
 
 /// <summary>
 /// Selectable UI font family (React parity: appearance-options.ts). The family
-/// is applied to the MudBlazor typography default face.
+/// is applied to the MudBlazor typography default face. <see cref="Family"/> is
+/// the full CSS stack used for previews; <see cref="GoogleQuery"/> is the
+/// family=… segment for the on-demand Google Fonts stylesheet (the nine
+/// non-boot families load only when selected — same map as React's lazy loader).
 /// </summary>
-public sealed record FshFontOption(string Id, string Label, string Description, string Family);
+public sealed record FshFontOption(string Id, string Label, string Description, string Family, string GoogleQuery)
+{
+    /// <summary>First face of the CSS stack, e.g. "Figtree" (unquoted).</summary>
+    public string FamilyName => Family.Split(',')[0].Trim().Trim('\'');
+}
 
 public enum FshDensityMode
 {
@@ -87,22 +94,25 @@ public static class FshAppearanceOptions
 
     public static readonly FshFontOption[] Fonts =
     [
-        new("figtree",       "Figtree",       "Friendly, approachable.", "'Figtree', 'Inter', 'Segoe UI', sans-serif"),
-        new("geist",         "Geist",         "Designed for screens. Default.", "'Geist', 'Inter', 'Segoe UI', sans-serif"),
-        new("inter-tight",   "Inter Tight",   "Tighter modern Inter.", "'Inter Tight', 'Inter', 'Segoe UI', sans-serif"),
-        new("dm-sans",       "DM Sans",       "Geometric, friendly.", "'DM Sans', 'Inter', 'Segoe UI', sans-serif"),
-        new("ibm-plex",      "IBM Plex Sans", "Editorial grotesque.", "'IBM Plex Sans', 'Inter', 'Segoe UI', sans-serif"),
-        new("manrope",       "Manrope",       "Warm, geometric.", "'Manrope', 'Inter', 'Segoe UI', sans-serif"),
-        new("plus-jakarta",  "Plus Jakarta Sans", "Modern, lightly geometric.", "'Plus Jakarta Sans', 'Inter', 'Segoe UI', sans-serif"),
-        new("outfit",        "Outfit",        "Confident geometric sans.", "'Outfit', 'Inter', 'Segoe UI', sans-serif"),
-        new("sora",          "Sora",          "Distinctive, contemporary.", "'Sora', 'Inter', 'Segoe UI', sans-serif"),
-        new("lexend",        "Lexend",        "Tuned for reading speed.", "'Lexend', 'Inter', 'Segoe UI', sans-serif"),
-        new("onest",         "Onest",         "Clean, neutral grotesque.", "'Onest', 'Inter', 'Segoe UI', sans-serif"),
-        new("roboto-flex",   "Roboto Flex",   "Google's flagship variable.", "'Roboto Flex', 'Inter', 'Segoe UI', sans-serif"),
+        new("figtree",       "Figtree",       "Friendly, approachable.", "'Figtree', 'Inter', 'Segoe UI', sans-serif", "Figtree:wght@300..900"),
+        new("geist",         "Geist",         "Designed for screens. Default.", "'Geist', 'Inter', 'Segoe UI', sans-serif", "Geist:wght@100..900"),
+        new("inter-tight",   "Inter Tight",   "Tighter modern Inter.", "'Inter Tight', 'Inter', 'Segoe UI', sans-serif", "Inter+Tight:wght@100..900"),
+        new("dm-sans",       "DM Sans",       "Geometric, friendly.", "'DM Sans', 'Inter', 'Segoe UI', sans-serif", "DM+Sans:opsz,wght@9..40,100..1000"),
+        new("ibm-plex",      "IBM Plex Sans", "Editorial grotesque.", "'IBM Plex Sans', 'Inter', 'Segoe UI', sans-serif", "IBM+Plex+Sans:wght@100;200;300;400;500;600;700"),
+        new("manrope",       "Manrope",       "Warm, geometric.", "'Manrope', 'Inter', 'Segoe UI', sans-serif", "Manrope:wght@200..800"),
+        new("plus-jakarta",  "Plus Jakarta Sans", "Modern, lightly geometric.", "'Plus Jakarta Sans', 'Inter', 'Segoe UI', sans-serif", "Plus+Jakarta+Sans:wght@200..800"),
+        new("outfit",        "Outfit",        "Confident geometric sans.", "'Outfit', 'Inter', 'Segoe UI', sans-serif", "Outfit:wght@100..900"),
+        new("sora",          "Sora",          "Distinctive, contemporary.", "'Sora', 'Inter', 'Segoe UI', sans-serif", "Sora:wght@100..800"),
+        new("lexend",        "Lexend",        "Tuned for reading speed.", "'Lexend', 'Inter', 'Segoe UI', sans-serif", "Lexend:wght@100..900"),
+        new("onest",         "Onest",         "Clean, neutral grotesque.", "'Onest', 'Inter', 'Segoe UI', sans-serif", "Onest:wght@100..900"),
+        new("roboto-flex",   "Roboto Flex",   "Google's flagship variable.", "'Roboto Flex', 'Inter', 'Segoe UI', sans-serif", "Roboto+Flex:opsz,wght@8..144,100..1000"),
     ];
 
     public static FshAccentOption GetAccent(string id)
         => Accents.FirstOrDefault(a => a.Id == id) ?? Accents[0];
+
+    public static FshFontOption GetFont(string id)
+        => Fonts.FirstOrDefault(f => f.Id == id) ?? Fonts[0];
 
     /// <summary>
     /// Resolves an accent option for the current theme. The custom accent id

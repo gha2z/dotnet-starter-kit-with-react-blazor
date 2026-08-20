@@ -3,7 +3,7 @@
 @inject Microsoft.AspNetCore.Components.WebAssembly.Services.LazyAssemblyLoader LazyLoader
 @inject ILogger<App> Logger
 
-<MudThemeProvider Theme="FshMudTheme.CreateAdmin()" IsDarkMode="@Theme.IsDarkMode" IsDarkModeChanged="@OnThemeChanged" ObserveSystemDarkModeChange="false" />
+<MudThemeProvider Theme="@_theme" IsDarkMode="@Theme.IsDarkMode" IsDarkModeChanged="@OnThemeChanged" ObserveSystemDarkModeChange="false" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -40,6 +40,7 @@
 @code {
     private List<System.Reflection.Assembly> _lazyAssemblies = [];
     private bool _loadingPages;
+    private MudBlazor.MudTheme _theme = FshMudTheme.CreateAdmin();
 
     private async Task OnThemeChanged(bool isDarkMode)
         => await Theme.SetAsync(isDarkMode);
