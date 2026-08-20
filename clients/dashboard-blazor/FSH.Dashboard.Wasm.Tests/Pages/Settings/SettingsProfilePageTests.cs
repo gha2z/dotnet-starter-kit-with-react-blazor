@@ -67,4 +67,51 @@ public sealed class SettingsProfilePageTests : TestSetup
                 Arg.Is<UpdateProfileRequest>(r => r.FirstName == "Janet"),
                 Arg.Any<CancellationToken>()));
     }
+
+    [Fact]
+    public void Image_picker_label_is_wired_to_the_hidden_file_input()
+    {
+        _userService.GetMyProfileAsync(Arg.Any<CancellationToken>())
+            .Returns(new UserDto("user-1", "jdoe", "Jane", "Doe", "jane@acme.com", true, true, "+15550123", null, false));
+
+        var cut = Render<SettingsProfilePage>();
+        cut.WaitForAssertion(() => cut.FindAll("input").Count.ShouldBeGreaterThan(0));
+
+        var fileInput = cut.Find("input[type=file]");
+        var picker = cut.FindAll("label.fsh-image-picker").ShouldHaveSingleItem();
+
+        picker.GetAttribute("for").ShouldBe(fileInput.Id);
+        picker.TextContent.ShouldContain("Choose image");
+        fileInput.ClassList.ShouldContain("fsh-input-file-hidden");
+    }
+
+    [Fact]
+    public void Image_change_raises_profile_updated_event()
+    {
+        _userService.GetMyProfileAsync(Arg.Any<CancellationToken>())
+            .Returns(new UserDto("user-1", "jdoe", "Jane", "Doe", "jane@acme.com", true, true, "+15550123", null, false));
+
+        var raised = 0;
+        ProfileEvents.ProfileUpdated += Handler;
+        try
+        {
+            var cut = Render<SettingsProfilePage>();
+            cut.WaitForAssertion(() => cut.FindAll("input").Count.ShouldBeGreaterThan(0));
+
+            // Switch to Paste URL mode, then type an image URL into the text field.
+            cut.FindAll("button.fsh-image-mode").First(b => b.TextContent.Contains("Paste URL")).Click();
+            var urlField = cut.FindAll("input").First(i => i.GetAttribute("type") != "file");
+            urlField.Change("https://example.com/avatar.png");
+
+            cut.WaitForAssertion(() =>
+                _userService.Received(1).SetProfileImageAsync("https://example.com/avatar.png", Arg.Any<CancellationToken>()));
+            raised.ShouldBe(1);
+        }
+        finally
+        {
+            ProfileEvents.ProfileUpdated -= Handler;
+        }
+
+        void Handler() => raised++;
+    }
 }
