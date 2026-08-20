@@ -2,7 +2,7 @@
 // Cache strategy: network-first with cache fallback for everything. _framework
 // URLs are NOT content-hashed (boot.json + dll names are stable across builds),
 // so a cache-first strategy pins stale builds until the cache is purged.
-const CACHE_NAME = 'fsh-pwa-v2.0';
+const CACHE_NAME = 'fsh-pwa-v2.1';
 const OFFLINE_URL = 'offline.html';
 const PRECACHE_URLS = [
   './',
@@ -44,14 +44,23 @@ self.addEventListener('fetch', (e) => {
 
   // _framework assets: network-first with cache fallback (see header comment
   // — cache-first pins stale builds because these URLs are not content-hashed).
-  // Everything else: network-first with cache fallback
+  // Everything else: network-first with cache fallback.
+  // Never respond with undefined (respondWith(undefined) surfaces as
+  // "TypeError: Failed to fetch" in the browser): synthesize a 404 when both
+  // the network and the cache come up empty.
   e.respondWith(
     fetch(e.request)
       .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+        if (response && response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+        }
         return response;
       })
-      .catch(() => caches.match(e.request))
+      .catch(() =>
+        caches.match(e.request).then(
+          (cached) => cached || new Response('Not found', { status: 404 })
+        )
+      )
   );
 });

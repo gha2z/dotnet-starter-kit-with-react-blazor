@@ -1,6 +1,8 @@
 using Bunit;
 using Bunit.TestDoubles;
+using FSH.BlazorShared.Models;
 using FSH.BlazorShared.Models.Chat;
+using FSH.BlazorShared.Models.Identity;
 using FSH.BlazorShared.Realtime;
 using FSH.BlazorShared.Services;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -275,6 +277,99 @@ public sealed class ChatPageTests : TestSetup
         var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
 
         cut.Find("button[aria-label='Create channel']").ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Renders_dm_section_with_new_dm_button()
+    {
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
+
+        cut.FindAll(".fsh-chat-section").Count.ShouldBe(2);
+        cut.Markup.ShouldContain("Direct Messages");
+        cut.Find("button[aria-label='New direct message']").ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Splits_channels_and_dms_into_separate_sections()
+    {
+        var channel = SampleChannel("General");
+        var dm = SampleChannel("dm", ChannelType.DirectMessage, unread: 2);
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([channel, dm]);
+        _chat.ListChannelMessagesAsync(dm.Id, Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
+
+        cut.FindAll(".fsh-chat-channel-item").Count.ShouldBe(2);
+        cut.FindAll(".fsh-chat-section").Count.ShouldBe(2);
+        cut.Markup.ShouldContain("General");
+        cut.Markup.ShouldContain("Direct Messages");
+    }
+
+    [Fact]
+    public void Dm_channel_shows_partner_name_once_resolved()
+    {
+        var dm = SampleChannel("dm", ChannelType.DirectMessage);
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([dm]);
+        _chat.ListChannelMessagesAsync(dm.Id, Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _users.GetAsync("user-1").Returns(Task.FromResult(new UserDto(
+            "user-1", "alice", "Alice", "Smith", "alice@example.com", true, true, null, null, false)));
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
+
+        cut.WaitForState(() => cut.Markup.Contains("Alice Smith"), timeout: TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public void New_dm_button_opens_dialog_with_suggested_users()
+    {
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _users.SearchAsync(Arg.Any<SearchRequest>()).Returns(new PagedResult<UserDto>(
+            Items: [new UserDto("u-1", "alice", "Alice", "Smith", "alice@example.com", true, true, null, null, false)],
+            PageNumber: 1, PageSize: 12, TotalCount: 1, TotalPages: 1, HasNext: false, HasPrevious: false));
+
+        var provider = Render<MudDialogProvider>();
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
+
+        cut.Find("button[aria-label='New direct message']").Click();
+
+        provider.WaitForState(() => provider.Markup.Contains("Alice Smith"), timeout: TimeSpan.FromSeconds(5));
+        provider.Markup.ShouldContain("New Direct Message");
+    }
+
+    [Fact]
+    public async Task Clicking_suggested_user_starts_dm_and_selects_channel()
+    {
+        var dm = SampleChannel("dm", ChannelType.DirectMessage);
+        _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([dm]);
+        _chat.FindOrCreateDmAsync(Arg.Any<FindOrCreateDmRequest>())
+            .Returns(Task.FromResult(dm.Id));
+        _chat.ListChannelMessagesAsync(dm.Id, Arg.Any<Guid?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _users.SearchAsync(Arg.Any<SearchRequest>()).Returns(new PagedResult<UserDto>(
+            Items: [new UserDto("u-1", "alice", "Alice", "Smith", "alice@example.com", true, true, null, null, false)],
+            PageNumber: 1, PageSize: 12, TotalCount: 1, TotalPages: 1, HasNext: false, HasPrevious: false));
+
+        var provider = Render<MudDialogProvider>();
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>();
+
+        cut.Find("button[aria-label='New direct message']").Click();
+        provider.WaitForState(() => provider.Markup.Contains("Alice Smith"), timeout: TimeSpan.FromSeconds(5));
+
+        provider.Find(".fsh-chat-dm-user").Click();
+
+        await _chat.Received(1).FindOrCreateDmAsync(Arg.Is<FindOrCreateDmRequest>(r => r.UserIds.Count == 1 && r.UserIds[0] == "u-1"));
+        cut.WaitForState(() =>
+            Services.GetRequiredService<BunitNavigationManager>().Uri.EndsWith($"/chat/{dm.Id}"),
+            timeout: TimeSpan.FromSeconds(5));
     }
 
     [Fact]

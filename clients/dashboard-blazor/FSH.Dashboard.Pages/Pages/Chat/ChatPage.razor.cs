@@ -40,6 +40,23 @@ public sealed partial class ChatPage : IAsyncDisposable
         .OrderBy(id => id)
         .Select(id => DisplayNameFor(GetOrResolveUser(id), id)));
 
+    /// <summary>Rail section: public channels, client-side filtered (React parity).</summary>
+    private List<ChannelDto> ChannelsSection => _channels
+        .Where(c => c.Type == ChannelType.Channel && MatchesFilter(c))
+        .ToList();
+
+    /// <summary>Rail section: direct + group messages, client-side filtered (React parity).</summary>
+    private List<ChannelDto> DmsSection => _channels
+        .Where(c => c.Type is ChannelType.DirectMessage or ChannelType.GroupMessage && MatchesFilter(c))
+        .ToList();
+
+    private bool MatchesFilter(ChannelDto channel)
+    {
+        var query = _searchChannels?.Trim();
+        return string.IsNullOrEmpty(query)
+            || ChannelTitleFor(channel).Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
     private string? _searchChannels;
     private Guid? _activeChannelId;
     private ChannelDto? _activeChannel;
@@ -460,6 +477,13 @@ public sealed partial class ChatPage : IAsyncDisposable
 
         _loadingChannels = false;
         await InvokeAsync(StateHasChanged);
+
+        // Fire-and-forget: resolve DM/group partner profiles so rail + header
+        // titles show real names once the user cache fills (React parity).
+        _ = EnsureUsersResolvedAsync(_channels
+            .Where(c => c.Type is ChannelType.DirectMessage or ChannelType.GroupMessage)
+            .SelectMany(c => c.Members)
+            .Select(m => m.UserId));
     }
 
     private async Task SelectChannel(Guid channelId)
@@ -604,6 +628,57 @@ public sealed partial class ChatPage : IAsyncDisposable
             await InvokeAsync(StateHasChanged);
         }));
         await DialogService.ShowAsync<CreateChannelDialog>("Create Channel", parameters);
+    }
+
+    private async Task OpenNewDmDialog()
+    {
+        var parameters = new DialogParameters<NewDmDialog>
+        {
+            { nameof(NewDmDialog.SelfUserId), _currentUserId }
+        };
+        parameters.Add(nameof(NewDmDialog.OnCreated), EventCallback.Factory.Create<Guid>(this, async channelId =>
+        {
+            await LoadChannels();
+            await SelectChannel(channelId);
+        }));
+        await DialogService.ShowAsync<NewDmDialog>("New Direct Message", parameters);
+    }
+
+    /// <summary>
+    /// Rail/header display title, mirroring the React app's channelTitle
+    /// resolution: channels use their name, DMs use the partner's display name,
+    /// group messages join up to three other member names ("+N" for the rest).
+    /// </summary>
+    private string ChannelTitleFor(ChannelDto channel)
+    {
+        if (channel.Type == ChannelType.Channel)
+        {
+            return string.IsNullOrWhiteSpace(channel.Name) ? "(unnamed channel)" : channel.Name;
+        }
+
+        var others = channel.Members
+            .Select(m => m.UserId)
+            .Where(id => !string.IsNullOrEmpty(id) && id != _currentUserId)
+            .ToList();
+
+        if (channel.Type == ChannelType.DirectMessage)
+        {
+            var partnerId = others.FirstOrDefault();
+            return string.IsNullOrEmpty(partnerId)
+                ? "Direct message"
+                : DisplayNameFor(GetOrResolveUser(partnerId), partnerId);
+        }
+
+        var names = others
+            .Take(3)
+            .Select(id => DisplayNameFor(GetOrResolveUser(id), id))
+            .ToList();
+        var extra = others.Count - names.Count;
+        return names.Count == 0
+            ? "Group message"
+            : extra > 0
+                ? $"{string.Join(", ", names)} +{extra}"
+                : string.Join(", ", names);
     }
 
     private async Task ScrollToBottom()

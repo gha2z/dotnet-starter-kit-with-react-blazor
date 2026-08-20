@@ -1,0 +1,152 @@
+@using FSH.BlazorShared.Models
+@using FSH.BlazorShared.Models.Identity
+@using FSH.BlazorShared.Services
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Outlined.Forum" Class="mr-3" /> New Direct Message
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_query" Placeholder="Name, username, or email…" Immediate="true"
+                      DebounceInterval="250" OnDebounceIntervalElapsed="LoadUsers"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                      IconSize="Size.Small" Margin="Margin.Dense" Variant="Variant.Outlined" Class="mb-3" />
+        <div style="max-height: 320px; overflow-y: auto;">
+            @if (_loading)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="d-flex mx-auto my-4" />
+            }
+            else if (_users.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-4 text-center">
+                    @(_query.Trim().Length >= 2 ? $"No one matches \"{_query.Trim()}\"." : "No teammates in your tenant yet.")
+                </MudText>
+            }
+            else
+            {
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="px-2 pt-1">
+                    @(_query.Trim().Length >= 2 ? "Search results" : "Suggested")
+                </MudText>
+                @foreach (var user in _users)
+                {
+                    <MudListItem T="UserDto" Value="user" OnClick="() => StartDm(user)" Class="fsh-chat-dm-user">
+                        <div class="d-flex align-center" style="width: 100%;">
+                            <MudAvatar Size="Size.Small" Color="Color.Primary" Class="mr-2">@Initials(user)</MudAvatar>
+                            <div style="min-width: 0;">
+                                <MudText Typo="Typo.body2" Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    @DisplayName(user)
+                                </MudText>
+                                @if (!string.IsNullOrEmpty(user.Email))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                        @user.Email
+                                    </MudText>
+                                }
+                            </div>
+                        </div>
+                    </MudListItem>
+                }
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Inject] private IChatService ChatService { get; set; } = default!;
+    [Inject] private IUserService Users { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    [Parameter] public string? SelfUserId { get; set; }
+    [Parameter] public EventCallback<Guid> OnCreated { get; set; }
+
+    private string _query = string.Empty;
+    private List<UserDto> _users = [];
+    private bool _loading = true;
+    private bool _creating;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        _loading = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var request = new SearchRequest(
+                PageNumber: 1,
+                PageSize: 12,
+                Filters: new Dictionary<string, string?> { ["IsActive"] = "true" });
+            if (_query.Trim().Length >= 2)
+            {
+                request = request with { Search = _query.Trim() };
+            }
+
+            var result = await Users.SearchAsync(request);
+            _users = result.Items
+                .Where(u => !string.IsNullOrEmpty(u.Id) && u.Id != SelfUserId)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load users: {ex.Message}", Severity.Error);
+            _users = [];
+        }
+
+        _loading = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task StartDm(UserDto user)
+    {
+        if (user.Id is null || _creating)
+        {
+            return;
+        }
+
+        _creating = true;
+        try
+        {
+            var channelId = await ChatService.FindOrCreateDmAsync(new FindOrCreateDmRequest([user.Id]));
+            await OnCreated.InvokeAsync(channelId);
+            MudDialog.Close();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to start conversation: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _creating = false;
+        }
+    }
+
+    private static string DisplayName(UserDto user)
+    {
+        var name = string.Join(' ', new[] { user.FirstName, user.LastName }).Trim();
+        return !string.IsNullOrEmpty(name) ? name
+            : !string.IsNullOrEmpty(user.UserName) ? user.UserName
+            : !string.IsNullOrEmpty(user.Email) ? user.Email
+            : "(unnamed)";
+    }
+
+    private static string Initials(UserDto user)
+    {
+        var name = DisplayName(user);
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant()
+            : (name.Length > 0 ? name[..Math.Min(2, name.Length)].ToUpperInvariant() : "?");
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

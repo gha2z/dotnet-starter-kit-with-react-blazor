@@ -99,8 +99,36 @@
     <script src="_content/FSH.BlazorShared/js/fshFile.js"></script>
     <script src="_content/FSH.BlazorShared/js/fshError.js"></script>
     <script>
+        // Stale-build guard (v2.1): the app's own boot can fail before the
+        // service worker update check runs, pinning an old SW + old caches
+        // that then serve a broken build forever. Every page load starts by
+        // unregistering every SW and purging every cache, THEN registers the
+        // current SW — so a stale worker can never survive past one reload.
+        // If a stale SW still controls THIS load, reload once after the purge
+        // so the next load boots with no controller at all.
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('service-worker.js').catch(function() {});
+            var staleController = !!navigator.serviceWorker.controller;
+            var selfHealed = false;
+            try { selfHealed = sessionStorage.getItem('fsh-sw-selfheal') === '1'; } catch (e) {}
+            var purge = navigator.serviceWorker.getRegistrations().then(function (regs) {
+                return Promise.all(regs.map(function (r) { return r.unregister(); }));
+            }).catch(function () {});
+            if (window.caches) {
+                purge = purge.then(function () {
+                    return caches.keys().then(function (keys) {
+                        return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                    });
+                }).catch(function () {});
+            }
+            purge.then(function () {
+                if (staleController && !selfHealed) {
+                    try { sessionStorage.setItem('fsh-sw-selfheal', '1'); } catch (e) {}
+                    location.reload();
+                    return;
+                }
+                try { sessionStorage.removeItem('fsh-sw-selfheal'); } catch (e) {}
+                navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).catch(function () {});
+            });
         }
     </script>
 </body>

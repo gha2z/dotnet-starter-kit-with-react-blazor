@@ -1,6 +1,6 @@
 # Current Status
 
-Last Update: 2026-08-17 17:40, by: opencode (model: opencode/deepseek-v4-flash-free).
+Last Update: 2026-08-20 12:15, by: opencode (model: opencode/deepseek-v4-flash-free).
 
 ## Progress
 
@@ -38,6 +38,8 @@ Last Update: 2026-08-17 17:40, by: opencode (model: opencode/deepseek-v4-flash-f
 **Phase 9 COMPLETE.** W0–W4 all committed: theme fix, dashboard channel (D1–D4 + Overview polish), admin channel (A1–A5 + tenants detail), Hybrid nav gate (`ImplementedRoutes` + build fixes). Audit §3/§6 fully resolved; `audit.md` FINAL. All gaps from the Phase-08 parity audit are closed.
 
 **Next:** Phase-10 is not yet defined. Current test baselines: dashboard 233/233 + admin 164/164 + hybrid 12/12. No regressions across any W0–W4 wave.
+
+**2026-08-20 12:15 (sess-main, uncommitted):** SW stale-build guard **v2.1** (both apps — runtime version capture-and-verify + stale retry + self-unregister; user-confirmed after cache clear) · **D32 notifications-bell parity committed** `da4be27e` · **chat rail dead-space fix** — root cause: MudBlazor 9.7 `MudDivider` default `DividerType.FullWidth` stretches `flex-grow:1` (322px gap); replaced with deterministic `.fsh-chat-divider` `<hr>` + `min-height:0` on rail/messages + explicit `.fsh-chat-*` heights; `NewDmDialog.razor` added. Real-browser walkthrough verified (divider 322→1px, channel list top 539→218). Tests: dashboard **256/256** (0 warnings build). Pending: user approval to commit the SW v2.1 + chat rail wave.
 
 ## Files to Read
 
