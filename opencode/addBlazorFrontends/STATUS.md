@@ -1,6 +1,6 @@
 # Current Status
 
-Last Update: 2026-08-20 12:15, by: opencode (model: opencode/deepseek-v4-flash-free).
+Last Update: 2026-08-20 21:05, by: opencode (model: opencode/deepseek-v4-flash-free).
 
 ## Progress
 
@@ -40,6 +40,8 @@ Last Update: 2026-08-20 12:15, by: opencode (model: opencode/deepseek-v4-flash-f
 **Next:** Phase-10 is not yet defined. Current test baselines: dashboard 233/233 + admin 164/164 + hybrid 12/12. No regressions across any W0–W4 wave.
 
 **2026-08-20 12:15 (sess-main, uncommitted):** SW stale-build guard **v2.1** (both apps — runtime version capture-and-verify + stale retry + self-unregister; user-confirmed after cache clear) · **D32 notifications-bell parity committed** `da4be27e` · **chat rail dead-space fix** — root cause: MudBlazor 9.7 `MudDivider` default `DividerType.FullWidth` stretches `flex-grow:1` (322px gap); replaced with deterministic `.fsh-chat-divider` `<hr>` + `min-height:0` on rail/messages + explicit `.fsh-chat-*` heights; `NewDmDialog.razor` added. Real-browser walkthrough verified (divider 322→1px, channel list top 539→218). Tests: dashboard **256/256** (0 warnings build). Pending: user approval to commit the SW v2.1 + chat rail wave.
+
+**2026-08-20 21:05 (sess-main):** **Overview restyle + chat badge + avatar/fonts wave COMPLETE — committed `8b87182f`** (24 files, +1699/−527): dashboard OverviewPage → React parity (quick actions, stat cards, Recent Transactions / Billing Summary / Notifications / Activity; `fsh-sse-pulse` retained) · chat unread badge mark-read FIXED (watermark now targets active channel's own last message; re-marks on new message; clears via `ChatChannelRead` push; badge sums unread across channels) · topnav avatar shows profile `ImageUrl` in both MainLayouts (initials fallback; live refresh via `ProfileEvents`) · `FshImageInput` picker = `<label for>` driving `InputFile` · nav section captions inherit `.fsh-nav-text` font · appearance on-demand font `<link>` (idempotent). **GR11**: `walkthrough/verify-overview-walk.mjs` ALL 15 PASS (badge "5" → cleared after opening chat; avatar img from MinIO; 0 console errors) + `probe-avatar-font.mjs` PASS. bUnit dashboard **261/261** + admin **164/164**. Note: earlier probe "request aborts" were probe navigation racing WASM boot — app was never broken (all authenticated calls 200 with login() only).
 
 ## Files to Read
 
