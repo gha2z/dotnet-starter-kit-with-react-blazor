@@ -47,6 +47,6 @@ public sealed record RequestUploadUrlRequest(
     string ContentType,
     long SizeBytes,
     FileVisibility Visibility = FileVisibility.Private,
-    string Category = "general");
+    string Category = "Document");
 
 public sealed record ChangeVisibilityRequest(FileVisibility Visibility);

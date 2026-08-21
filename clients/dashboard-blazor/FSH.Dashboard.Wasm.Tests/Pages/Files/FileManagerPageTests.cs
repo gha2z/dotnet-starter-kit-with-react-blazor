@@ -1,6 +1,7 @@
 using Bunit;
 using FSH.BlazorShared.Models.Files;
 using FSH.BlazorShared.Services;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using NSubstitute;
@@ -103,5 +104,75 @@ public sealed class FileManagerPageTests : TestSetup
         var cut = Render<FSH.Dashboard.Wasm.Pages.Files.FileManagerPage>();
 
         cut.Markup.ShouldContain("Public");
+    }
+
+    [Fact]
+    public void Toggles_dragover_highlight_on_drag_enter_and_leave()
+    {
+        _files.ListMyFilesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _files.ListSharedFilesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Files.FileManagerPage>();
+        var zone = cut.Find("#fsh-dropzone");
+
+        zone.TriggerEvent("ondragenter", new DragEventArgs());
+        cut.Find(".fsh-file-dropzone").ClassList.ShouldContain("dragover");
+
+        zone.TriggerEvent("ondragleave", new DragEventArgs());
+        cut.Find(".fsh-file-dropzone").ClassList.ShouldNotContain("dragover");
+    }
+
+    [Fact]
+    public void Dropzone_uses_prevent_default_modifiers()
+    {
+        _files.ListMyFilesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _files.ListSharedFilesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Files.FileManagerPage>();
+
+        cut.Markup.ShouldContain("ondragenter:preventdefault");
+        cut.Markup.ShouldContain("ondragover:preventdefault");
+        cut.Markup.ShouldContain("ondrop:preventdefault");
+    }
+
+    [Fact]
+    public async Task Drop_uploads_dropped_files_via_js_bridge()
+    {
+        _files.ListMyFilesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _files.ListSharedFilesAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns([]);
+        _files.RequestUploadUrlAsync(Arg.Any<RequestUploadUrlRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new PresignedUploadResponse(
+                Guid.NewGuid(),
+                new Uri("https://presigned.local/upload"),
+                new Dictionary<string, string>(),
+                DateTimeOffset.UtcNow.AddMinutes(10)));
+        _files.FinalizeUploadAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(SampleFile("drop.txt"));
+
+        JSInterop.SetupVoid("fshInitDropCapture", _ => true);
+        JSInterop.Setup<List<FSH.Dashboard.Wasm.Pages.Files.FileManagerPage.DroppedFileInfo>>("fshGetDroppedFiles")
+            .SetResult([new FSH.Dashboard.Wasm.Pages.Files.FileManagerPage.DroppedFileInfo("drop.txt", "text/plain", 42)]);
+        JSInterop.Setup<byte[]>("fshReadDroppedFile", _ => true)
+            .SetResult("hello, dropped!"u8.ToArray());
+        JSInterop.SetupVoid("fshFileUpload", _ => true);
+
+        var cut = Render<FSH.Dashboard.Wasm.Pages.Files.FileManagerPage>();
+        var zone = cut.Find("#fsh-dropzone");
+
+        zone.TriggerEvent("ondragenter", new DragEventArgs());
+        cut.Find(".fsh-file-dropzone").ClassList.ShouldContain("dragover");
+
+        await cut.InvokeAsync(() => zone.TriggerEvent("ondrop", new DragEventArgs()));
+
+        await _files.Received(1).RequestUploadUrlAsync(
+            Arg.Is<RequestUploadUrlRequest>(r => r.FileName == "drop.txt" && r.SizeBytes == 42),
+            Arg.Any<CancellationToken>());
+        cut.Find(".fsh-file-dropzone").ClassList.ShouldNotContain("dragover");
     }
 }
