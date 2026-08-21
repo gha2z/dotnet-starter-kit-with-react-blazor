@@ -61,6 +61,8 @@ public sealed partial class ChatPage : IAsyncDisposable
     private Guid? _activeChannelId;
     private ChannelDto? _activeChannel;
     private string? _messageText;
+    private MessageDto? _replyToMessage;
+    private Guid? _editingMessageId;
     private string _currentUserId = string.Empty;
     private bool _loadingChannels;
     private bool _loadingMessages;
@@ -569,26 +571,42 @@ public sealed partial class ChatPage : IAsyncDisposable
     {
         if (_activeChannelId is null || string.IsNullOrWhiteSpace(_messageText)) return;
 
-        var text = _messageText;
-        _messageText = null;
+        var text = _messageText!.Trim();
+        if (string.IsNullOrEmpty(text)) return;
+        var replyId = _replyToMessage?.Id;
+        var editingId = _editingMessageId;
+        _messageText = string.Empty;
+        var prevReply = _replyToMessage;
+        var prevEdit = _editingMessageId;
+        _replyToMessage = null;
+        _editingMessageId = null;
         await InvokeAsync(StateHasChanged);
 
         try
         {
-            var sent = await ChatService.SendMessageAsync(_activeChannelId.Value, new SendMessageRequest(Body: text));
-            // Message will arrive via SignalR; also add optimistically
-            if (!_messages.Any(m => m.Id == sent.Id))
+            if (editingId.HasValue)
             {
-                _messages.Add(sent);
-                RebuildRenderItems();
+                await ChatService.EditMessageAsync(editingId.Value, new EditMessageRequest(text));
+                if (_activeChannelId.HasValue) await LoadMessages(_activeChannelId.Value);
             }
-
-            await ScrollToBottom();
+            else
+            {
+                var sent = await ChatService.SendMessageAsync(_activeChannelId.Value, new SendMessageRequest(Body: text, ParentMessageId: replyId));
+                if (!_messages.Any(m => m.Id == sent.Id))
+                {
+                    _messages.Add(sent);
+                    RebuildRenderItems();
+                }
+                await ScrollToBottom();
+            }
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Failed to send message: {ex.Message}", Severity.Error);
-            _messageText = text; // Restore on failure
+            _messageText = text;
+            _replyToMessage = prevReply;
+            _editingMessageId = prevEdit;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -597,6 +615,25 @@ public sealed partial class ChatPage : IAsyncDisposable
         if (e.Key == "Enter" && !e.ShiftKey)
         {
             await SendMessage();
+        }
+    }
+
+    private DateTime _lastTypingSentAt = DateTime.MinValue;
+
+    private async Task OnMessageTextChanged(string value)
+    {
+        _messageText = value;
+        // Throttle typing indicator to at most once per 2 seconds
+        if (_activeChannelId is null || string.IsNullOrWhiteSpace(value)) return;
+        if (DateTime.UtcNow - _lastTypingSentAt < TimeSpan.FromSeconds(2)) return;
+        _lastTypingSentAt = DateTime.UtcNow;
+        try
+        {
+            await Hub.SendAsync("Typing", _activeChannelId.Value);
+        }
+        catch
+        {
+            // Best effort
         }
     }
 
@@ -640,6 +677,73 @@ public sealed partial class ChatPage : IAsyncDisposable
         {
             Snackbar.Add($"Failed to update reaction: {ex.Message}", Severity.Warning);
         }
+    }
+
+    private void BeginReply(MessageDto msg)
+    {
+        _replyToMessage = msg;
+        _editingMessageId = null;
+    }
+
+    private void BeginEdit(MessageDto msg)
+    {
+        _editingMessageId = msg.Id;
+        _messageText = msg.Body ?? string.Empty;
+        _replyToMessage = null;
+    }
+
+    private void CancelReplyEdit()
+    {
+        var wasEditing = _editingMessageId.HasValue;
+        _replyToMessage = null;
+        _editingMessageId = null;
+        if (wasEditing) _messageText = string.Empty;
+    }
+
+    private async Task TogglePin(MessageDto msg)
+    {
+        try
+        {
+            if (msg.IsPinned) await ChatService.UnpinMessageAsync(msg.Id);
+            else await ChatService.PinMessageAsync(msg.Id);
+            if (_activeChannelId.HasValue) await LoadMessages(_activeChannelId.Value);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Pin failed: {ex.Message}", Severity.Warning);
+        }
+    }
+
+    private async Task DeleteMessage(MessageDto msg)
+    {
+        var parameters = new DialogParameters { { "Message", "Delete this message? This cannot be undone." }, { "ConfirmText", "Delete" }, { "CancelText", "Cancel" } };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<FSH.BlazorShared.Components.FshConfirmDialogContent>("Delete message", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return;
+        try
+        {
+            await ChatService.DeleteMessageAsync(msg.Id);
+            if (_activeChannelId.HasValue) await LoadMessages(_activeChannelId.Value);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Delete failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ScrollToMessage(Guid messageId)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("eval", $"document.querySelector('[data-message-id=\"{messageId}\"]')?.scrollIntoView({{behavior:'smooth',block:'center'}})");
+        }
+        catch { }
+    }
+
+    private void ShowReplies(Guid messageId)
+    {
+        Snackbar.Add("Threaded replies — full view coming soon", Severity.Info);
     }
 
     private async Task OpenCreateChannelDialog()

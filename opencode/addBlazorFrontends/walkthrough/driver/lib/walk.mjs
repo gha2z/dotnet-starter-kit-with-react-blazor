@@ -16,11 +16,19 @@ async function settleSnapshot(page) {
   let prev = null;
   let stableCount = 0;
   for (let i = 0; i < 30; i++) {
-    facts = await snapshotInPage(page);
+    try {
+      facts = await snapshotInPage(page);
+    } catch (err) {
+      if (String(err).includes("Execution context was destroyed")) {
+        await page.waitForTimeout(800);
+        continue;
+      }
+      throw err;
+    }
     // A boot splash ("Loading...", ~10 chars, 1 interactive element) must never
     // count as content — keep polling until real UI replaces it.
     const splash = (facts.bodyText ?? "").trim().length <= 20 && /loading/i.test(facts.bodyText ?? "");
-    const hasContent = !facts.snapshotError && !splash && (facts.counts.interactive > 1 || facts.textLen > 100);
+    const hasContent = !facts?.snapshotError && !splash && (facts.counts.interactive > 1 || facts.textLen > 100);
     const loading = (facts.loadingEls ?? 0) > 0;
     const signature = `${facts.counts.interactive}|${facts.textLen}|${facts.counts.rowLike}|${facts.counts.tableRows}`;
     if (hasContent && !loading && signature === prev) {

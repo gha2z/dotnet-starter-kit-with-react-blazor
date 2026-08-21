@@ -13,8 +13,14 @@
                       Placeholder="Search user, email, IP…" Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Small"
                       DebounceInterval="300" Style="max-width: 300px;" />
-        <MudSwitch T="bool" Value="@_includeInactive" ValueChanged="OnIncludeInactiveChanged"
-                   Label="Include inactive" Color="Color.Primary" />
+        @if (!string.IsNullOrWhiteSpace(_search))
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Clear" Size="Size.Small" OnClick="() => OnSearchChanged(string.Empty)" aria-label="Clear search" />
+        }
+        <MudChipSet T="bool" SelectedValue="@_includeInactive" SelectedValueChanged="OnIncludeInactiveChanged" SelectionMode="SelectionMode.SingleSelection">
+            <MudChip Value="@false" Text="Live only" Variant="Variant.Outlined" Color="Color.Default" />
+            <MudChip Value="@true" Text="Include inactive" Variant="Variant.Outlined" Color="Color.Default" />
+        </MudChipSet>
         <MudSpacer />
         @if (_stats is not null)
         {
@@ -90,6 +96,7 @@ else
                 }
             </MudTd>
             <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" aria-label="View session" OnClick="() => { }" />
                 @if (context.IsActive && !context.IsCurrentSession)
                 {
                     @if (!string.IsNullOrEmpty(context.UserId))

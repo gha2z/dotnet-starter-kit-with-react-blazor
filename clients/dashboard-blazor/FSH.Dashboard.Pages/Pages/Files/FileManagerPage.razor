@@ -175,7 +175,7 @@ else
 
     private void SetFilter(string filter) { _activeFilter = filter; }
 
-    private void OpenFilePicker() => JS.InvokeVoidAsync("document.getElementById('fileInput').click");
+    private void OpenFilePicker() => JS.InvokeVoidAsync("fshOpenFilePicker", "fileInput");
 
     private async Task HandleFileSelect(InputFileChangeEventArgs e)
     {

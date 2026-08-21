@@ -476,18 +476,23 @@ body {
         bottom: 0;
         transform: translateX(-100%);
         box-shadow: none;
+        background: var(--mud-palette-surface) !important;
+        opacity: 1 !important;
     }
 
     .fsh-sidebar.open {
         transform: none;
-        box-shadow: 8px 0 32px color-mix(in srgb, var(--mud-palette-dark) 20%, transparent);
+        background: var(--mud-palette-surface) !important;
+        opacity: 1 !important;
+        box-shadow: 8px 0 32px rgba(0,0,0,0.28);
     }
 
     .fsh-sidebar-backdrop {
         display: block;
         position: fixed;
         inset: 0;
-        background: color-mix(in srgb, var(--mud-palette-dark) 45%, transparent);
+        background: rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(1px);
         z-index: 19;
     }
 }
@@ -2166,6 +2171,105 @@ body {
 .fsh-chat-message-row .mud-typography {
     overflow-wrap: anywhere;
     word-break: break-word;
+}
+
+.fsh-chat-message {
+    position: relative;
+}
+
+.fsh-chat-hover-actions {
+    position: absolute;
+    top: -10px;
+    display: none;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--mud-palette-divider);
+    background: var(--mud-palette-surface);
+    border-radius: 8px;
+    box-shadow: var(--mud-elevation-4);
+    z-index: 10;
+}
+
+.fsh-chat-message:hover .fsh-chat-hover-actions {
+    display: flex;
+}
+
+.fsh-chat-hover-actions-other {
+    left: 100%;
+    margin-left: 8px;
+}
+
+.fsh-chat-hover-actions-own {
+    right: 100%;
+    margin-right: 8px;
+}
+
+.fsh-chat-hover-time {
+    position: absolute;
+    top: 6px;
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    color: var(--mud-palette-text-secondary);
+    display: none;
+    pointer-events: none;
+}
+
+.fsh-chat-message:hover .fsh-chat-hover-time {
+    display: block;
+}
+
+.fsh-chat-hover-time-other {
+    right: 16px;
+}
+
+.fsh-chat-hover-time-own {
+    left: 16px;
+}
+
+.fsh-chat-quote {
+    border-left: 3px solid var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 6%, transparent);
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+}
+
+.fsh-chat-quote-author {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--mud-palette-primary);
+}
+
+.fsh-chat-quote-body {
+    font-size: 12px;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fsh-chat-hover-btn {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--mud-palette-text-secondary);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.fsh-chat-hover-btn:hover {
+    background: var(--mud-palette-action-default-hover);
+    color: var(--mud-palette-text-primary);
+}
+
+.fsh-chat-hover-btn.danger:hover {
+    background: color-mix(in srgb, var(--mud-palette-error) 10%, transparent);
+    color: var(--mud-palette-error);
 }
 
 .fsh-chat-unread {

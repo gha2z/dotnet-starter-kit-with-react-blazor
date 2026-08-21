@@ -14,6 +14,11 @@ window.fshOpenDownload = function (url) {
     window.open(url, '_blank');
 };
 
+window.fshOpenFilePicker = function (id) {
+    const el = document.getElementById(id);
+    if (el) el.click();
+};
+
 // Drag-and-drop bridge — captures dropped File objects on the drop event
 // (Blazor DragEventArgs only carries file *names* in WebAssembly) and exposes
 // them to .NET for the upload pipeline.

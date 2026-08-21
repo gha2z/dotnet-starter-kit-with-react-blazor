@@ -173,6 +173,17 @@
                         {
                             var first = block.Messages[0];
                             <div @key="first.Id" class="fsh-chat-message @(block.IsOwn ? "fsh-chat-message-own" : "fsh-chat-message-other")">
+                                <span class="fsh-chat-hover-time @(block.IsOwn ? "fsh-chat-hover-time-own" : "fsh-chat-hover-time-other")">@TimeFor(first.CreatedAtUtc)</span>
+                                <div class="fsh-chat-hover-actions @(block.IsOwn ? "fsh-chat-hover-actions-own" : "fsh-chat-hover-actions-other")">
+                                    <button class="fsh-chat-hover-btn" title="React" aria-label="React" @onclick="@(() => ToggleReaction(first.Id, "👍"))"><MudIcon Icon="@Icons.Material.Outlined.AddReaction" Size="Size.Small" /></button>
+                                    <button class="fsh-chat-hover-btn" title="Reply" aria-label="Reply" @onclick="@(() => BeginReply(first))"><span style="font-size:12px;font-weight:600;">↪</span></button>
+                                    <button class="fsh-chat-hover-btn" title="@(first.IsPinned ? "Unpin" : "Pin")" aria-label="Pin" @onclick="@(() => TogglePin(first))"><MudIcon Icon="@Icons.Material.Outlined.PushPin" Size="Size.Small" /></button>
+                                    @if (block.IsOwn)
+                                    {
+                                        <button class="fsh-chat-hover-btn" title="Edit" aria-label="Edit" @onclick="@(() => BeginEdit(first))"><MudIcon Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" /></button>
+                                        <button class="fsh-chat-hover-btn danger" title="Delete" aria-label="Delete" @onclick="@(() => DeleteMessage(first))"><MudIcon Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" /></button>
+                                    }
+                                </div>
                                 @if (!block.IsOwn)
                                 {
                                     <MudAvatar Size="Size.Small" Color="Color.Primary" Class="mr-2">@InitialsFor(block.Author, block.AuthorId)</MudAvatar>
@@ -187,14 +198,26 @@
                                     }
                                     @foreach (var msg in block.Messages)
                                     {
-                                        <div class="fsh-chat-message-row">
+                                        <div class="fsh-chat-message-row" data-message-id="@msg.Id">
                                             @if (msg.DeletedAtUtc.HasValue)
                                             {
                                                 <MudText Typo="Typo.body2" Style="font-style: italic;" Color="Color.Secondary">Message deleted</MudText>
                                             }
                                             else
                                             {
-                                                <MudText Typo="Typo.body2">@msg.Body</MudText>
+                                                @if (msg.ParentMessageId.HasValue)
+                                                {
+                                                    var parent = _messages.FirstOrDefault(m => m.Id == msg.ParentMessageId.Value);
+                                                    <div class="fsh-chat-quote" @onclick="() => ScrollToMessage(msg.ParentMessageId.Value)">
+                                                        <div class="fsh-chat-quote-author">@(parent is not null ? DisplayNameFor(GetOrResolveUser(parent.AuthorUserId), parent.AuthorUserId) : "Unknown")</div>
+                                                        <div class="fsh-chat-quote-body">@(parent?.Body is not null ? (parent.Body.Length > 80 ? parent.Body[..80] + "…" : parent.Body) : "Original message")</div>
+                                                    </div>
+                                                }
+                                                <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@msg.Body</MudText>
+                                                @if (msg.ReplyCount > 0)
+                                                {
+                                                    <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" Class="mt-1" OnClick="() => ShowReplies(msg.Id)">View @msg.ReplyCount @(msg.ReplyCount == 1 ? "reply" : "replies")</MudButton>
+                                                }
                                             }
                                             @if (msg.Attachments.Count > 0)
                                             {
@@ -252,12 +275,25 @@
                 </MudText>
             }
 
+            @if (_replyToMessage is not null)
+            {
+                <MudPaper Class="d-flex align-center pa-2 mt-1" Elevation="0" Style="border-radius: var(--mud-default-border-radius); background: color-mix(in srgb, var(--mud-palette-primary) 6%, transparent);">
+                    <MudText Typo="Typo.body2" Class="flex-grow-1" Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Replying to: @(_replyToMessage.Body?.Length > 60 ? _replyToMessage.Body[..60] + "…" : _replyToMessage.Body)</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="CancelReplyEdit" aria-label="Cancel reply" />
+                </MudPaper>
+            }
+            else if (_editingMessageId.HasValue)
+            {
+                <MudPaper Class="d-flex align-center pa-2 mt-1" Elevation="0" Style="border-radius: var(--mud-default-border-radius); background: color-mix(in srgb, var(--mud-palette-warning) 8%, transparent);">
+                    <MudText Typo="Typo.body2" Class="flex-grow-1">Editing message</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="CancelReplyEdit" aria-label="Cancel edit" />
+                </MudPaper>
+            }
             @* Composer *@
             <MudPaper Class="d-flex align-center pa-2 mt-1" Elevation="0" Style="border-radius: var(--mud-default-border-radius);">
-                <MudTextField @bind-Value="_messageText" Placeholder="Type a message..." Immediate="true"
-                              DebounceInterval="300" OnDebounceIntervalElapsed="SendTypingIndicator"
+                <MudTextField @bind-Value="_messageText" Placeholder="@(_editingMessageId.HasValue ? "Edit message..." : _replyToMessage is not null ? "Reply..." : "Type a message...")" Immediate="true"
                               OnKeyDown="HandleKeyDown" Variant="Variant.Outlined" Margin="Margin.Dense"
-                              Class="flex-grow-1" Lines="1" aria-label="Message" />
+                              Class="flex-grow-1" Lines="1" aria-label="Message" TextChanged="OnMessageTextChanged" />
                 <MudIconButton Icon="@Icons.Material.Outlined.Send" Color="Color.Primary" Size="Size.Small"
                                aria-label="Send message"
                                OnClick="SendMessage" Disabled="string.IsNullOrWhiteSpace(_messageText)" Class="ml-2" />
