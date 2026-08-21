@@ -148,7 +148,7 @@
                                  @onkeydown="e => HandleUserMenuKey(e, userMenuActivator)"
                                  role="button" tabindex="0"
                                  class="fsh-user-menu-activator">
-                                <div class="fsh-user-menu-tile" style="background: color-mix(in srgb, var(--mud-palette-primary) 18%, transparent); color: var(--mud-palette-primary);">
+                                <div class="fsh-user-menu-tile" style="background: color-mix(in srgb, var(--mud-palette-primary) 15%, transparent); color: var(--mud-palette-primary);">
                                     @if (!string.IsNullOrEmpty(_profileImageUrl) && !_avatarFailed)
                                     {
                                         <img src="@_profileImageUrl" alt="@_userName" class="fsh-user-menu-avatar" @onerror="OnAvatarError" />
@@ -161,14 +161,14 @@
                                 @if (!string.IsNullOrEmpty(_userName))
                                 {
                                     <div class="d-none d-md-flex flex-column align-start">
-                                        <span style="font-size: 13px; font-weight: 600; line-height: 1.2; color: var(--mud-palette-text-primary);">@_userName</span>
+                                        <span class="fsh-user-menu-name">@_userName</span>
                                         @if (!string.IsNullOrEmpty(_tenantName))
                                         {
-                                            <span style="font-size: 11px; line-height: 1.2; color: var(--mud-palette-text-secondary);">@_tenantName</span>
+                                            <span class="fsh-user-menu-tenant">@_tenantName</span>
                                         }
                                     </div>
                                 }
-                                <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" Color="Color.Secondary" />
+                                <MudIcon Icon="@Icons.Material.Filled.UnfoldMore" Size="Size.Small" Class="fsh-user-menu-chevron" />
                             </div>
                         </ActivatorContent>
                         <ChildContent>
@@ -223,7 +223,7 @@
                     </MudMenu>
                 </header>
 
-                <main id="fsh-main" tabindex="-1" style="flex: 1; overflow: auto; padding: 20px 24px;">
+                <main id="fsh-main" tabindex="-1" style="flex: 1; overflow: auto; padding: 16px 24px;">
                     @Body
                 </main>
             </div>

@@ -1,12 +1,16 @@
 /* FSH shared design system — React (Tailwind) parity layer for the MudBlazor apps. */
 
 :root {
-    --fsh-mono: 'JetBrains Mono', 'Cascadia Mono', 'Consolas', monospace;
+    --fsh-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+    --fsh-sans: 'Figtree', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --fsh-display: 'Outfit', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 /* ---------- body polish (React parity: globals.css smoothing) ---------- */
 
 body {
+    font-family: var(--fsh-sans);
+    font-feature-settings: "tnum";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
 }
@@ -493,17 +497,23 @@ body {
 }
 
 .fsh-topbar {
-    height: 56px;
+    height: 48px;
     display: flex;
     align-items: center;
     gap: 8px;
     border-bottom: 1px solid var(--mud-palette-divider);
-    padding: 0 16px;
-    background: color-mix(in srgb, var(--mud-palette-background) 85%, transparent);
-    backdrop-filter: blur(8px);
+    padding: 0 12px;
+    background: color-mix(in srgb, var(--mud-palette-background) 80%, transparent);
+    backdrop-filter: blur(4px);
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 30;
+}
+
+@media (min-width: 768px) {
+    .fsh-topbar {
+        padding: 0 20px;
+    }
 }
 
 .fsh-topbar-menu {
@@ -881,6 +891,7 @@ body {
 }
 
 .fsh-brand-wordmark {
+    font-family: var(--fsh-display);
     font-size: 15px;
     font-weight: 600;
     letter-spacing: -0.01em;
@@ -936,13 +947,15 @@ body {
 .fsh-user-menu-tile {
     width: 32px;
     height: 32px;
-    border-radius: 9px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    font-size: 12px;
-    font-weight: 600;
+    font-family: var(--fsh-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
     flex-shrink: 0;
 }
 
@@ -954,12 +967,12 @@ body {
 }
 
 .fsh-user-menu-activator {
-    padding: 4px 8px;
+    padding: 4px 8px 4px 4px;
     border-radius: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     transition: background-color 120ms ease;
 }
 
@@ -970,6 +983,25 @@ body {
 .fsh-user-menu-activator:focus-visible {
     outline: 2px solid var(--mud-palette-primary);
     outline-offset: 2px;
+}
+
+.fsh-user-menu-name {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--mud-palette-text-primary);
+}
+
+.fsh-user-menu-tenant {
+    font-size: 10px;
+    line-height: 1;
+    margin-top: 4px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.fsh-user-menu-chevron {
+    font-size: 14px;
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 50%, transparent);
 }
 
 /* ---------- live activity (React parity: activity.tsx grid) ---------- */
@@ -2187,4 +2219,9 @@ body {
 .fsh-file-dropzone:hover {
     border-color: var(--mud-palette-primary);
     background: color-mix(in srgb, var(--mud-palette-primary) 4%, transparent);
+}
+
+.fsh-file-dropzone.dragover {
+    border-color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
 }
