@@ -67,6 +67,8 @@ public sealed partial class ChatPage : IAsyncDisposable
     private bool _showSearch;
     private bool _showSettings;
     private string? _searchQuery;
+    private string? _editChannelName;
+    private string? _editChannelDesc;
     private bool _loadingChannels;
     private bool _loadingMessages;
     private bool _loadingOlder;
