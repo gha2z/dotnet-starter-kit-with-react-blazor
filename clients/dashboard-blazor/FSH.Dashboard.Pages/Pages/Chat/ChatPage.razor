@@ -137,6 +137,8 @@
                         @(_activeChannel?.Members.Count ?? 0) member@((_activeChannel?.Members.Count ?? 0) != 1 ? "s" : "")
                     </MudText>
                 </div>
+                <MudIconButton Icon="@Icons.Material.Outlined.Search" Size="Size.Small" OnClick="() => _showSearch = true" aria-label="Search messages" Class="ml-2" />
+                <MudIconButton Icon="@Icons.Material.Outlined.Settings" Size="Size.Small" OnClick="() => _showSettings = true" aria-label="Channel settings" Class="ml-1" />
                 @if (_activeChannel?.UnreadCount > 0)
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
@@ -186,7 +188,7 @@
                                 </div>
                                 @if (!block.IsOwn)
                                 {
-                                    <MudAvatar Size="Size.Small" Color="Color.Primary" Class="mr-2">@InitialsFor(block.Author, block.AuthorId)</MudAvatar>
+                                    <MudAvatar Size="Size.Small" Color="Color.Primary" Class="mr-2" Src="@GetAvatarUrl(block.AuthorId)">@InitialsFor(block.Author, block.AuthorId)</MudAvatar>
                                 }
                                 <div class="fsh-chat-message-bubble">
                                     @if (!block.IsOwn)
@@ -259,7 +261,7 @@
                                 </div>
                                 @if (block.IsOwn)
                                 {
-                                    <MudAvatar Size="Size.Small" Color="Color.Secondary" Class="ml-2">@InitialsFor(block.Author, block.AuthorId)</MudAvatar>
+                                    <MudAvatar Size="Size.Small" Color="Color.Secondary" Class="ml-2">InitialsFor(block.Author, block.AuthorId)</MudAvatar>
                                 }
                             </div>
                         }
@@ -300,4 +302,4 @@
             </MudPaper>
         }
     </MudItem>
-</MudGrid>
+    @if (_showSearch){<MudOverlay Visible="true" DarkBackground="true" OnClick="()=> _showSearch=false" /><MudPaper Class="pa-4" Style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1300;min-width:400px;"><MudText Typo="Typo.h6">Search Messages</MudText><MudTextField @bind-Value="_searchQuery" Placeholder="Search..." Immediate="true" /><MudList T="MessageDto">@foreach(var m in _messages.Where(x=> string.IsNullOrWhiteSpace(_searchQuery) || x.Body.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase)).Take(20)){<MudListItem OnClick="()=> { _showSearch=false; ScrollToMessage(m.Id); }">@m.Body</MudListItem>}</MudList><MudButton OnClick="()=> _showSearch=false">Close</MudButton></MudPaper>}`n</MudGrid>

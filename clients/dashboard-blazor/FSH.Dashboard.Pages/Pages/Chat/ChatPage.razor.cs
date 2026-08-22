@@ -64,6 +64,9 @@ public sealed partial class ChatPage : IAsyncDisposable
     private MessageDto? _replyToMessage;
     private Guid? _editingMessageId;
     private string _currentUserId = string.Empty;
+    private bool _showSearch;
+    private bool _showSettings;
+    private string? _searchQuery;
     private bool _loadingChannels;
     private bool _loadingMessages;
     private bool _loadingOlder;
@@ -80,6 +83,7 @@ public sealed partial class ChatPage : IAsyncDisposable
         await ResolveCurrentUserAsync();
         await LoadChannels();
         await EnsureHubConnected();
+        if (_activeChannelId.HasValue) { try { await Hub.SendAsync("JoinChannel", _activeChannelId.Value); } catch {} }
         SubscribeToSignalREvents();
     }
 
@@ -193,6 +197,7 @@ public sealed partial class ChatPage : IAsyncDisposable
 
     private static string TimeFor(DateTime utc) => utc.ToLocalTime().ToString("h:mm tt");
 
+    private string? GetAvatarUrl(string userId) => _userCache.TryGetValue(userId, out var u) ? u?.ImageUrl : null;
     private string InitialsFor(UserDto? user, string userId)
     {
         var name = DisplayNameFor(user, userId);
@@ -393,6 +398,7 @@ public sealed partial class ChatPage : IAsyncDisposable
             if (msg.ChannelId == _activeChannelId)
             {
                 _messages.Add(msg);
+                if(msg.AuthorUserId != _currentUserId && msg.ChannelId != _activeChannelId) { Snackbar.Add($"New message in {ChannelTitleFor(_channels.FirstOrDefault(c=>c.Id==msg.ChannelId) ?? null)}: {msg.Body?.Substring(0, Math.Min(30, msg.Body.Length))}", Severity.Info); }
                 RebuildRenderItems();
                 await InvokeAsync(StateHasChanged);
                 _ = EnsureUsersResolvedAsync([msg.AuthorUserId]);
@@ -679,6 +685,8 @@ public sealed partial class ChatPage : IAsyncDisposable
         }
     }
 
+    private bool IsUserOnline(string userId) => _onlineUsers.Contains(userId);
+    private readonly HashSet<string> _onlineUsers = new(StringComparer.Ordinal);
     private void BeginReply(MessageDto msg)
     {
         _replyToMessage = msg;

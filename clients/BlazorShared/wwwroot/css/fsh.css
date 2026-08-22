@@ -2329,3 +2329,4 @@ body {
     border-color: var(--mud-palette-primary);
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
 }
+.fsh-chat-message:hover .fsh-chat-hover-actions, .fsh-chat-hover-actions:hover { display: flex; }
