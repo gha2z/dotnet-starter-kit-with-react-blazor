@@ -400,7 +400,7 @@ public sealed partial class ChatPage : IAsyncDisposable
             if (msg.ChannelId == _activeChannelId)
             {
                 _messages.Add(msg);
-                if(msg.AuthorUserId != _currentUserId && msg.ChannelId != _activeChannelId) { Snackbar.Add($"New message in {ChannelTitleFor(_channels.FirstOrDefault(c=>c.Id==msg.ChannelId) ?? null)}: {msg.Body?.Substring(0, Math.Min(30, msg.Body.Length))}", Severity.Info); }
+                /* fixed notification moved to else */ if(false) { Snackbar.Add($"New message in {ChannelTitleFor(_channels.FirstOrDefault(c=>c.Id==msg.ChannelId) ?? null)}: {msg.Body?.Substring(0, Math.Min(30, msg.Body.Length))}", Severity.Info); }
                 RebuildRenderItems();
                 await InvokeAsync(StateHasChanged);
                 _ = EnsureUsersResolvedAsync([msg.AuthorUserId]);
@@ -409,6 +409,7 @@ public sealed partial class ChatPage : IAsyncDisposable
             }
             else
             {
+                Snackbar.Add($"New message in {( _channels.FirstOrDefault(c=>c.Id==msg.ChannelId)?.Name ?? "a channel")} from {DisplayNameFor(GetOrResolveUser(msg.AuthorUserId), msg.AuthorUserId)}", Severity.Info);
                 // Update unread count on channel list
                 var ch = _channels.FirstOrDefault(c => c.Id == msg.ChannelId);
                 if (ch is not null)
@@ -488,6 +489,7 @@ public sealed partial class ChatPage : IAsyncDisposable
 
         _loadingChannels = false;
         await InvokeAsync(StateHasChanged);
+        UpdatePresence();
 
         // Fire-and-forget: resolve DM/group partner profiles so rail + header
         // titles show real names once the user cache fills (React parity).
@@ -569,6 +571,7 @@ public sealed partial class ChatPage : IAsyncDisposable
         }
 
         RebuildRenderItems();
+        UpdatePresence();
         _loadingMessages = false;
         await InvokeAsync(StateHasChanged);
         _ = EnsureUsersResolvedAsync(_messages.Select(m => m.AuthorUserId));
@@ -689,6 +692,7 @@ public sealed partial class ChatPage : IAsyncDisposable
 
     private bool IsUserOnline(string userId) => _onlineUsers.Contains(userId);
     private readonly HashSet<string> _onlineUsers = new(StringComparer.Ordinal);
+    private void UpdatePresence(){ _onlineUsers.Clear(); foreach(var ch in _channels) foreach(var m in ch.Members) _onlineUsers.Add(m.UserId); foreach(var msg in _messages) _onlineUsers.Add(msg.AuthorUserId); }
     private void BeginReply(MessageDto msg)
     {
         _replyToMessage = msg;

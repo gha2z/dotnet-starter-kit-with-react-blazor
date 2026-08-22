@@ -188,7 +188,7 @@
                                 </div>
                                 @if (!block.IsOwn)
                                 {
-                                    <MudAvatar Size="Size.Small" Color="Color.Primary" Class="mr-2" src="@GetAvatarUrl(block.AuthorId)">@@InitialsFor(block.Author, block.AuthorId)</MudAvatar>
+                                    <div style="position:relative;display:inline-block;"><MudAvatar Size="Size.Small" Color="Color.Primary" Class="mr-2" src="@GetAvatarUrl(block.AuthorId)">@InitialsFor(block.Author, block.AuthorId)</MudAvatar>@if(IsUserOnline(block.AuthorId)){<span style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:var(--mud-palette-success);border-radius:50%;border:2px solid var(--mud-palette-surface);"></span>}</div>
                                 }
                                 <div class="fsh-chat-message-bubble">
                                     @if (!block.IsOwn)
@@ -261,7 +261,7 @@
                                 </div>
                                 @if (block.IsOwn)
                                 {
-                                    <MudAvatar Size="Size.Small" Color="Color.Secondary" Class="ml-2">@InitialsFor(block.Author, block.AuthorId)</MudAvatar>
+                                    <div style="position:relative;display:inline-block;"><MudAvatar Size="Size.Small" Color="Color.Secondary" Class="ml-2" src="@GetAvatarUrl(block.AuthorId)">@InitialsFor(block.Author, block.AuthorId)</MudAvatar>@if(IsUserOnline(block.AuthorId)){<span style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:var(--mud-palette-success);border-radius:50%;border:2px solid var(--mud-palette-surface);"></span>}</div>
                                 }
                             </div>
                         }
