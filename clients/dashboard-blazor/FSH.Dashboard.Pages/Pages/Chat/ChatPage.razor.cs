@@ -390,6 +390,8 @@ public sealed partial class ChatPage : IAsyncDisposable
         if (Hub.State != HubConnectionState.Connected)
         {
             await Hub.StartAsync();
+        if (_activeChannelId.HasValue) { try { await Hub.SendAsync("JoinChannel", _activeChannelId.Value); } catch {} }
+        foreach(var ch in _channels) try { await Hub.SendAsync("JoinChannel", ch.Id); } catch {}
         }
     }
 
@@ -490,6 +492,7 @@ public sealed partial class ChatPage : IAsyncDisposable
         _loadingChannels = false;
         await InvokeAsync(StateHasChanged);
         UpdatePresence();
+        foreach(var ch in _channels) try { await Hub.SendAsync("JoinChannel", ch.Id); } catch {}
 
         // Fire-and-forget: resolve DM/group partner profiles so rail + header
         // titles show real names once the user cache fills (React parity).
@@ -510,7 +513,10 @@ public sealed partial class ChatPage : IAsyncDisposable
         // _messages before the load would use the previously-selected channel's
         // list, and the server rejects a message id that isn't in the target
         // channel (NotFoundException), leaving the unread count stuck forever.
+        try { await Hub.SendAsync("JoinChannel", channelId); } catch {}
         await LoadMessages(channelId);
+        _editChannelName = _activeChannel?.Name;
+        _editChannelDesc = _activeChannel?.Description;
         Nav.NavigateTo($"/chat/{channelId}");
         await MarkActiveChannelReadAsync();
     }
@@ -755,6 +761,7 @@ public sealed partial class ChatPage : IAsyncDisposable
         catch { }
     }
 
+    private async Task SaveChannelSettings(){ if(_activeChannel==null || string.IsNullOrWhiteSpace(_editChannelName)) return; try{ await ChatService.UpdateChannelAsync(_activeChannel.Id, new UpdateChannelRequest(_editChannelName.Trim(), _editChannelDesc)); _showSettings=false; await LoadChannels(); await LoadMessages(_activeChannel.Id); Snackbar.Add("Channel updated", Severity.Success);} catch(Exception ex){ Snackbar.Add($"Failed: {ex.Message}", Severity.Error);}}
     private void ShowReplies(Guid messageId)
     {
         Snackbar.Add("Threaded replies — full view coming soon", Severity.Info);
