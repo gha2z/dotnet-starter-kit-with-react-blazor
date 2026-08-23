@@ -1,5 +1,5 @@
 # sess-main
-identity: opencode/x-preview-f-free (verified fresh 2026-08-23 takeover - prior sessions: deepseek-v4-flash 2026-08-21, omniroute 2026-08-22) | started: 2026-08-06 | state: active | heartbeat: 2026-08-23
+identity: opencode/x-preview-f-free (verified fresh 2026-08-23 takeover - prior sessions: deepseek-v4-flash 2026-08-21, omniroute 2026-08-22) | started: 2026-08-06 | state: active | heartbeat: 2026-08-23 23:07
 
 scope: clients/dashboard-blazor/** · clients/BlazorShared/** (Main-only) · clients/admin-blazor/** (Main-owned by default; app-code edits by other sessions need a board sign-off per task) · STATUS.md · 00-Index.md · Phase-02/03/04/06/07 plan files · opencode/addBlazorFrontends coordination docs (readme.md, verify.ps1, coordination.ps1) · implementation summaries
 
