@@ -74,10 +74,26 @@ public sealed partial class ChatPage : IAsyncDisposable
     /// </summary>
     private bool _mobileRailVisible = true;
 
+    /// <summary>
+    /// React parity (chat-page.tsx:224): the route pointed at a channel that is
+    /// not in our list (archived, left, or never a member) — show a graceful
+    /// notice instead of silently ignoring the deep link.
+    /// </summary>
+    private bool _unreachableChannel;
+
     private void BackToRailMobile()
     {
         _mobileRailVisible = true;
         _typingUsers.Clear();
+    }
+
+    private void BackToConversations()
+    {
+        _unreachableChannel = false;
+        _activeChannelId = null;
+        _activeChannel = null;
+        _messages.Clear();
+        Nav.NavigateTo("/chat");
     }
     private bool _loadingMessages;
     private bool _loadingOlder;
@@ -299,7 +315,18 @@ public sealed partial class ChatPage : IAsyncDisposable
 
         if (_activeChannelId != Id && _channels.Any(c => c.Id == Id))
         {
+            _unreachableChannel = false;
             await SelectChannel(Id);
+        }
+        else if (_activeChannelId != Id)
+        {
+            // Route id is not one of our channels (archived / left / foreign) —
+            // React parity: graceful "isn't reachable" state, not a silent no-op.
+            _unreachableChannel = true;
+            _activeChannelId = null;
+            _activeChannel = null;
+            _messages.Clear();
+            _mobileRailVisible = true;
         }
     }
 
@@ -549,6 +576,7 @@ public sealed partial class ChatPage : IAsyncDisposable
         _activeChannel = _channels.FirstOrDefault(c => c.Id == channelId);
         _typingUsers.Clear();
         _mobileRailVisible = false;
+        _unreachableChannel = false;
 
         // Join the SignalR group for live messages (React parity: JoinChannel on select)
         if (Hub.State == HubConnectionState.Connected)
@@ -806,7 +834,7 @@ public sealed partial class ChatPage : IAsyncDisposable
         var parameters = new DialogParameters<ChatSearchDialog>();
         parameters.Add(nameof(ChatSearchDialog.Messages), _messages);
         parameters.Add(nameof(ChatSearchDialog.OnJumpToMessage), EventCallback.Factory.Create<Guid>(this, async id => await ScrollToMessage(id)));
-        await DialogService.ShowAsync<ChatSearchDialog>("Search Messages", parameters, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        await DialogService.ShowAsync<ChatSearchDialog>("Search Messages", parameters, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true });
     }
 
     private async Task OpenChannelSettingsDialog()
@@ -814,12 +842,29 @@ public sealed partial class ChatPage : IAsyncDisposable
         if (_activeChannel is null) return;
         var parameters = new DialogParameters<ChannelSettingsDialog>();
         parameters.Add(nameof(ChannelSettingsDialog.Channel), _activeChannel);
+        parameters.Add(nameof(ChannelSettingsDialog.SelfUserId), _currentUserId);
         parameters.Add(nameof(ChannelSettingsDialog.OnChannelUpdated), EventCallback.Factory.Create(this, async () =>
         {
             await LoadChannels();
-            if (_activeChannelId.HasValue) await LoadMessages(_activeChannelId.Value);
+            // React parity (channel-settings.tsx): archive/leave navigates back to
+            // /chat when the active conversation is gone from the rail.
+            if (_activeChannelId.HasValue && _channels.All(c => c.Id != _activeChannelId.Value))
+            {
+                _activeChannelId = null;
+                _activeChannel = null;
+                _messages.Clear();
+                Nav.NavigateTo("/chat");
+                return;
+            }
+            if (_activeChannelId.HasValue)
+            {
+                // Re-sync the cached active channel so reopened dialogs and the
+                // header reflect saves (rename/description/members) immediately.
+                _activeChannel = _channels.FirstOrDefault(c => c.Id == _activeChannelId.Value);
+                await LoadMessages(_activeChannelId.Value);
+            }
         }));
-        await DialogService.ShowAsync<ChannelSettingsDialog>("Channel Settings", parameters, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true });
+        await DialogService.ShowAsync<ChannelSettingsDialog>("Channel Settings", parameters, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true });
     }
 
     private void ShowReplies(Guid messageId)
@@ -836,7 +881,7 @@ public sealed partial class ChatPage : IAsyncDisposable
             await LoadChannels();
             await InvokeAsync(StateHasChanged);
         }));
-        await DialogService.ShowAsync<CreateChannelDialog>("Create Channel", parameters);
+        await DialogService.ShowAsync<CreateChannelDialog>("Create Channel", parameters, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true });
     }
 
     private async Task OpenNewDmDialog()
@@ -850,7 +895,7 @@ public sealed partial class ChatPage : IAsyncDisposable
             await LoadChannels();
             await SelectChannel(channelId);
         }));
-        await DialogService.ShowAsync<NewDmDialog>("New Direct Message", parameters);
+        await DialogService.ShowAsync<NewDmDialog>("New Direct Message", parameters, new DialogOptions { CloseButton = true, CloseOnEscapeKey = true });
     }
 
     /// <summary>

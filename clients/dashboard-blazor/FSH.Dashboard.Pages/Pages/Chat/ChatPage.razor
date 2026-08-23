@@ -117,7 +117,18 @@
 
     @* ── Right: Active Channel ─────────────────────────────────── *@
     <MudItem xs="12" md="9" Class="d-flex flex-column fsh-chat-conversation" Style="height: 100%; min-height: 0;">
-        @if (_activeChannelId is null)
+        @if (_unreachableChannel)
+        {
+            @* React parity (chat-page.tsx:224): deep link to an archived/left channel *@
+            <MudPaper Class="d-flex align-center justify-center flex-grow-1" Elevation="0" Style="border-radius: var(--mud-default-border-radius);">
+                <FshEmptyState Icon="@Icons.Material.Outlined.Block" Tone="Color.Warning"
+                               Kicker="Chat" Title="That channel isn't reachable"
+                               Description="It may have been archived or you're no longer a member.">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="BackToConversations">Back to conversations</MudButton>
+                </FshEmptyState>
+            </MudPaper>
+        }
+        else if (_activeChannelId is null)
         {
             <MudPaper Class="d-flex align-center justify-center flex-grow-1" Elevation="0" Style="border-radius: var(--mud-default-border-radius);">
                 <div class="text-center">

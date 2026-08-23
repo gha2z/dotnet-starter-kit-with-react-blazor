@@ -139,15 +139,19 @@ public sealed class ChatPageTests : TestSetup
     }
 
     [Fact]
-    public void Deep_link_with_unknown_channel_id_keeps_placeholder()
+    public void Deep_link_with_unknown_channel_id_shows_unreachable_notice()
     {
+        // React parity (chat-page.tsx:224): an archived/left/foreign channel id
+        // renders the graceful "isn't reachable" state, not a silent placeholder.
         var channel = SampleChannel("General");
         _chat.ListMyChannelsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns([channel]);
 
         var cut = Render<FSH.Dashboard.Wasm.Pages.Chat.ChatPage>(parameters => parameters.Add(p => p.Id, Guid.NewGuid()));
 
-        cut.Markup.ShouldContain("Select a channel to start chatting");
+        cut.WaitForState(() => cut.Markup.Contains("isn't reachable"), timeout: TimeSpan.FromSeconds(5));
+        cut.Markup.ShouldContain("That channel isn't reachable");
+        cut.Markup.ShouldContain("archived or you're no longer a member");
         cut.FindAll(".fsh-chat-channel-active").Count.ShouldBe(0);
     }
 
