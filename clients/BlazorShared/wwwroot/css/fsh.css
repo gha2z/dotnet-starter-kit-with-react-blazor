@@ -2330,3 +2330,18 @@ body {
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
 }
 .fsh-chat-message:hover .fsh-chat-hover-actions, .fsh-chat-hover-actions:hover { display: flex; }
+
+/* ── Chat mobile single-pane (React parity: chat-page.tsx "hidden md:flex").
+   Below the md breakpoint either the rail or the conversation is visible —
+   never both stacked. data-pane is toggled by SelectChannel / back button. ── */
+@media (max-width: 959.98px) {
+    .fsh-chat-root[data-pane="conversation"] .fsh-chat-rail { display: none !important; }
+    .fsh-chat-root[data-pane="list"] .fsh-chat-conversation { display: none !important; }
+}
+
+/* Touch devices have no hover — hover-only affordances must never stick open
+   (a tap leaves :hover latched, pinning the toolbar over the bubbles). */
+@media (hover: none) {
+    .fsh-chat-hover-actions,
+    .fsh-chat-hover-time { display: none !important; }
+}

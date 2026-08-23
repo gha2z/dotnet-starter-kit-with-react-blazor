@@ -1,0 +1,52 @@
+@using FSH.BlazorShared.Models.Chat
+@using FSH.BlazorShared.Formatting
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="_query" Placeholder="Search messages..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search"
+                      Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" AutoFocus="true" Clearable="true" />
+        <MudDivider Class="my-3" />
+        @if (Filtered.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-4 text-center">
+                @(string.IsNullOrWhiteSpace(_query) ? "Type to search messages" : "No matches")
+            </MudText>
+        }
+        else
+        {
+            <MudList T="MessageDto" Dense="true" Style="max-height: 360px; overflow-y: auto;">
+                @foreach (var m in Filtered)
+                {
+                    <MudListItem T="MessageDto" Value="m" OnClick="() => JumpTo(m.Id)">
+                        <div class="d-flex flex-column" style="min-width: 0;">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@FshFormat.DateRelative(m.CreatedAtUtc) · @m.AuthorUserId[..8]</MudText>
+                            <MudText Typo="Typo.body2" Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@m.Body</MudText>
+                        </div>
+                    </MudListItem>
+                    <MudDivider />
+                }
+            </MudList>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public IReadOnlyList<MessageDto> Messages { get; set; } = [];
+    [Parameter] public EventCallback<Guid> OnJumpToMessage { get; set; }
+
+    private string? _query;
+    private IReadOnlyList<MessageDto> Filtered => string.IsNullOrWhiteSpace(_query)
+        ? []
+        : Messages.Where(m => !string.IsNullOrWhiteSpace(m.Body) && m.Body.Contains(_query!, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+
+    private void Cancel() => MudDialog.Cancel();
+    private async Task JumpTo(Guid id)
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+        await OnJumpToMessage.InvokeAsync(id);
+    }
+}

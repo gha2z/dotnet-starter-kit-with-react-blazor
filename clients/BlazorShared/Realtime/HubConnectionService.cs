@@ -19,6 +19,19 @@ public sealed class HubConnectionService(
 
     public async Task StartAsync(CancellationToken ct = default)
     {
+        // Idempotent: MainLayout's auth watcher and pages (Chat) can both race this
+        // around login/navigation. A blind stop+rebuild here orphans every .On()
+        // handler registered by earlier subscribers (the old connection dies with
+        // them), so chat events silently vanish — mirror React's connect() guard,
+        // which never rebuilds while a connection is already up or coming up.
+        if (_hub is not null
+            && _hub.State is HubConnectionState.Connected
+                or HubConnectionState.Connecting
+                or HubConnectionState.Reconnecting)
+        {
+            return;
+        }
+
         if (_hub is not null)
         {
             await StopAsync();

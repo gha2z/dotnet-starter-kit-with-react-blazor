@@ -1,11 +1,12 @@
 # Current Status
 
-Last Update: 2026-08-22 09:30, by: opencode (model: omniroute/auto/coding).
+Last Update: 2026-08-23, by: opencode (model: x-preview-f-free).
 
 ## Progress
 
 | Phase | Status | Tests |
 |-------|--------|-------|
+| Chat parity | ? **COMPLETE (2026-08-23)** - user-reported 6-gap wave fixed + root-caused: (1) real-time dead  `HubConnectionService.StartAsync` raced MainLayout's auth-watcher, blind stop+rebuild orphaned every `.On` handler  now idempotent (Connected/Connecting/Reconnecting  return; BlazorShared  both apps); (2) avatar  MudAvatar has no Image param (MUD0002)  nested `<img>` + initials fallback, own-avatar removed (React renders gutter other-side only); (3) toast  refetch channels for unknown conversation (new-DM race) + real title via ChannelTitleFor + close icon (MudBlazor 9 has no SnackbarOptions.Onclick; React sonner toast not clickable = parity); (4) settings  Channel-only gate + working save + members GUIDsnames (IUserService); (5) create-channel dialog end-to-end; (6) mobile single-pane (`hidden md:flex` parity: data-pane CSS + back button) + `hover:none` touch rule. **GR11: `walkthrough/probe-chat-realtime.mjs` 16 PASS / 0 FAIL (two live sessions A=admin B=alice, realtime ~210ms both directions, toast title, settings gate+save, create dialog)**; `probe-chat-visual.mjs` 15 shots inspected (desktop+mobile); raw-hub isolation probe proved server broadcast OK (bug was client wiring). **Leftovers  handoff**: restart stack + rerun visual probe to eyeball d07 members/m01 pane after final edits; QA-Room-*/Visual-* probe channels accumulate in demo DB (cosmetic) | dashboard bUnit 264/264, 0 warnings |
 | Phase 0 | ✅ | — |
 | Phase 1 | ✅ | — |
 | Phase 2 | ✅ (2.1–2.10) | admin 147/147 |

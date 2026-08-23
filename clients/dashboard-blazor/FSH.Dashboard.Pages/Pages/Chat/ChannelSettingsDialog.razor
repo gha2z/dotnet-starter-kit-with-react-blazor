@@ -1,0 +1,124 @@
+@using FSH.BlazorShared.Models.Chat
+@using FSH.BlazorShared.Models.Identity
+@using FSH.BlazorShared.Services
+@using FSH.BlazorShared.Components
+@inject IChatService ChatService
+@inject IUserService UserService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudTextField @bind-Value="_name" Label="Channel name" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Required="true" RequiredError="Name is required" MaxLength="80" Counter="80"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Tag" Immediate="true" />
+            <MudTextField @bind-Value="_description" Label="Description (optional)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Lines="3" MaxLength="300" Counter="300" Immediate="true" Class="mt-4" />
+            <MudCheckBox @bind-Value="_isPrivate" Label="Private channel" Color="Color.Primary" Class="mt-2" />
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Members (@Channel.Members.Count)</MudText>
+            <MudList T="string" Dense="true">
+                @foreach (var m in Channel.Members.Take(20))
+                {
+                    var name = ResolveName(m.UserId);
+                    <MudListItem>
+                        <div class="d-flex align-center gap-2">
+                            <MudAvatar Size="Size.Small" Color="Color.Primary">@name[0]</MudAvatar>
+                            <div>
+                                <MudText Typo="Typo.body2">@name</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@m.UserId</MudText>
+                            </div>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Text" OnClick="ArchiveChannel" Disabled="_saving">Archive</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveAsync" Disabled="@(!_isValid || _saving)" Class="ml-auto">
+            @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> } Save
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public ChannelDto Channel { get; set; } = null!;
+    [Parameter] public EventCallback OnChannelUpdated { get; set; }
+
+    private MudForm _form = null!;
+    private bool _isValid;
+    private bool _saving;
+    private string _name = string.Empty;
+    private string _description = string.Empty;
+    private bool _isPrivate;
+    private readonly Dictionary<string, string> _memberNames = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _name = Channel.Name ?? string.Empty;
+        _description = Channel.Description ?? string.Empty;
+        _isPrivate = Channel.IsPrivate;
+
+        var ids = Channel.Members.Select(m => m.UserId).Distinct().Take(20).ToList();
+        var tasks = ids.Select(async id =>
+        {
+            try
+            {
+                var user = await UserService.GetAsync(id);
+                if (user is not null) _memberNames[id] = $"{user.FirstName} {user.LastName}".Trim();
+            }
+            catch { /* best-effort */ }
+        });
+        await Task.WhenAll(tasks);
+    }
+
+    private string ResolveName(string userId) =>
+        _memberNames.TryGetValue(userId, out var name) && !string.IsNullOrWhiteSpace(name) ? name : userId[..8];
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task SaveAsync()
+    {
+        await _form.ValidateAsync();
+        if (!_isValid) return;
+        _saving = true;
+        try
+        {
+            await ChatService.UpdateChannelAsync(Channel.Id, new UpdateChannelRequest(_name.Trim(), string.IsNullOrWhiteSpace(_description) ? null : _description.Trim()));
+            Snackbar.Add("Channel updated", Severity.Success);
+            await OnChannelUpdated.InvokeAsync();
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to update: {ex.Message}", Severity.Error);
+        }
+        finally { _saving = false; }
+    }
+
+    private async Task ArchiveChannel()
+    {
+        var parameters = new DialogParameters
+        {
+            { "Message", $"Archive \"{Channel.Name}\"? This will hide it for everyone." },
+            { "ConfirmText", "Archive" },
+            { "CancelText", "Cancel" }
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<FshConfirmDialogContent>("Archive channel", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return;
+        try
+        {
+            await ChatService.ArchiveChannelAsync(Channel.Id);
+            Snackbar.Add("Channel archived", Severity.Success);
+            await OnChannelUpdated.InvokeAsync();
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex) { Snackbar.Add($"Failed: {ex.Message}", Severity.Error); }
+    }
+}

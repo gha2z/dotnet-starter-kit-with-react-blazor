@@ -64,12 +64,21 @@ public sealed partial class ChatPage : IAsyncDisposable
     private MessageDto? _replyToMessage;
     private Guid? _editingMessageId;
     private string _currentUserId = string.Empty;
-    private bool _showSearch;
-    private bool _showSettings;
-    private string? _searchQuery;
-    private string? _editChannelName;
-    private string? _editChannelDesc;
     private bool _loadingChannels;
+
+    /// <summary>
+    /// Mobile single-pane switch (React parity: chat-page.tsx "hidden md:flex").
+    /// Below the md breakpoint either the rail or the conversation is visible,
+    /// never both stacked; selecting a channel opens the pane, the header back
+    /// button returns to the list. Desktop ignores this entirely.
+    /// </summary>
+    private bool _mobileRailVisible = true;
+
+    private void BackToRailMobile()
+    {
+        _mobileRailVisible = true;
+        _typingUsers.Clear();
+    }
     private bool _loadingMessages;
     private bool _loadingOlder;
     private bool _hasOlder = true;
@@ -390,8 +399,16 @@ public sealed partial class ChatPage : IAsyncDisposable
         if (Hub.State != HubConnectionState.Connected)
         {
             await Hub.StartAsync();
-        if (_activeChannelId.HasValue) { try { await Hub.SendAsync("JoinChannel", _activeChannelId.Value); } catch {} }
-        foreach(var ch in _channels) try { await Hub.SendAsync("JoinChannel", ch.Id); } catch {}
+        }
+        JoinAllChannels();
+    }
+
+    private void JoinAllChannels()
+    {
+        if (Hub.State != HubConnectionState.Connected) return;
+        foreach (var ch in _channels)
+        {
+            try { _ = Hub.SendAsync("JoinChannel", ch.Id); } catch { /* best effort */ }
         }
     }
 
@@ -399,26 +416,50 @@ public sealed partial class ChatPage : IAsyncDisposable
     {
         _signalrSubscriptions.Add(Hub.On<MessageDto>("ChatMessageCreated", async msg =>
         {
+            // Resolve author profile immediately
+            _ = EnsureUsersResolvedAsync([msg.AuthorUserId]);
+
             if (msg.ChannelId == _activeChannelId)
             {
-                _messages.Add(msg);
-                /* fixed notification moved to else */ if(false) { Snackbar.Add($"New message in {ChannelTitleFor(_channels.FirstOrDefault(c=>c.Id==msg.ChannelId) ?? null)}: {msg.Body?.Substring(0, Math.Min(30, msg.Body.Length))}", Severity.Info); }
-                RebuildRenderItems();
-                await InvokeAsync(StateHasChanged);
-                _ = EnsureUsersResolvedAsync([msg.AuthorUserId]);
-                await ScrollToBottom();
+                // Active channel: add message, scroll, mark read
+                if (!_messages.Any(m => m.Id == msg.Id))
+                {
+                    _messages.Add(msg);
+                    RebuildRenderItems();
+                    await InvokeAsync(StateHasChanged);
+                    await ScrollToBottom();
+                }
                 await MarkActiveChannelReadAsync();
             }
             else
             {
-                Snackbar.Add($"New message in {( _channels.FirstOrDefault(c=>c.Id==msg.ChannelId)?.Name ?? "a channel")} from {DisplayNameFor(GetOrResolveUser(msg.AuthorUserId), msg.AuthorUserId)}", Severity.Info);
-                // Update unread count on channel list
+                // Non-active channel: show notification snackbar (React parity: toast).
+                // A brand-new DM created by the peer may not be in our rail yet —
+                // refetch (mirrors React's invalidateQueries(["chat","my-channels"]))
+                // so the toast carries the real title and clicking through works.
                 var ch = _channels.FirstOrDefault(c => c.Id == msg.ChannelId);
+                if (ch is null)
+                {
+                    await LoadChannels();
+                    ch = _channels.FirstOrDefault(c => c.Id == msg.ChannelId);
+                }
+
+                var authorName = DisplayNameFor(GetOrResolveUser(msg.AuthorUserId), msg.AuthorUserId);
+                var preview = msg.Body?.Length > 60 ? msg.Body[..60] + "…" : msg.Body ?? "";
+                var where = ch is null ? "a conversation"
+                    : ch.Type == ChannelType.Channel ? $"#{ch.Name}"
+                    : ChannelTitleFor(ch);
+                // React parity: sonner toast with close affordance, not clickable.
+                Snackbar.Add($"{authorName} in {where}: {preview}", Severity.Info, config =>
+                {
+                    config.ShowCloseIcon = true;
+                });
+
+                // Update unread count + recency on channel list
                 if (ch is not null)
                 {
-                    ch = ch with { UnreadCount = ch.UnreadCount + 1, LastMessageAtUtc = msg.CreatedAtUtc };
-                    var idx = _channels.IndexOf(_channels.First(c => c.Id == msg.ChannelId));
-                    _channels[idx] = ch;
+                    var idx = _channels.IndexOf(ch);
+                    _channels[idx] = ch with { UnreadCount = ch.UnreadCount + 1, LastMessageAtUtc = msg.CreatedAtUtc };
                     await InvokeAsync(StateHasChanged);
                 }
             }
@@ -507,16 +548,15 @@ public sealed partial class ChatPage : IAsyncDisposable
         _activeChannelId = channelId;
         _activeChannel = _channels.FirstOrDefault(c => c.Id == channelId);
         _typingUsers.Clear();
+        _mobileRailVisible = false;
 
-        // Load THIS channel's messages first. The mark-read watermark below
-        // must reference the last message of the channel being opened — reading
-        // _messages before the load would use the previously-selected channel's
-        // list, and the server rejects a message id that isn't in the target
-        // channel (NotFoundException), leaving the unread count stuck forever.
-        try { await Hub.SendAsync("JoinChannel", channelId); } catch {}
+        // Join the SignalR group for live messages (React parity: JoinChannel on select)
+        if (Hub.State == HubConnectionState.Connected)
+        {
+            try { await Hub.SendAsync("JoinChannel", channelId); } catch { /* best effort */ }
+        }
+
         await LoadMessages(channelId);
-        _editChannelName = _activeChannel?.Name;
-        _editChannelDesc = _activeChannel?.Description;
         Nav.NavigateTo($"/chat/{channelId}");
         await MarkActiveChannelReadAsync();
     }
@@ -761,7 +801,27 @@ public sealed partial class ChatPage : IAsyncDisposable
         catch { }
     }
 
-    private async Task SaveChannelSettings(){ if(_activeChannel==null || string.IsNullOrWhiteSpace(_editChannelName)) return; try{ await ChatService.UpdateChannelAsync(_activeChannel.Id, new UpdateChannelRequest(_editChannelName.Trim(), _editChannelDesc)); _showSettings=false; await LoadChannels(); await LoadMessages(_activeChannel.Id); Snackbar.Add("Channel updated", Severity.Success);} catch(Exception ex){ Snackbar.Add($"Failed: {ex.Message}", Severity.Error);}}
+    private async Task OpenSearchDialog()
+    {
+        var parameters = new DialogParameters<ChatSearchDialog>();
+        parameters.Add(nameof(ChatSearchDialog.Messages), _messages);
+        parameters.Add(nameof(ChatSearchDialog.OnJumpToMessage), EventCallback.Factory.Create<Guid>(this, async id => await ScrollToMessage(id)));
+        await DialogService.ShowAsync<ChatSearchDialog>("Search Messages", parameters, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+    }
+
+    private async Task OpenChannelSettingsDialog()
+    {
+        if (_activeChannel is null) return;
+        var parameters = new DialogParameters<ChannelSettingsDialog>();
+        parameters.Add(nameof(ChannelSettingsDialog.Channel), _activeChannel);
+        parameters.Add(nameof(ChannelSettingsDialog.OnChannelUpdated), EventCallback.Factory.Create(this, async () =>
+        {
+            await LoadChannels();
+            if (_activeChannelId.HasValue) await LoadMessages(_activeChannelId.Value);
+        }));
+        await DialogService.ShowAsync<ChannelSettingsDialog>("Channel Settings", parameters, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true });
+    }
+
     private void ShowReplies(Guid messageId)
     {
         Snackbar.Add("Threaded replies — full view coming soon", Severity.Info);
