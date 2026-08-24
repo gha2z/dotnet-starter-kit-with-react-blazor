@@ -76,7 +76,7 @@ async function firstChannelTypeId() {
   const res = await fetch('https://localhost:7030/api/v1/chat/channels', { headers: { authorization: `Bearer ${tok}` } });
   const list = await res.json();
   const chans = Array.isArray(list) ? list : list.items ?? [];
-  const ch = chans.find((c) => c.type === 'Channel' && !/^QA-Room/i.test(c.name ?? '')) ?? chans[0];
+  const ch = chans.find((c) => c.type === 'Channel' && !/^(QA-Room|QA-LC|Visual-)/i.test(c.name ?? '')) ?? chans[0];
   return ch.id;
 }
 

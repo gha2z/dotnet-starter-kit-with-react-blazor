@@ -1,11 +1,12 @@
 # Current Status
 
-Last Update: 2026-08-23 23:07, by: opencode (model: x-preview-f-free).
+Last Update: 2026-08-24 14:30, by: opencode (model: x-preview-f-free).
 
 ## Progress
 
 | Phase | Status | Tests |
 |-------|--------|-------|
+| Gap hunt (C1-C4) | ? **COMPLETE (2026-08-24)** — channel lifecycle + role-gated settings + archive/leave + graceful unreachable state (C1, `32944917`, probe-chat-lifecycle 18/0); all-page real-CRUD harnesses dashboard 37/0 + admin 21/0 (C2, `29298c55`+`48a58a69`) — **fixed: profile-save ExpectedJsonTokens (server returns empty 200 body)**; inactivity auto-logout finally WIRED in both apps — was unregistered + no-op activity reset + hardcoded 10 min; now config-driven + FshInactivityDialog warning modal + E2E 8/8 via config route-intercept (C4a, `a4e7cfb3`); impersonation E2E 7/0 (C4b, `e1fbab8f`) — **fixed: cross-tenant user search dead (duplicate tenant headers, handler override)** + handoff URL → Blazor pair (config dashboardUrl 5176); regression: bUnit 264/264 · realtime 16/0 · thorough-qa 4-combo responsive **48/0** | all green, 0 console errors |
 | Chat parity | ? **COMPLETE (2026-08-23)** - user-reported 6-gap wave fixed + root-caused: (1) real-time dead  `HubConnectionService.StartAsync` raced MainLayout's auth-watcher, blind stop+rebuild orphaned every `.On` handler  now idempotent (Connected/Connecting/Reconnecting  return; BlazorShared  both apps); (2) avatar  MudAvatar has no Image param (MUD0002)  nested `<img>` + initials fallback, own-avatar removed (React renders gutter other-side only); (3) toast  refetch channels for unknown conversation (new-DM race) + real title via ChannelTitleFor + close icon (MudBlazor 9 has no SnackbarOptions.Onclick; React sonner toast not clickable = parity); (4) settings  Channel-only gate + working save + members GUIDsnames (IUserService); (5) create-channel dialog end-to-end; (6) mobile single-pane (`hidden md:flex` parity: data-pane CSS + back button) + `hover:none` touch rule. **GR11: `walkthrough/probe-chat-realtime.mjs` 16 PASS / 0 FAIL (two live sessions A=admin B=alice, realtime ~210ms both directions, toast title, settings gate+save, create dialog)**; `probe-chat-visual.mjs` 15 shots inspected (desktop+mobile); raw-hub isolation probe proved server broadcast OK (bug was client wiring). **Leftovers  handoff**: restart stack + rerun visual probe to eyeball d07 members/m01 pane after final edits; QA-Room-*/Visual-* probe channels accumulate in demo DB (cosmetic) | dashboard bUnit 264/264, 0 warnings |
 | Phase 0 | ✅ | — |
 | Phase 1 | ✅ | — |
