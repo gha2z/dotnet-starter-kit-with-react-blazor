@@ -77,10 +77,12 @@ public sealed class UserService(HttpClient http) : IUserService
 
     public async Task<UserDto> UpdateMyProfileAsync(UpdateProfileRequest request, CancellationToken ct = default)
     {
+        // The server (UpdateUserEndpoint) returns 200 with an EMPTY body — parsing
+        // it as UserDto throws "ExpectedJsonTokens". React parity: mutate, then
+        // refetch the profile.
         var response = await http.PutAsJsonAsync($"{IdentityBase}/profile", request, ct);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<UserDto>(ct)
-            ?? throw new InvalidOperationException("Null profile response");
+        return await GetMyProfileAsync(ct);
     }
 
     public async Task SetProfileImageAsync(string? imageUrl, CancellationToken ct = default)
