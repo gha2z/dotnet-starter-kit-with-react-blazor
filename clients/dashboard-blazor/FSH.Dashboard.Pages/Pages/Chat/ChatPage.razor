@@ -89,11 +89,28 @@
                         @foreach (var ch in DmsSection)
                         {
                             var isActive = ch.Id == _activeChannelId;
+                            var partner = PartnerOf(ch);
                             <MudListItem @key="ch.Id" T="ChannelDto" Value="ch" OnClick="() => SelectChannel(ch.Id)"
                                          Class="@ChannelItemClass(isActive)">
                                 <div class="d-flex align-center" style="width: 100%;">
-                                    <MudIcon Icon="@ChannelIcon(ch.Type)" Size="Size.Small" Class="mr-2"
-                                             Color="@ChannelIconColor(isActive)" />
+                                    @* React parity (channel-rail.tsx): DM rows show the partner's
+                                       avatar (photo → initials) with a green presence dot. *@
+                                    <div style="position: relative; display: inline-block; margin-right: 8px; flex-shrink: 0;">
+                                        <MudAvatar Size="Size.Small" Color="Color.Primary">
+                                            @if (partner is not null && GetAvatarUrl(partner.UserId) is { } partnerUrl)
+                                            {
+                                                <img src="@partnerUrl" alt="@InitialsFor(GetOrResolveUser(partner.UserId), partner.UserId)" style="width:100%;height:100%;object-fit:cover;" />
+                                            }
+                                            else
+                                            {
+                                                @InitialsFor(partner is null ? null : GetOrResolveUser(partner.UserId), partner?.UserId ?? "?")
+                                            }
+                                        </MudAvatar>
+                                        @if (partner is not null && IsUserOnline(partner.UserId))
+                                        {
+                                            <span style="position:absolute;bottom:0;right:0;width:10px;height:10px;background:var(--mud-palette-success);border-radius:50%;border:2px solid var(--mud-palette-surface);"></span>
+                                        }
+                                    </div>
                                     <div class="flex-grow-1" style="min-width: 0;">
                                         <MudText Typo="Typo.body2" Style="@ChannelTextWeight(isActive)">
                                             @ChannelTitleFor(ch)
@@ -116,7 +133,7 @@
     </MudItem>
 
     @* ── Right: Active Channel ─────────────────────────────────── *@
-    <MudItem xs="12" md="9" Class="d-flex flex-column fsh-chat-conversation" Style="height: 100%; min-height: 0;">
+    <MudItem xs="12" md="9" Class="d-flex flex-column fsh-chat-conversation" Style="height: 100%; min-height: 0; position: relative;">
         @if (_unreachableChannel)
         {
             @* React parity (chat-page.tsx:224): deep link to an archived/left channel *@
@@ -287,6 +304,19 @@
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="px-3 py-1">
                     @TypingNames @(_typingUsers.Count == 1 ? "is" : "are") typing...
                 </MudText>
+            }
+
+            @* Jump-to-bottom pill (React message-list.tsx parity): shown when messages
+               arrived while the user was scrolled away from the bottom. *@
+            @if (_unseenCount > 0)
+            {
+                <div class="d-flex justify-center" style="position: absolute; bottom: 84px; left: 0; right: 0; z-index: 3; pointer-events: none;">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                               Style="pointer-events: auto; border-radius: 999px;"
+                               OnClick="JumpToBottomAsync">
+                        ↓ @(_unseenCount == 1 ? "1 new message" : $"{_unseenCount} new messages")
+                    </MudButton>
+                </div>
             }
 
             @if (_replyToMessage is not null)

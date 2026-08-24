@@ -13,12 +13,12 @@
 
 ## Waves
 
-### P1 — Chat UX (dashboard-blazor) — ☐
-- [ ] P1.1 Render-aware scroll: `_scrollPending` flag consumed in `OnAfterRenderAsync`; own sends
-      always scroll; incoming scrolls only within ~150px of bottom; jump-to-bottom pill when suppressed.
-- [ ] P1.2 DM rail: partner avatar (photo → initials fallback) + green presence dot (reuse
-      `IsUserOnline` + partner from `ChannelDto.Members`).
-- [ ] P1.3 Re-verify: probe-chat-realtime 16/0 + scroll assertions; rail screenshots desktop+mobile.
+### P1 — Chat UX (dashboard-blazor) — ✅ (2026-08-24)
+- [x] P1.1 Render-aware scroll: `_scrollPending` flag consumed in `OnAfterRenderAsync`; own sends
+      always scroll; incoming scrolls only within ~150px of bottom; jump-to-bottom pill when suppressed. — ✅ probe-chat-scroll 5/0
+- [x] P1.2 DM rail: partner avatar (photo → initials fallback) + green presence dot (reuse
+      `IsUserOnline` + partner from `ChannelDto.Members`). — ✅ p1-rail-dm-avatars.png
+- [x] P1.3 Re-verify: probe-chat-realtime 16/0 + scroll assertions; rail screenshots desktop+mobile. — ✅ 264/264 bUnit
 
 ### P2 — Products list — ☐
 - [ ] P2.1 Searchable combobox filters (brand/category) — type-to-narrow, clearable, React filter

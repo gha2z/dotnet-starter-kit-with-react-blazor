@@ -29,6 +29,15 @@ export function scrollToBottom() {
     document.querySelector('.fsh-chat-messages')?.scrollTo(0, 999999);
 }
 
+// React parity (message-list.tsx): auto-scroll is suppressed once the user has
+// scrolled away from the bottom; the page asks this before scrolling for an
+// incoming message. Returns 0 when the container is missing (treat as pinned).
+export function distanceFromBottom() {
+    const el = document.querySelector('.fsh-chat-messages');
+    if (!el) return 0;
+    return el.scrollHeight - el.scrollTop - el.clientHeight;
+}
+
 export function scrollHeight() {
     return document.querySelector('.fsh-chat-messages')?.scrollHeight ?? 0;
 }

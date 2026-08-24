@@ -103,6 +103,13 @@ public sealed partial class ChatPage : IAsyncDisposable
     private DotNetObjectReference<ChatPage>? _dotNetRef;
     private ElementReference _messagesContainer;
 
+    // Render-aware auto-scroll (React message-list.tsx pinning contract): the scroll fires in
+    // OnAfterRenderAsync after the DOM patch; incoming messages only pin when the user is near
+    // the bottom, otherwise they count as unseen and a jump-to-bottom pill appears.
+    private bool _scrollPending;
+    private int _unseenCount;
+    private const int NearBottomPx = 150;
+
     private readonly List<IDisposable> _signalrSubscriptions = [];
 
     protected override async Task OnInitializedAsync()
@@ -336,7 +343,27 @@ public sealed partial class ChatPage : IAsyncDisposable
         {
             await AttachScrollWatcherAsync();
         }
-        else if (_scrollHeightBeforeOlderLoad >= 0)
+
+        if (_scrollPending)
+        {
+            // Consume AFTER the DOM patch for this render — scrolling synchronously in the
+            // event handler raced Blazor's render queue and scrolled to the OLD bottom, so
+            // the new message landed below the fold (spec.md §1 auto-scroll complaint).
+            _scrollPending = false;
+            try
+            {
+                if (_scrollModule is not null)
+                {
+                    await _scrollModule.InvokeVoidAsync("scrollToBottom");
+                }
+            }
+            catch
+            {
+                // Interop unavailable (prerender/tests) — skip.
+            }
+        }
+
+        if (_scrollHeightBeforeOlderLoad >= 0)
         {
             // Older messages were just prepended — restore the previous scroll offset
             // so the user's reading position doesn't jump.
@@ -448,13 +475,22 @@ public sealed partial class ChatPage : IAsyncDisposable
 
             if (msg.ChannelId == _activeChannelId)
             {
-                // Active channel: add message, scroll, mark read
+                // Active channel: add message; pin to bottom only when the user is near it
+                // (React parity) — otherwise count it unseen behind the jump-to-bottom pill.
                 if (!_messages.Any(m => m.Id == msg.Id))
                 {
+                    var pinned = await IsNearBottomAsync();
                     _messages.Add(msg);
                     RebuildRenderItems();
+                    if (pinned)
+                    {
+                        await ScrollToBottom();
+                    }
+                    else
+                    {
+                        _unseenCount++;
+                    }
                     await InvokeAsync(StateHasChanged);
-                    await ScrollToBottom();
                 }
                 await MarkActiveChannelReadAsync();
             }
@@ -937,17 +973,31 @@ public sealed partial class ChatPage : IAsyncDisposable
 
     private async Task ScrollToBottom()
     {
+        // Defer the actual scroll to OnAfterRenderAsync so it runs after the DOM patch.
+        _scrollPending = true;
+        _unseenCount = 0;
+    }
+
+    /// <summary>React parity (message-list.tsx): is the feed within the auto-scroll pin window?</summary>
+    private async Task<bool> IsNearBottomAsync()
+    {
         try
         {
-            if (_scrollModule is not null)
-            {
-                await _scrollModule.InvokeVoidAsync("scrollToBottom");
-            }
+            if (_scrollModule is null) return true;
+            var d = await _scrollModule.InvokeAsync<double>("distanceFromBottom");
+            return d <= NearBottomPx;
         }
         catch
         {
-            // JS interop may fail during prerender
+            return true; // interop unavailable — behave pinned (matches prerender/tests)
         }
+    }
+
+    private async Task JumpToBottomAsync()
+    {
+        _unseenCount = 0;
+        _scrollPending = true;
+        await InvokeAsync(StateHasChanged);
     }
 
     private static string ChannelIcon(ChannelType type) => type switch
@@ -959,6 +1009,14 @@ public sealed partial class ChatPage : IAsyncDisposable
 
     private static string ChannelItemClass(bool isActive) =>
         $"fsh-chat-channel-item {(isActive ? "fsh-chat-channel-active" : "")}";
+
+    /// <summary>The DM partner: the member that is not the current user (React channel-rail parity).</summary>
+    private ChannelMemberDto? PartnerOf(ChannelDto ch)
+    {
+        if (ch.Type != ChannelType.DirectMessage) return null;
+        return ch.Members.FirstOrDefault(m => !string.Equals(m.UserId, _currentUserId, StringComparison.OrdinalIgnoreCase))
+            ?? ch.Members.FirstOrDefault();
+    }
 
     private static Color ChannelIconColor(bool isActive) => isActive ? Color.Primary : Color.Default;
 
