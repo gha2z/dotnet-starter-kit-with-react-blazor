@@ -1,8 +1,22 @@
 # Current Status
 
-Last Update: 2026-08-24 14:30, by: opencode (model: x-preview-f-free).
+Last Update: 2026-08-24 16:30, by: opencode (model: x-preview-f-free).
 
-## Progress
+## Dashboard (living — update at every close-out)
+
+- **Current mission:** [`Phase-09-UI-Parity-Hardening/`](./Phase-09-UI-Parity-Hardening/) —
+  chat UX (scroll, DM rail avatars+presence), products parity (combobox filters, hover actions,
+  responsive columns, mobile cards, detail hero, catalog dialogs), files page parity, tickets
+  filter BUG, CRUD dialog standardization, audits filters verification.
+- **Next task:** P1.1 render-aware chat scroll (mission plan.md P1).
+- **Obstacles / known issues:** tickets filter bug root cause not yet classified (P5.1
+  diagnostic is the first step); stack restart needed after each code wave (agent-driven).
+- **Priorities:** P1 → P2 → P3 → P6 → P4 → P5 → P7 → P8 (see mission plan.md).
+- **Definition of done:** real-browser walkthrough (clicks/CRUD/resizes/device emulation,
+  vision-inspected screenshots, 0 console errors) + regression battery (bUnit 264/264,
+  probe-chat-realtime 16/0, probe-actions ×2, thorough-qa 48/0).
+
+## Progress (append-only ledger — never edit existing rows)
 
 | Phase | Status | Tests |
 |-------|--------|-------|

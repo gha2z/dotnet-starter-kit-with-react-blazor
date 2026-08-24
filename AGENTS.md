@@ -14,13 +14,25 @@ Any coding agent, any tool (opencode, Claude Code, Copilot, Cursor, Gemini CLI, 
 session (fresh or resumed after compaction): because you read this file, you run the session
 protocol on **every task** — nobody reminds you. Canonical protocol:
 `workflows/current/session-protocol.md`. The short version: read the protocol + the track's
-`STATUS.md` + `live/*.md` fresh → identify as `sess-<id>` in `live/sess-<id>.md` (verify your
-tool/model identity fresh each session) → `pwsh workflows/current/coordination.ps1 -Session <sid> -Start`
-→ heartbeat every turn + one lesson line per turn → close-out (summary + `## Lessons` + STATUS row
-+ `-CloseOut`, fail-closed) → stage by explicit paths, never `-A`, never push. Track for this
-repo: `opencode/addBlazorFrontends/` — `zones.md` there is the ownership authority the gate
-parses. A tool-neutral variant of the same package (for the original
-`fullstackhero/dotnet-starter-kit` repo) lives at `workflows/neutral/`.
+`START-HERE.md` + `STATUS.md` (top dashboard) + the current mission folder → identify as
+`sess-<id>` in `live/sess-<id>.md` (verify your tool/model identity fresh each session) →
+`pwsh workflows/current/coordination.ps1 -Session <sid> -Start` → heartbeat every turn + one
+lesson line per turn → close-out (summary + `## Lessons` + STATUS refresh + `-CloseOut`,
+fail-closed) → stage by explicit paths, never `-A`, never push. Track for this repo:
+`opencode/addBlazorFrontends/` — `zones.md` there is the ownership authority the gate parses.
+A tool-neutral variant of the same package (for the original `fullstackhero/dotnet-starter-kit`
+repo) lives at `workflows/neutral/`.
+
+## Workflow artifacts (mission convention)
+
+Mission work lives in `opencode/<track>/Phase-XX-<Mission>/`: **`spec.md`** (human-authored
+requirements), **`plan.md`** (agent-authored phased plan with ☐/🔄/✅ markers — the human
+confirms it before build), **`implementation.md`** (agent-authored log: what/why/evidence/
+lessons per wave). The progress entry point for human and agent alike is the track's
+**`STATUS.md`** (top dashboard = current mission / next task / obstacles; append-only history
+below) via the track's **`START-HERE.md`**. Engineering rules: prove root causes before fixing;
+a bug fix gets a regression test where feasible; test counts are point-in-time evidence in
+implementation logs/summaries, never in living docs.
 
 ## What this is
 

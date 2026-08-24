@@ -1,5 +1,12 @@
 # AddBlazorFrontends — Session Instructions
-**Last updated: 2026-08-12 14:00, by: opencode (model: auto/coding — unresolved) — W1 theme fix landed; ritual made self-starting (AGENTIC-GUIDE.md §2.1, HUMAN-GUIDE.md §Self-starting ritual, STATUS.md append-only ledger, board cross-session only).**
+
+> **Entry point moved:** start at [`START-HERE.md`](./START-HERE.md) → [`STATUS.md`](./STATUS.md)
+> (dashboard) → the current mission folder (`spec.md` / `plan.md` / `implementation.md`).
+> Canonical session protocol: [`workflows/current/session-protocol.md`](../../workflows/current/session-protocol.md).
+> This file is now the **detailed reference** only (streams/worktrees, coordination rules,
+> subagent dispatch, model identity, DoD) — the session ritual and commit policy are NOT
+> redefined here anymore.
+**Last updated: 2026-08-24 16:30, by: opencode (model: x-preview-f-free) — workflow restructure: entry point moved to START-HERE.md; ritual sections now point at the canonical protocol; mission folders introduced.**
 
 ## Commit Policy
 
@@ -22,52 +29,14 @@ see "Coordination Gate Script" below).
 
 ## Session Start Ritual
 
-On session start:
-1. `git status` — confirm the tree is clean or matches the expected in-progress work
-2. Determine your session id: the user names this session (`sess-main`, `sess-maui`, …). If
-   unnamed, ask. Every doc and coordination file uses it
-3. Determine your actual model identity (see "Model Identity Convention" below) and record it
-   for today's docs
-4. Read `./opencode/addBlazorFrontends/STATUS.md` — current state, next task
-5. Read ALL `./opencode/addBlazorFrontends/live/*.md` (session coordination — see
-   "Multi-Session Coordination Protocol"); create `live/<your-session-id>.md` from
-   `live/_template.md` if it does not exist
-6. Read the latest `./opencode/addBlazorFrontends/00_summary/implementation-summary-*.md` — what was last done
-7. Read `.agents/rules/frontend/blazor-shared.md` — Blazor conventions (plus `blazor-admin.md`,
-   `blazor-dashboard.md`, or `maui-hybrid.md` for the target app)
-8. Load any relevant skills from `.agents/skills/` (e.g. `add-blazor-page`, `add-feature`,
-   `setup-blazor-auth`, `setup-blazor-realtime`, `implement-blazor-list`, `implement-blazor-form`,
-   `add-permission`) before you start; for .NET/Blazor/test tasks supplement with the dotnet
-   plugin suite — see the task→skill map in `WORKFLOW-GUIDE.md` (`author-component`,
-   `fetch-and-send-data`, `use-js-interop`, `run-tests`, `optimizing-ef-core-queries`,
-   `test-anti-patterns`, `dotnet-webapi`, dotnet-maui skills, build-perf-*)
-9. Verify builds + tests pass before starting work
-
-### Self-starting — run this automatically on every task (no human reminder needed)
-
-When you receive ANY task in this track, **before starting work** execute the ritual above (steps 1–9).
-This is not optional — it is the protocol. The human should never need to say "follow the ritual."
-
-**During work** (every user turn):
-1. `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Heartbeat`
-2. Read the lesson ledger tail: `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Lessons`
-   — check the failure-pattern registry for a match BEFORE acting; a matching event gets `[RECUR]` on append
-3. If the task touches files in another session's zone → stop; post on `board.md`; take another task
-4. **At turn end, append exactly one lesson line** (what failed / what I learned → root cause → remedy →
-   proof): `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Lesson "<text>"`. If nothing
-   went wrong, write one improvement or one verified pattern — the ledger never gets an empty turn.
-   (This is the Continuous Improvement Ritual — rule 13; -Gate refuses to pass while the ledger is missing.)
-
-**Wave close-out** (after each verified unit of work — the "two-call" ritual):
-1. Write summary to `00_summary/implementation-summary-<ts>-<sid>.md` per `_template.md`
-   (wave DAG + verification block + `## Lessons` section — this is the **single tracking artifact**)
-2. Append one line to `STATUS.md` (timestamp + wave + commit + test counts — **append-only ledger**,
-   never edit existing rows)
-3. If a board row exists for this work, update its Status cell only (**cross-session only** —
-   single-session work does not add board rows)
-4. `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -CloseOut` (fail-closed —
-   blocks staging if summary is missing or STATUS not refreshed)
-5. Stage by explicit paths, show `git diff --cached --stat`, wait for user approval
+**Canonical: [`workflows/current/session-protocol.md`](../../workflows/current/session-protocol.md)
+§1.** Short version: read `START-HERE.md` → `STATUS.md` dashboard → the current mission folder
+(`spec.md` / `plan.md` / `implementation.md`) → identify in `live/sess-<id>.md` (fresh model
+identity) → `coordination.ps1 -Session <sid> -Start` → lessons-ledger tail check → overlap
+check → verify baseline. During work: heartbeat + one lesson line every turn. Close-out:
+summary to `00_summary/` (with `## Lessons`) + STATUS refresh + `-CloseOut` + explicit-path
+staging. Load relevant skills from `.agents/skills/` and the task→skill map in
+`WORKFLOW-GUIDE.md` before starting.
 
 ---
 

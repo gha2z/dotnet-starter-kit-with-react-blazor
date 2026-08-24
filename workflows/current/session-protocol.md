@@ -15,11 +15,17 @@
 **Whole-file reads only** (no offset-tunneling) — state moves fast in this repo.
 
 1. Read fresh, in order (whole files):
-   - `AGENTS.md` (golden rules + register) → this file → the track's `readme.md`
-   - the track's `STATUS.md` → all track `live/*.md` → latest track `00_summary/implementation-summary-*.md`
+   - `AGENTS.md` (golden rules + register) → this file
+   - the track's **`START-HERE.md`** (entry point) → the track's **`STATUS.md`** (top dashboard =
+     current mission / next task / obstacles; history below)
+   - the **current mission folder** named in the dashboard: `spec.md` + `plan.md` (status
+     markers) + `implementation.md` (latest waves)
+   - all track `live/*.md` → lessons ledger tail (step 4)
 2. **Identify** — session id is the name the user gives (`sess-main`, `sess-maui`, …). Record it,
    your **model identity** (verify fresh — never copy from an older doc; write `<modelID> (unresolved)`
    if unverifiable), your scope, and a heartbeat in `live/sess-<id>.md` (from `live/_template.md`).
+   Session files stay **short** (identity, heartbeat, current focus, `Next:` pointer, recent
+   lessons) — mission narrative belongs in the mission's `implementation.md`, never in session files.
 3. **Heartbeat** — stamp `live/sess-<id>.md` heartbeat AND run
    `pwsh opencode/<track>/coordination.ps1 -Session <sid> -Start` (also validates the session file).
 4. **Read the lessons ledger tail** — `coordination.ps1 -Session <sid> -Lessons` — check the
@@ -30,7 +36,27 @@
 
 **Memory rule:** your model's memory tools (`ctx_memory`, `ctx_search`, `knowledge_recall`,
 `ctx_note`) are search/recall aids and personal scratch — **never the source of truth**. The disk
-(`STATUS.md`, `live/`, summaries) is. If the disk and your memory disagree, the disk wins.
+(`STATUS.md`, mission folders, `live/`, summaries) is. If the disk and your memory disagree, the disk wins.
+
+## 1b. Mission folders (spec → plan → implementation)
+
+Every non-trivial unit of work lives in a mission folder under the track:
+`Phase-XX-<Mission>/` (numbering continues the track's phase sequence).
+
+- **`spec.md`** — the human authors requirements (verbatim reports are fine). The agent may
+  draft it from conversation for the human to correct, but the human owns it.
+- **`plan.md`** — the agent authors it FROM the spec: phases, tasks with ☐/🔄/✅ status markers,
+  per-phase and overall success criteria, execution order. **The human confirms plan.md before
+  implementation begins** (bench rule: do not proceed to build on an unconfirmed plan). Task
+  claims append `— claimed by <sid> @ <ts>`; completion marks `✅ by <sid>`; never edit another
+  session's claim.
+- **`implementation.md`** — the agent keeps it current per wave: what changed, why, evidence
+  (probe results, screenshots, test counts — point-inimate numbers live HERE and in
+  `00_summary/`, not in living docs), deviations from plan, lessons.
+
+Reading contract: **resuming work = `START-HERE.md` → `STATUS.md` dashboard → mission `plan.md`
+markers.** Three reads, always current. "Why was X done?" → mission `implementation.md` →
+`00_summary/` for raw evidence.
 
 ## 2. During Work (every user turn)
 
@@ -68,6 +94,16 @@
 | Blazor/Hybrid page | real-browser walkthrough (Playwright driver) — bUnit is necessary, not sufficient |
 | Numbers in docs | always from a real run THIS session — never from memory |
 
+**Engineering rules (bench-inspired, mandatory where feasible):**
+- **Prove the root cause before fixing.** Reproduce it, measure it, show the evidence (a probe,
+  a failing request, a screenshot). Never ship a workaround for an unexplained symptom.
+- **A bug fix gets a regression test that fails without it** (bUnit, a probe assertion, or a
+  backend test) — that is what stops it coming back.
+- **Fix flakiness at the root** (shared state, unmet wait, viewport) — never paper over with
+  retries/timeouts without proving the cause.
+- When you deliberately leave something unverified or uncovered, say so explicitly in the
+  mission `implementation.md` — a green suite must not imply coverage it does not have.
+
 `verify.ps1`/`verify-hybrid.ps1` delete `obj/`/`bin/` — take the **verify lock** first
 (`coordination.ps1 -LockVerify`, release with `-UnlockVerify`); the script refuses while the lock
 exists. A stale lock (owner heartbeat >12h) is removable after a `board.md` announcement.
@@ -101,6 +137,10 @@ Incidents → short playbook, full detail in the track `readme.md`:
   cross-session drift.
 - **Process changes** are authored here (this protocol), ranked by evidence from the ledger, and
   versioned with the code — never improvised mid-session.
+- **Recursive self-improvement:** when a process change lands, re-read this section and ask whether
+  the *way improvements are made* should also change (bench PROCESS.md §7 pattern). Workflow
+  structure is reviewed whenever it starts costing more than it saves — duplication is removed,
+  stale artifacts archived (not deleted), and the reading contract kept to three reads.
 
 ## 7. How this protocol is wired (pointer map)
 
