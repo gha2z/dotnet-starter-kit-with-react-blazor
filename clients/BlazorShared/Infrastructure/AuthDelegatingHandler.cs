@@ -17,8 +17,10 @@ public sealed class AuthDelegatingHandler(ITokenStore tokenStore, IHttpClientFac
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
+        // Explicit per-request tenant overrides (e.g. cross-tenant user search)
+        // must win — only default to the signed-in tenant when none was set.
         var tenant = await tokenStore.GetTenantAsync();
-        if (tenant is not null)
+        if (tenant is not null && !request.Headers.Contains("tenant"))
         {
             request.Headers.TryAddWithoutValidation("tenant", tenant);
         }
