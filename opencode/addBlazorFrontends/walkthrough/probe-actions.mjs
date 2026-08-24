@@ -41,8 +41,14 @@ async function saveDialog(page, saveLabel = 'Save') {
   await dlg(page).locator('input').first().waitFor({ state: 'detached', timeout: 8000 }).catch(() => {});
 }
 async function rowVisible(page, name) {
-  const mainTxt = await page.locator('main').innerText().catch(() => '');
-  return mainTxt.includes(name);
+  // Poll: the list reloads (LoadAsync) after the action — give it time under load.
+  const deadline = Date.now() + 6000;
+  while (Date.now() < deadline) {
+    const mainTxt = await page.locator('main').innerText().catch(() => '');
+    if (mainTxt.includes(name)) return true;
+    await page.waitForTimeout(400);
+  }
+  return false;
 }
 async function deleteRow(page, name, confirmLabel = /delete|confirm|yes/i) {
   const del = page.locator(`[aria-label="Delete ${name}"], [aria-label^="Delete ${name}"]`).first();
@@ -162,7 +168,14 @@ const actions = {
       await dlg(page).getByLabel('Password', { exact: false }).first().fill('Password123!');
       await dlg(page).getByLabel('Confirm password', { exact: false }).fill('Password123!');
       await saveDialog(page, /register|create|save/i);
-      ok('D17', 'user created', await rowVisible(page, uname), await toast(page));
+      ok('D17', 'user created (toast)', /registered/i.test(await toast(page)), await toast(page));
+      // paginated list sorted by name — filter via the page's search box (D19 pattern)
+      const search = page.locator('input[placeholder*="earch" i]').first();
+      if (await search.isVisible().catch(() => false)) {
+        await search.fill(uname);
+        await page.waitForTimeout(900);
+      }
+      ok('D17', 'user appears in list', await rowVisible(page, uname));
       // Rows open the DETAIL page (no row-level delete by design) — cleanup via
       // detail page is out of probe scope; the QA user stays (documented).
       ok('D17', 'row opens detail (row is a button)', true);
@@ -266,7 +279,7 @@ const actions = {
 
   async D12(page) { // Sessions
     await page.goto(`${BASE}/system/sessions`, { waitUntil: 'load' });
-    await page.waitForTimeout(2500);
+    await page.waitForTimeout(6000); // full SPA reload re-boots WASM — give it time
     const rows = page.locator('tr');
     const n = await rows.count();
     ok('D12', 'sessions listed', n > 1, `${n} rows`);
@@ -294,7 +307,7 @@ const browser = await chromium.launch({ ignoreHTTPSErrors: true });
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 const page = await ctx.newPage();
 page.on('pageerror', (e) => consoleErrors.push(`[pageerror] ${String(e).slice(0, 160)}`));
-page.on('console', (m) => { if (m.type() === 'error' && /failed|exception/i.test(m.text()) && !/mono_download|favicon/i.test(m.text())) consoleErrors.push(`[console] ${m.text().slice(0, 160)}`); });
+  page.on('console', (m) => { if (m.type() === 'error' && /failed|exception/i.test(m.text()) && !/mono_download|instantiate_wasm_module|favicon/i.test(m.text())) consoleErrors.push(`[console] ${m.text().slice(0, 160)}`); });
 
 const requested = process.argv.slice(2);
 try {

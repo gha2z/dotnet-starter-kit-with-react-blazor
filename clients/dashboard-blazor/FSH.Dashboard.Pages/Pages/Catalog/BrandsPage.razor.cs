@@ -69,17 +69,17 @@ public sealed partial class BrandsPage
         }
     }
 
-    private void GoToPage(int page)
+    private async Task GoToPage(int page)
     {
         _pageNumber = Math.Clamp(page, 1, _totalPages);
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
-    private void ClearSearch()
+    private async Task ClearSearch()
     {
         _search = string.Empty;
         _pageNumber = 1;
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
     private async Task OpenEditorAsync(BrandDto? brand)

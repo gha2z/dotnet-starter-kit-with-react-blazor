@@ -41,11 +41,14 @@
 - [ ] P4.1 Side-by-side visual diff (:5176 vs :5174) desktop+mobile → delta list.
 - [ ] P4.2 Fix deltas; real upload/rename/delete verification.
 
-### P5 — Tickets: filter bug + filters look — ☐
-- [ ] P5.1 DIAGNOSE FIRST: live API check (`?status=Open`, `?priority=High`, …) to classify
-      500 vs hang vs empty-200; fix root cause (client wiring looks correct — enum names match).
-- [ ] P5.2 Filter pills look-and-feel to React.
-- [ ] P5.3 Probe assertion per filter value.
+### P5 — Tickets: filter bug + filters look — ✅ (2026-08-24)
+- [x] P5.1 Diagnosed: API was never at fault (all filters 200, <60ms) — root cause was the
+      fire-and-forget `_ = LoadAsync()` render-stall pattern; fixed across **8 pages / 17 call
+      sites**. — ✅
+- [x] P5.2 Filter pills verified against React (tickets pills were already parity); products
+      filter bar moved above results (was hidden on zero-row results — unclearable). — ✅
+- [x] P5.3 `probe-filters-p5.mjs` **11/0** (every ticket status/priority value + products
+      visibility + brands search/clear). — ✅
 
 ### P6 — Dialog standardization (all CRUD) — ☐
 - [ ] P6.1 Shared `FshFormDialog` scaffold (React Dialog chrome: header title+description, body,

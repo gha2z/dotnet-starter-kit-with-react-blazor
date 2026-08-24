@@ -103,17 +103,17 @@ public sealed partial class CategoriesPage
     private string ParentName(Guid id) =>
         _parentNames.TryGetValue(id, out var name) ? name : "(parent)";
 
-    private void GoToPage(int page)
+    private async Task GoToPage(int page)
     {
         _pageNumber = Math.Clamp(page, 1, _totalPages);
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
-    private void ClearSearch()
+    private async Task ClearSearch()
     {
         _search = string.Empty;
         _pageNumber = 1;
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
     private async Task OpenEditorAsync(CategoryDto? category)

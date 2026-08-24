@@ -36,18 +36,20 @@ public sealed partial class ProductsPage
     private Task<IEnumerable<CategoryDto>> FilterCategories(string term, CancellationToken ct) =>
         Task.FromResult(_categories.Where(c => c.Name.Contains(term, StringComparison.OrdinalIgnoreCase)).AsEnumerable());
 
-    private void OnBrandSelChanged(BrandDto? value)
+    // Awaited (not fire-and-forget): the completing handler triggers the re-render.
+    // Fire-and-forget loads left the UI stuck on skeletons (see TicketsListPage lesson).
+    private async Task OnBrandSelChanged(BrandDto? value)
     {
         _brandFilter = value?.Id;
         _pageNumber = 1;
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
-    private void OnCatSelChanged(CategoryDto? value)
+    private async Task OnCatSelChanged(CategoryDto? value)
     {
         _categoryFilter = value?.Id;
         _pageNumber = 1;
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
     private bool _loading = true;
@@ -124,20 +126,20 @@ public sealed partial class ProductsPage
         }
     }
 
-    private void SetVisibility(bool? value)
+    private async Task SetVisibility(bool? value)
     {
         _visibilityFilter = value;
         _pageNumber = 1;
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
-    private void GoToPage(int page)
+    private async Task GoToPage(int page)
     {
         _pageNumber = Math.Clamp(page, 1, _totalPages);
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
-    private void ClearFilters()
+    private async Task ClearFilters()
     {
         _search = string.Empty;
         _brandFilter = null;
@@ -146,7 +148,7 @@ public sealed partial class ProductsPage
         _brandSel = null;
         _catSel = null;
         _pageNumber = 1;
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
     private string BrandName(Guid id) => _brands.FirstOrDefault(b => b.Id == id)?.Name ?? "—";

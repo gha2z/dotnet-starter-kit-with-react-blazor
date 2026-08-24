@@ -102,10 +102,10 @@ public sealed partial class WalletPage
         }
     }
 
-    private void GoToPage(int page)
+    private async Task GoToPage(int page)
     {
         _pageNumber = Math.Clamp(page, 1, _totalPages);
-        _ = LoadRequestsAsync();
+        await LoadRequestsAsync();
     }
 
     private static string StatusTone(string status) => status switch

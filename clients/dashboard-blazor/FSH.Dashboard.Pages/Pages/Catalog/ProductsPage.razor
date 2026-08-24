@@ -28,37 +28,10 @@
     <FshErrorBand Message="@_error" />
 }
 
-@if (_loading)
+@if (!_loading)
 {
-    @for (var i = 0; i < 4; i++)
-    {
-        <div class="fsh-skeleton" style="height: 56px; border-radius: 12px; margin-bottom: 8px;"></div>
-    }
-}
-else if (Filtered.Count == 0)
-{
-    <FshEmptyState Icon="@(FilterActive ? Icons.Material.Filled.Search : Icons.Material.Filled.Inventory2)"
-                   Title="@(FilterActive ? "No products found" : "No products yet")"
-                   Description="@EmptyStateDescription">
-        @if (FilterActive)
-        {
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="ClearFilters">Clear filters</MudButton>
-        }
-        else
-        {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.Add" OnClick="() => OpenEditorAsync(null)">
-                Add product
-            </MudButton>
-        }
-    </FshEmptyState>
-}
-else
-{
-    <div class="d-flex flex-wrap gap-2 align-center mb-3">
-        <p class="fsh-muted-copy" style="font-size: 12px; font-weight: 500; margin: 0;">@MetaText</p>
-    </div>
-
+    @* React parity (products.tsx): the FilterRow renders ABOVE the results unconditionally —
+       it must stay reachable when a filter yields zero rows, otherwise you can't clear it. *@
     <FshFilterBar Caption="Filters">
         @* React parity (products.tsx FilterRow): searchable comboboxes — type to narrow,
            clearable. *@
@@ -99,6 +72,38 @@ else
             </MudButton>
         </div>
     </FshFilterBar>
+}
+
+@if (_loading)
+{
+    @for (var i = 0; i < 4; i++)
+    {
+        <div class="fsh-skeleton" style="height: 56px; border-radius: 12px; margin-bottom: 8px;"></div>
+    }
+}
+else if (Filtered.Count == 0)
+{
+    <FshEmptyState Icon="@(FilterActive ? Icons.Material.Filled.Search : Icons.Material.Filled.Inventory2)"
+                   Title="@(FilterActive ? "No products found" : "No products yet")"
+                   Description="@EmptyStateDescription">
+        @if (FilterActive)
+        {
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="ClearFilters">Clear filters</MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Add" OnClick="() => OpenEditorAsync(null)">
+                Add product
+            </MudButton>
+        }
+    </FshEmptyState>
+}
+else
+{
+    <div class="d-flex flex-wrap gap-2 align-center mb-3">
+        <p class="fsh-muted-copy" style="font-size: 12px; font-weight: 500; margin: 0;">@MetaText</p>
+    </div>
 
     @* Desktop table (hidden below md) — React products.tsx DesktopRow parity *@
     <div class="fsh-products-desktop d-none d-md-block">

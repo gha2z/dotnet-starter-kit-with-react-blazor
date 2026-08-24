@@ -136,14 +136,14 @@ public sealed partial class UsersListPage
         await LoadAsync();
     }
 
-    private void ClearFilters()
+    private async Task ClearFilters()
     {
         _search = string.Empty;
         _statusFilter = null;
         _emailFilter = null;
         _roleFilter = null;
         _pageNumber = 1;
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
     private void OpenDetail(UserDto user) => Nav.NavigateTo($"/identity/users/{user.Id}");

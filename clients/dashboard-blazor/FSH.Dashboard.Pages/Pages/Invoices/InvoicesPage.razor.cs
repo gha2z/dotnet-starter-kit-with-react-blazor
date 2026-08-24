@@ -64,10 +64,10 @@ public sealed partial class InvoicesPage
         }
     }
 
-    private void GoToPage(int page)
+    private async Task GoToPage(int page)
     {
         _pageNumber = Math.Clamp(page, 1, _totalPages);
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
     private void ClearSearch()

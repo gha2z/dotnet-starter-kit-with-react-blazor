@@ -94,3 +94,29 @@ probe timeout was a selector bug, not a product bug (verified via body-text dump
 **Deviations**: none. **Lessons**: `UserAttributes` needs `Dictionary<,>` not
 `IReadOnlyDictionary<,>`; devserver cold-start can emit MONO_WASM download errors that surface as
 spurious probe failures — re-run before diagnosing product bugs.
+
+## P5 — Tickets filter bug + render-stall class fix (2026-08-24) — ✅
+
+**Root cause (proven):** every list page used fire-and-forget `_ = LoadAsync()` in click
+handlers (filters, pagers, clear-search). The load completed but **nothing re-rendered** — the
+UI stayed on the loading skeleton forever. The API was never at fault (all filter values return
+200 with correct counts in <60ms — verified via `check-ticket-filters.mjs`). The bug was
+invisible until a user clicked a filter; search boxes worked because their debounce path awaits.
+
+**Fix:** converted all 17 fire-and-forget call sites across 8 pages to awaited `async Task`
+handlers (event-handler completion triggers the render): TicketsListPage
+(SetStatus/SetPriority/GoToPage/ClearFilters), ProductsPage (combobox handlers, visibility
+pills, pager, clear), Brands/Categories (pager, clear-search), Users (ClearFilters),
+Roles/Groups (clear-search), Invoices + Wallet (pagers).
+
+**Second fix (products):** the filter bar lived inside the results `else` branch — a filter
+yielding zero rows hid the pills, making the filter unclearable. Moved above the results
+(React products.tsx renders FilterRow unconditionally).
+
+**Verification:** `probe-filters-p5.mjs` **11/0** — tickets Open(8)/Closed(0)/Resolved(2)/
+All(13), priority High(2)/Low(2), products Hidden→All restore, brands search+clear; all with
+0 skeletons. Full CRUD harness `probe-actions.mjs` **38/0** (probe timing hardened: rowVisible
+polls 6s, D12 waits out the WASM cold boot, D17 uses the page search like D19). bUnit **264/264**.
+
+**Lesson:** fire-and-forget data loads in Blazor event handlers are render-stall bugs — the
+completion render only happens for awaited handler paths.

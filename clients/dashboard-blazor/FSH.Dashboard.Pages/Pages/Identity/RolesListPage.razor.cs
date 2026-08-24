@@ -83,10 +83,10 @@ public sealed partial class RolesListPage
         }
     }
 
-    private void ClearSearch()
+    private async Task ClearSearch()
     {
         _search = string.Empty;
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
     private static bool IsSystemRole(RoleDto role)

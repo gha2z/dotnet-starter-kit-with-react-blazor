@@ -60,8 +60,11 @@ public sealed partial class TicketsListPage : IDisposable
     private bool SearchActive => !string.IsNullOrWhiteSpace(_search);
     private bool HasFilters => SearchActive || _statusFilter.HasValue || _priorityFilter.HasValue;
 
-    private void SetStatus(TicketStatus? s) { _statusFilter = s; _pageNumber = 1; _ = LoadAsync(); }
-    private void SetPriority(TicketPriority? p) { _priorityFilter = p; _pageNumber = 1; _ = LoadAsync(); }
+    // Awaited (not fire-and-forget): the completing event handler triggers the re-render.
+    // A `_ = LoadAsync()` here left the page stuck on the loading skeletons forever —
+    // the fetch completed but nothing told the renderer (user-reported filter bug).
+    private async Task SetStatus(TicketStatus? s) { _statusFilter = s; _pageNumber = 1; await LoadAsync(); }
+    private async Task SetPriority(TicketPriority? p) { _priorityFilter = p; _pageNumber = 1; await LoadAsync(); }
 
     /// <summary>
     /// Debounced server-side search: cancels any in-flight debounce on a new
@@ -96,15 +99,15 @@ public sealed partial class TicketsListPage : IDisposable
 
     public void Dispose() => _debounceCts?.Dispose();
 
-    private void GoToPage(int page) { _pageNumber = Math.Clamp(page, 1, Math.Max(_totalPages, 1)); _ = LoadAsync(); }
+    private async Task GoToPage(int page) { _pageNumber = Math.Clamp(page, 1, Math.Max(_totalPages, 1)); await LoadAsync(); }
 
-    private void ClearFilters()
+    private async Task ClearFilters()
     {
         _search = string.Empty;
         _statusFilter = null;
         _priorityFilter = null;
         _pageNumber = 1;
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
     private void OpenCreateDialog() => _createDialogOpen = true;

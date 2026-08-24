@@ -77,10 +77,10 @@ public sealed partial class GroupsListPage
         }
     }
 
-    private void ClearSearch()
+    private async Task ClearSearch()
     {
         _search = string.Empty;
-        _ = LoadAsync();
+        await LoadAsync();
     }
 
     private static string Initial(string? name)
