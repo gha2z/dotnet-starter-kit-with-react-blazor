@@ -15,105 +15,96 @@
                 : $"Update {Product.Name}. Price and stock are changed separately so the ledger stays traceable.")
         </MudText>
 
-        @if (Product is null)
-        {
+        @* React parity (ProductEditorDialog): Name | SKU on one row *@
+        <div class="fsh-dialog-grid-2 mb-1">
+            <MudTextField T="string"
+                          @bind-Value="_name"
+                          Label="Name"
+                          Placeholder="Classic Cotton Tee"
+                          Required="true"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          MaxLength="200" />
             <MudTextField T="string"
                           @bind-Value="_sku"
                           Label="SKU"
-                          Placeholder="ACME-001"
-                          Required="true"
-                          HelperText="Unique stock-keeping unit. Cannot be changed after creation."
+                          Placeholder="ACM-TS-001"
+                          Required="@(Product is null)"
+                          Disabled="@(Product is not null)"
+                          HelperText="@(Product is null ? "Stock-keeping unit. Becomes the canonical identifier." : "SKU is fixed after creation.")"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
-                          Class="mb-4"
-                          MaxLength="64" />
-        }
+                          MaxLength="64"
+                          UserAttributes="@(_skuInputAttrs)" />
+        </div>
 
-        <MudTextField T="string"
-                      @bind-Value="_name"
-                      Label="Name"
-                      Placeholder="Camping Stove Pro"
-                      Required="true"
-                      Variant="Variant.Outlined"
-                      Margin="Margin.Dense"
-                      Class="mb-4"
-                      MaxLength="256" />
+        @* Brand | Category — searchable pickers (React Combobox parity) *@
+        <div class="fsh-dialog-grid-2 mb-1">
+            <MudAutocomplete T="BrandDto"
+                             Value="_brandSel"
+                             ValueChanged="OnBrandSelChanged"
+                             SearchFunc="FilterBrands"
+                             ToStringFunc="@(b => b?.Name ?? string.Empty)"
+                             Label="Brand"
+                             Placeholder="Select a brand…"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             Clearable="true"
+                             ResetValueOnEmptyText="true"
+                             MaxItems="8" />
+            <MudAutocomplete T="CategoryDto"
+                             Value="_catSel"
+                             ValueChanged="OnCatSelChanged"
+                             SearchFunc="FilterCategories"
+                             ToStringFunc="@(c => c?.Name ?? string.Empty)"
+                             Label="Category"
+                             Placeholder="Select a category…"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             Clearable="true"
+                             ResetValueOnEmptyText="true"
+                             MaxItems="8" />
+        </div>
+
+        @if (Product is null)
+        {
+            @* Price | Currency | Stock — one row (create only) *@
+            <div class="fsh-dialog-grid-3 mb-1">
+                <MudTextField T="decimal" @bind-Value="_priceAmount"
+                              Label="Price"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+                <MudTextField T="string" @bind-Value="_currency"
+                              Label="Currency"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              MaxLength="3" />
+                <MudTextField T="int" @bind-Value="_stock"
+                              Label="Stock"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense" />
+            </div>
+        }
 
         <MudTextField T="string"
                       @bind-Value="_description"
                       Label="Description"
                       HelperText="Shown on the product detail page."
-                      Placeholder="A lightweight stove for backcountry cooking."
+                      Placeholder="100% organic cotton crew-neck."
                       Variant="Variant.Outlined"
                       Margin="Margin.Dense"
                       Lines="3"
-                      Class="mb-4"
-                      MaxLength="4096" />
+                      Class="mb-1"
+                      MaxLength="4000" />
 
-        <div class="d-flex gap-3 mb-4 flex-wrap">
-            <MudSelect T="Guid?" @bind-Value="_brandId"
-                       Label="Brand"
-                       Required="true"
-                       Variant="Variant.Outlined"
-                       Margin="Margin.Dense"
-                       Style="min-width: 200px;"
-                       Class="flex-grow-1">
-                @foreach (var brand in Brands)
-                {
-                    <MudSelectItem T="Guid?" Value="@brand.Id">@brand.Name</MudSelectItem>
-                }
-            </MudSelect>
-            <MudSelect T="Guid?" @bind-Value="_categoryId"
-                       Label="Category"
-                       Required="true"
-                       Variant="Variant.Outlined"
-                       Margin="Margin.Dense"
-                       Style="min-width: 200px;"
-                       Class="flex-grow-1">
-                @foreach (var category in Categories)
-                {
-                    <MudSelectItem T="Guid?" Value="@category.Id">@category.Name</MudSelectItem>
-                }
-            </MudSelect>
-        </div>
-
-        @if (Product is null)
+        @if (Product is not null)
         {
-            <div class="d-flex gap-3 mb-4 flex-wrap">
-                <MudTextField T="decimal" @bind-Value="_priceAmount"
-                              Label="Price"
-                              Adornment="@Adornment.Start"
-                              AdornmentText="@_currency"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Style="min-width: 160px;">
-                </MudTextField>
-                <MudTextField T="int" @bind-Value="_stock"
-                              Label="Starting stock"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Style="min-width: 140px;">
-                </MudTextField>
-                <MudSelect T="string" @bind-Value="_currency"
-                           Label="Currency"
-                           Variant="Variant.Outlined"
-                           Margin="Margin.Dense"
-                           Style="min-width: 140px;">
-                    @foreach (var currency in Currencies)
-                    {
-                        <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
-                    }
-                </MudSelect>
-            </div>
-        }
-        else
-        {
-            <div class="d-flex align-center justify-space-between mb-2" style="border: 1px solid var(--mud-palette-divider); border-radius: 10px; padding: 12px 14px;">
+            <div class="d-flex align-center justify-space-between mt-2" style="border: 1px solid var(--mud-palette-divider); border-radius: 10px; padding: 12px 14px;">
                 <div>
-                    <div style="font-size: 13px; font-weight: 500;">Visible in catalog</div>
-                    <div class="fsh-muted-copy" style="font-size: 12px;">Hidden products don't appear in any listing or report.</div>
+                    <div style="font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--mud-palette-text-secondary);">Visibility</div>
+                    <div class="fsh-muted-copy" style="font-size: 12.5px;">@(_isActive ? "Listed for customers." : "Hidden from listings.")</div>
                 </div>
-                <MudSwitch T="bool" @bind-Value="_isActive" Color="Color.Primary" />
+                <MudSwitch T="bool" @bind-Value="_isActive" Color="Color.Primary" aria-label="Active" />
             </div>
         }
 
@@ -127,14 +118,14 @@
     <DialogActions>
         <MudButton OnClick="Cancel" Disabled="_isSubmitting">Cancel</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync"
-                   Disabled="_isSubmitting || string.IsNullOrWhiteSpace(_name) || _brandId is null || _categoryId is null">
+                   Disabled="_isSubmitting || string.IsNullOrWhiteSpace(_name) || (Product is null && string.IsNullOrWhiteSpace(_sku)) || _brandId is null || _categoryId is null">
             @(_isSubmitting ? "Saving…" : Product is null ? "Add product" : "Save changes")
         </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    private static readonly string[] Currencies = ["USD", "EUR", "GBP"];
+    private static readonly Dictionary<string, object> _skuInputAttrs = new() { ["style"] = "text-transform: uppercase; font-family: var(--fsh-mono, monospace); font-size: 13px;" };
 
     [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
     [Inject] private ICatalogService Catalog { get; set; } = default!;
@@ -155,6 +146,28 @@
     private string? _error;
     private bool _isSubmitting;
 
+    // Searchable picker selections (React Combobox parity); the Guid ids derive from these.
+    private BrandDto? _brandSel;
+    private CategoryDto? _catSel;
+
+    private Task<IEnumerable<BrandDto>> FilterBrands(string term, CancellationToken ct) =>
+        Task.FromResult(Brands.Where(b => b.Name.Contains(term, StringComparison.OrdinalIgnoreCase)).AsEnumerable());
+
+    private Task<IEnumerable<CategoryDto>> FilterCategories(string term, CancellationToken ct) =>
+        Task.FromResult(Categories.Where(c => c.Name.Contains(term, StringComparison.OrdinalIgnoreCase)).AsEnumerable());
+
+    private void OnBrandSelChanged(BrandDto? value)
+    {
+        _brandSel = value;
+        _brandId = value?.Id;
+    }
+
+    private void OnCatSelChanged(CategoryDto? value)
+    {
+        _catSel = value;
+        _categoryId = value?.Id;
+    }
+
     protected override void OnInitialized()
     {
         if (Product is not null)
@@ -163,6 +176,8 @@
             _description = Product.Description ?? string.Empty;
             _brandId = Product.BrandId;
             _categoryId = Product.CategoryId;
+            _brandSel = Brands.FirstOrDefault(b => b.Id == Product.BrandId);
+            _catSel = Categories.FirstOrDefault(c => c.Id == Product.CategoryId);
             _priceAmount = Product.Price.Amount;
             _currency = Product.Price.Currency;
             _stock = Product.Stock;

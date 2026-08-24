@@ -65,3 +65,32 @@ canonical probe) — login-by-label without tenant silently never submits.
 
 **Deviations**: none. **Lessons**: same-element class selectors need `.a.b`, not `.a .b` — the
 probe timeout was a selector bug, not a product bug (verified via body-text dump).
+
+## P3 — Product detail hero + editor dialog (2026-08-24) — ✅
+
+**What changed**
+- `ProductDetailPage.razor`: hero rebuilt to React `EntityDetailHero` parity — identity row with
+  actions on the RIGHT (was stacked below), subtitle = SKU mono-chip · brand · category, stats row
+  of tone-tinted pills (price → price dialog, stock → stock dialog, images count), meta row
+  (created/updated relative), `mb-5` card spacing; delete button gets destructive hover.
+- `ProductEditorDialog.razor`: React layout parity — Name|SKU 2-col grid (SKU uppercase mono,
+  disabled in edit with "fixed after creation" hint), Brand|Category as **searchable
+  MudAutocomplete pickers** (Combobox parity), Price|Currency|Stock 3-col (create only),
+  visibility switch row (edit) with React copy, footer pending states.
+- `fsh.css`: `.fsh-detail-hero-body`, `.fsh-sku-chip`, `.fsh-detail-stat` (+primary/warning/danger
+  tones, clickable), `.fsh-detail-meta(-item)`, `.fsh-btn-danger-outline`, `.fsh-dialog-grid-2/3`
+  (stack <640px).
+- Code-behind: `BrandNameOf/CategoryNameOf/StockTone/StockLabel` helpers; dialog
+  `_brandSel/_catSel` + filter funcs.
+
+**Evidence**
+- `walkthrough/shot-product-detail.mjs` + `evidence/p3-detail/hero-desktop.png` (vision-inspected:
+  gradient strip, avatar tile, title+ACTIVE badge, SKU chip · brand · category, outlined
+  Refresh/Edit/Delete right-aligned, stat pills, meta row) + `hero-mobile.png`.
+- Regression: `probe-actions.mjs` **37 PASS / 0 FAIL** (product/brand/category CRUD green with
+  the new dialog; D12's one flaky run was a devserver cold-start MONO_WASM artifact — focused
+  diag showed the page healthy at 26 rows); bUnit **264/264**; build 0 warnings.
+
+**Deviations**: none. **Lessons**: `UserAttributes` needs `Dictionary<,>` not
+`IReadOnlyDictionary<,>`; devserver cold-start can emit MONO_WASM download errors that surface as
+spurious probe failures — re-run before diagnosing product bugs.

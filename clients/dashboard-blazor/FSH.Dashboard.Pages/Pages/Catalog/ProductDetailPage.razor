@@ -27,57 +27,89 @@ else if (_product is null)
 }
 else
 {
-    <div class="fsh-enter overflow-hidden rounded-xl border fsh-detail-card">
+    <div class="fsh-enter overflow-hidden rounded-xl border fsh-detail-card mb-5">
         <div class="fsh-detail-accent-bar" aria-hidden="true"></div>
-        <div class="d-flex flex-column gap-4 p-4 fsh-detail-header-row">
-            <div class="d-flex align-center gap-4 min-w-0">
-                <span class="fsh-detail-icon" aria-hidden="true">
-                    @if (!string.IsNullOrEmpty(_product.ThumbnailUrl))
-                    {
-                        <img src="@_product.ThumbnailUrl" alt="" style="width: 44px; height: 44px; object-fit: cover; border-radius: 10px;" referrerpolicy="no-referrer" />
-                    }
-                    else
-                    {
-                        <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Medium" />
-                    }
-                </span>
-                <div class="min-w-0">
-                    <div class="d-flex flex-wrap align-center gap-2">
-                        <h1 class="fsh-detail-title">@_product.Name</h1>
-                        @if (_product.IsActive)
+        <div class="fsh-detail-hero-body">
+            @* Identity row — React EntityDetailHero parity: avatar + title block LEFT,
+               action buttons on the RIGHT (not stacked below). *@
+            <div class="d-flex align-start justify-space-between gap-3 gap-sm-4">
+                <div class="d-flex align-center gap-3 gap-sm-4 min-w-0">
+                    <span class="fsh-detail-icon" aria-hidden="true">
+                        @if (!string.IsNullOrEmpty(_product.ThumbnailUrl))
                         {
-                            <FshStatusPill Text="active" Tone="Color.Success" />
+                            <img src="@_product.ThumbnailUrl" alt="" style="width: 100%; height: 100%; object-fit: cover;" referrerpolicy="no-referrer" />
                         }
                         else
                         {
-                            <FshStatusPill Text="hidden" Tone="Color.Default" />
+                            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Medium" />
                         }
+                    </span>
+                    <div class="min-w-0">
+                        <div class="d-flex flex-wrap align-center gap-2">
+                            <h1 class="fsh-detail-title">@_product.Name</h1>
+                            @if (_product.IsActive)
+                            {
+                                <FshStatusPill Text="active" Tone="Color.Success" />
+                            }
+                            else
+                            {
+                                <FshStatusPill Text="hidden" Tone="Color.Default" />
+                            }
+                        </div>
+                        <div class="fsh-detail-subtitle mt-1">
+                            <code class="fsh-sku-chip">@_product.Sku</code>
+                            @if (!string.IsNullOrEmpty(BrandNameOf))
+                            {
+                                <span class="fsh-detail-meta-item"><MudIcon Icon="@Icons.Material.Outlined.Tag" Size="Size.Small" /> @BrandNameOf</span>
+                            }
+                            @if (!string.IsNullOrEmpty(CategoryNameOf))
+                            {
+                                <span class="fsh-detail-meta-item"><MudIcon Icon="@Icons.Material.Outlined.Layers" Size="Size.Small" /> @CategoryNameOf</span>
+                            }
+                        </div>
                     </div>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="font-family: var(--fsh-mono, monospace); font-size: 12.5px;">
-                        @_product.Sku
-                    </MudText>
+                </div>
+                <div class="d-flex flex-shrink-0 align-center gap-1">
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh"
+                               Disabled="@_loading" OnClick="ReloadAsync">
+                        <span class="d-none d-sm-inline">Refresh</span>
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit" OnClick="OpenEditorAsync">
+                        <span class="d-none d-sm-inline">Edit</span>
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Delete"
+                               Class="fsh-btn-danger-outline" OnClick="ConfirmDeleteAsync">
+                        <span class="d-none d-sm-inline">Delete</span>
+                    </MudButton>
                 </div>
             </div>
-            <div class="d-flex gap-2 flex-wrap">
-                <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh"
-                           Disabled="@_loading" OnClick="ReloadAsync">
-                    Refresh
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.Payments" OnClick="OpenPriceAsync">
-                    Change price
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Success" Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.Inventory2" OnClick="OpenStockAsync">
-                    Adjust stock
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit" OnClick="OpenEditorAsync">
-                    Edit
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.Delete" OnClick="ConfirmDeleteAsync">
-                    Delete
-                </MudButton>
+
+            @* Stats row — price / stock / images (React EntityDetailStat pills) *@
+            <div class="d-flex flex-wrap align-center gap-2 mt-4">
+                <button class="fsh-detail-stat primary" title="Change price" @onclick="OpenPriceAsync">
+                    <MudIcon Icon="@Icons.Material.Filled.Payments" Size="Size.Small" />
+                    <span class="fsh-detail-stat-value">@FshFormat.Money(_product.Price.Amount, _product.Price.Currency)</span>
+                    <span class="fsh-detail-stat-label">price</span>
+                </button>
+                <button class="fsh-detail-stat @StockTone" title="Adjust stock" @onclick="OpenStockAsync">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" />
+                    <span class="fsh-detail-stat-value">@_product.Stock</span>
+                    <span class="fsh-detail-stat-label">@StockLabel</span>
+                </button>
+                <span class="fsh-detail-stat">
+                    <MudIcon Icon="@Icons.Material.Filled.Layers" Size="Size.Small" />
+                    <span class="fsh-detail-stat-value">@(_product.Images?.Count ?? 0)</span>
+                    <span class="fsh-detail-stat-label">images</span>
+                </span>
+            </div>
+
+            @* Meta row — created / updated *@
+            <div class="d-flex flex-wrap align-center gap-x-4 gap-y-1 fsh-detail-meta mt-3">
+                <span class="fsh-detail-meta-item"><MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" /> Created @FshFormat.DateRelative(_product.CreatedAtUtc)</span>
+                @if (_product.UpdatedAtUtc.HasValue)
+                {
+                    <span class="fsh-detail-meta-item">Updated @FshFormat.DateRelative(_product.UpdatedAtUtc.Value)</span>
+                }
             </div>
         </div>
     </div>
@@ -163,7 +195,7 @@ else
                 <div class="d-flex align-center gap-2 mb-3" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mud-palette-text-secondary);">
                     <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Small" />
                     Images
-                    <span class="fsh-count-chip" style="margin-left: 2px;">@_product.Images.Count</span>
+                    <span class="fsh-count-chip" style="margin-left: 2px;">@(_product.Images?.Count ?? 0)</span>
                 </div>
 
                 <div class="d-flex align-center gap-2 mb-3">

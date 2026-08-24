@@ -35,6 +35,20 @@ public sealed partial class ProductDetailPage
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
+    // Hero subtitle/meta helpers (React EntityDetailHero parity)
+    private string BrandNameOf => _brand?.Name ?? string.Empty;
+    private string CategoryNameOf => _category?.Name ?? string.Empty;
+
+    private string StockTone => _product is null ? ""
+        : _product.Stock <= 0 ? "danger"
+        : _product.Stock < 10 ? "warning"
+        : "";
+
+    private string StockLabel => _product is null ? ""
+        : _product.Stock <= 0 ? "out of stock"
+        : _product.Stock < 10 ? $"low (< 10)"
+        : "in stock";
+
     private async Task LoadAsync()
     {
         _loading = true;

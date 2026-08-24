@@ -1354,6 +1354,124 @@ body {
     justify-content: space-between;
 }
 
+/* React EntityDetailHero parity (entity-detail.tsx): hero body padding,
+   subtitle chip row, stat pills, meta row. */
+.fsh-detail-hero-body {
+    padding: 20px;
+}
+
+@media (min-width: 640px) {
+    .fsh-detail-hero-body {
+        padding: 20px 24px;
+    }
+}
+
+.fsh-detail-subtitle {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    font-size: 12px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.fsh-sku-chip {
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--mud-palette-text-secondary) 12%, transparent);
+    padding: 2px 6px;
+    font-family: var(--fsh-mono, monospace);
+    font-size: 11px;
+    letter-spacing: -0.01em;
+    color: var(--mud-palette-text-primary);
+}
+
+.fsh-detail-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: none;
+    background: color-mix(in srgb, var(--mud-palette-text-secondary) 10%, transparent);
+    font-size: 11px;
+    color: var(--mud-palette-text-secondary);
+    cursor: default;
+}
+
+button.fsh-detail-stat {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+button.fsh-detail-stat:hover {
+    background: color-mix(in srgb, var(--mud-palette-text-secondary) 16%, transparent);
+}
+
+.fsh-detail-stat.primary {
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
+    color: var(--mud-palette-primary);
+}
+
+.fsh-detail-stat.warning {
+    background: color-mix(in srgb, var(--mud-palette-warning) 10%, transparent);
+    color: var(--mud-palette-warning);
+}
+
+.fsh-detail-stat.danger {
+    background: color-mix(in srgb, var(--mud-palette-error) 10%, transparent);
+    color: var(--mud-palette-error);
+}
+
+.fsh-detail-stat .fsh-detail-stat-value {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: inherit;
+}
+
+.fsh-detail-stat .fsh-detail-stat-label {
+    color: var(--mud-palette-text-secondary);
+}
+
+.fsh-detail-meta {
+    font-size: 11px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.fsh-detail-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.fsh-btn-danger-outline:hover {
+    border-color: var(--mud-palette-error) !important;
+    color: var(--mud-palette-error) !important;
+}
+
+/* React dialog form grids (ProductEditorDialog): Name|SKU and Brand|Category on
+   one row; Price|Currency|Stock on three. Stack below 640px. */
+.fsh-dialog-grid-2,
+.fsh-dialog-grid-3 {
+    display: grid;
+    gap: 16px;
+}
+
+.fsh-dialog-grid-2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+.fsh-dialog-grid-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+@media (max-width: 639.98px) {
+    .fsh-dialog-grid-2,
+    .fsh-dialog-grid-3 {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (min-width: 640px) {
     .fsh-detail-header-row {
         flex-direction: row;

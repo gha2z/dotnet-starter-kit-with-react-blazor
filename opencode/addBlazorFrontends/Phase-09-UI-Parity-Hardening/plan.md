@@ -29,12 +29,13 @@
 - [x] P2.4 Mobile card list (React MobileCard parity). — ✅
 - [x] P2.5 Visual verification desktop + mobile. — ✅ probe-products-p2 11/0 + screenshots
 
-### P3 — Product detail hero + catalog dialogs — ☐
-- [ ] P3.1 Hero → EntityDetailHero parity (avatar tile, title + Active/Hidden badge, SKU chip ·
-      brand · category subtitle, outline Refresh/Edit/Delete, padding/rhythm, images↔Browse gap).
-- [ ] P3.2 Catalog dialogs (product/brand/category add-edit-delete) onto the P6 scaffold with
-      React's layout (2-col name/SKU, searchable pickers, 3-col price/currency/stock create-only,
-      visibility switch, Was→Becomes price/stock panels).
+### P3 — Product detail hero + catalog dialogs — ✅ (2026-08-24)
+- [x] P3.1 Hero → EntityDetailHero parity (avatar tile, title + Active/Hidden badge, SKU chip ·
+      brand · category subtitle, outline Refresh/Edit/Delete right-aligned, stat pills, meta row,
+      padding/rhythm, images↔Browse gap). — ✅ shot-product-detail + vision inspection
+- [x] P3.2 ProductEditorDialog to React layout (2-col name/SKU, searchable pickers, 3-col
+      price/currency/stock create-only, visibility switch row, pending footer). — ✅
+- [ ] P3.3 Brand/Category editor dialogs restyle — folded into P6 (shared scaffold). — 🔄 moved
 
 ### P4 — Files page parity — ☐
 - [ ] P4.1 Side-by-side visual diff (:5176 vs :5174) desktop+mobile → delta list.
