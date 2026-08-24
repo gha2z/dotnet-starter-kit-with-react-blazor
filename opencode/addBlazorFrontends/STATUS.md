@@ -1,20 +1,22 @@
 # Current Status
 
-Last Update: 2026-08-24 16:30, by: opencode (model: x-preview-f-free).
+Last Update: 2026-08-24 18:20, by: opencode (model: x-preview-f-free).
 
 ## Dashboard (living — update at every close-out)
 
 - **Current mission:** [`Phase-09-UI-Parity-Hardening/`](./Phase-09-UI-Parity-Hardening/) —
-  chat UX (scroll, DM rail avatars+presence), products parity (combobox filters, hover actions,
-  responsive columns, mobile cards, detail hero, catalog dialogs), files page parity, tickets
-  filter BUG, CRUD dialog standardization, audits filters verification.
-- **Next task:** P1.1 render-aware chat scroll (mission plan.md P1).
-- **Obstacles / known issues:** tickets filter bug root cause not yet classified (P5.1
-  diagnostic is the first step); stack restart needed after each code wave (agent-driven).
-- **Priorities:** P1 → P2 → P3 → P6 → P4 → P5 → P7 → P8 (see mission plan.md).
+  chat UX, products parity, detail hero/dialogs, tickets filter BUG (fixed), CRUD dialog
+  standardization, files parity, audits filters verification.
+- **Progress:** P1 ✅ chat scroll + DM rail (`564de110`) · P2 ✅ products list (`411807ab`) ·
+  P3 ✅ detail hero + editor dialog (`4b862c68`) · P5 ✅ tickets filter bug + render-stall
+  class fix across 8 pages (`64db552f`). **Remaining: P6 → P4 → P7 → P8.**
+- **Next task:** P6.1 shared `FshFormDialog` scaffold in BlazorShared.
+- **Obstacles / known issues:** none blocking. Devserver cold-start emits MONO_WASM download
+  noise (probes filter it); QA-* demo entities accumulate (P8 cleanup probe).
+- **Verification state:** bUnit 264/264 · probe-filters-p5 11/0 · probe-actions 38/0 ·
+  probe-chat-realtime 16/0 · probe-chat-scroll 5/0.
 - **Definition of done:** real-browser walkthrough (clicks/CRUD/resizes/device emulation,
-  vision-inspected screenshots, 0 console errors) + regression battery (bUnit 264/264,
-  probe-chat-realtime 16/0, probe-actions ×2, thorough-qa 48/0).
+  vision-inspected screenshots, 0 console errors) + regression battery.
 
 ## Progress (append-only ledger — never edit existing rows)
 
