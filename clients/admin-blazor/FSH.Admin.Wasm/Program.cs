@@ -137,6 +137,10 @@ builder.Services.AddScoped<IWebhookService, WebhookService>();
 builder.Services.AddScoped<IHubConnectionService, HubConnectionService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+// Inactivity auto-logout (React parity: InactivityGuard) — config-driven idle
+// duration; the JS activity listener resets the countdown.
+builder.Services.AddSingleton<IInactivityTimerService, InactivityTimerService>();
+
 var host = builder.Build();
 
 // Load runtime config before the app starts (no race on first request).

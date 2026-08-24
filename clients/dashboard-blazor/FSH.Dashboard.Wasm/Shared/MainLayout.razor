@@ -5,9 +5,10 @@
 @inject IJSRuntime Js
 @inject FshThemeService Theme
 @inject IDialogService DialogService
-@inject IHubConnectionService Hub
-@inject ISseService Sse
-@inject IUserService UserService
+ @inject IHubConnectionService Hub
+ @inject ISseService Sse
+ @inject IUserService UserService
+@inject FSH.BlazorShared.Infrastructure.IInactivityTimerService InactivityTimer
 @using FSH.BlazorShared.Components
 @using FSH.BlazorShared.Permissions
 @using FSH.BlazorShared.Realtime
@@ -98,6 +99,7 @@
                 <ImpersonationBanner />
                 <FshExpiryBanner />
                 <FshOfflineBanner />
+                <FshInactivityDialog OnSignOut="SignOutFromInactivityAsync" />
                 <header class="fsh-topbar">
                     <MudIconButton Icon="@Icons.Material.Filled.Menu" Size="Size.Medium" Class="fsh-topbar-menu" aria-label="Open navigation" OnClick="ToggleDrawer" />
                     <MudIconButton Icon="@Icons.Material.Filled.Search" Size="Size.Medium" Class="fsh-topbar-command"
@@ -384,6 +386,7 @@
             _tenantName = claims.FirstOrDefault(c => c.Type == "tenant")?.Value ?? string.Empty;
 
             await ManageHubConnectionAsync(user.Identity?.IsAuthenticated == true);
+            ManageInactivityTimer(user.Identity?.IsAuthenticated == true);
             if (user.Identity?.IsAuthenticated == true)
             {
                 _profileImageUrl = string.Empty;
@@ -415,6 +418,45 @@
         catch
         {
             // The hub may be unreachable; the bell simply shows no live updates.
+        }
+    }
+
+    // React parity (components/auth/inactivity-guard.tsx): watch only while
+    // signed in; expire → sign out with the inactivity path.
+    private void ManageInactivityTimer(bool isAuthenticated)
+    {
+        try
+        {
+            if (isAuthenticated)
+            {
+                InactivityTimer.OnTimeout -= HandleInactivityTimeout;
+                InactivityTimer.OnTimeout += HandleInactivityTimeout;
+                InactivityTimer.Start();
+            }
+            else
+            {
+                InactivityTimer.Stop();
+            }
+        }
+        catch
+        {
+            // The timer must never break the auth flow.
+        }
+    }
+
+    private async void HandleInactivityTimeout() => await SignOutFromInactivityAsync();
+
+    private async Task SignOutFromInactivityAsync()
+    {
+        try
+        {
+            var authProvider = (FSH.BlazorShared.Auth.AuthStateProvider)Auth;
+            await authProvider.NotifyLogoutAsync();
+            Nav.NavigateTo("/login", forceLoad: false);
+        }
+        catch
+        {
+            // Best-effort — the session is already dead server-side.
         }
     }
 
@@ -496,5 +538,7 @@
         Nav.LocationChanged -= OnLocationChanged;
         Sse.ConnectionChanged -= OnSseConnectionChanged;
         ProfileEvents.ProfileUpdated -= OnProfileUpdated;
+        InactivityTimer.OnTimeout -= HandleInactivityTimeout;
+        InactivityTimer.Stop();
     }
 }

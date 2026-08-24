@@ -1,0 +1,72 @@
+@namespace FSH.BlazorShared.Components
+@using FSH.BlazorShared.Infrastructure
+@using MudBlazor
+@inject IInactivityTimerService InactivityTimer
+@implements IDisposable
+
+@* React parity (components/auth/inactivity-dialog.tsx): a forced-choice modal
+   while the inactivity warning window is open — no Esc, no overlay-dismiss,
+   no close X. Countdown drains primary → warning → destructive. *@
+
+@if (InactivityTimer.IsWarningShown)
+{
+    <MudOverlay Visible="true" Absolute="true" Style="z-index: 2000;" Class="d-flex align-center justify-center">
+        <MudPaper Elevation="5" Class="pa-6 text-center" Style="border-radius: var(--mud-default-border-radius); max-width: 380px; width: 92%;">
+            <MudIcon Icon="@Icons.Material.Filled.Security" Color="@(Tone)" Class="mb-2" Style="font-size: 40px;" aria-hidden="true" />
+            <MudText Typo="Typo.h6" Class="mb-1">Are you still there?</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                You'll be signed out in
+                <span style="font-weight: 600; color: var(--mud-palette-primary);">@InactivityTimer.SecondsLeft</span>
+                seconds due to inactivity.
+            </MudText>
+            <MudProgressLinear Value="@Progress" Color="@Tone" Class="mb-5" Rounded="true" />
+            <div class="d-flex justify-center gap-3">
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="SignOut">Sign out</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Stay">Stay signed in</MudButton>
+            </div>
+        </MudPaper>
+    </MudOverlay>
+}
+
+@code {
+    [Parameter] public EventCallback OnStay { get; set; }
+    [Parameter] public EventCallback OnSignOut { get; set; }
+
+    private double Progress => InactivityTimer.WarningTotalSeconds > 0
+        ? Math.Clamp(100.0 * InactivityTimer.SecondsLeft / InactivityTimer.WarningTotalSeconds, 0, 100)
+        : 0;
+
+    private Color Tone =>
+        InactivityTimer.SecondsLeft > InactivityTimer.WarningTotalSeconds * 0.5 ? Color.Primary
+        : InactivityTimer.SecondsLeft > InactivityTimer.WarningTotalSeconds * 0.2 ? Color.Warning
+        : Color.Error;
+
+    protected override void OnInitialized()
+    {
+        InactivityTimer.OnTick += HandleTick;
+        InactivityTimer.OnWarning += HandleTick;
+        InactivityTimer.OnTimeout += HandleTick;
+    }
+
+    // The timer ticks on a thread-pool thread — marshal to the renderer.
+    private void HandleTick() => _ = InvokeAsync(StateHasChanged);
+
+    private async Task Stay()
+    {
+        InactivityTimer.DismissWarning();
+        await OnStay.InvokeAsync();
+    }
+
+    private async Task SignOut()
+    {
+        InactivityTimer.Stop();
+        await OnSignOut.InvokeAsync();
+    }
+
+    public void Dispose()
+    {
+        InactivityTimer.OnTick -= HandleTick;
+        InactivityTimer.OnWarning -= HandleTick;
+        InactivityTimer.OnTimeout -= HandleTick;
+    }
+}
