@@ -26,6 +26,30 @@ public sealed partial class ProductsPage
     private Guid? _categoryFilter;
     private bool? _visibilityFilter;
 
+    // Searchable combobox selections (React Combobox parity); the Guid filters derive from these.
+    private BrandDto? _brandSel;
+    private CategoryDto? _catSel;
+
+    private Task<IEnumerable<BrandDto>> FilterBrands(string term, CancellationToken ct) =>
+        Task.FromResult(_brands.Where(b => b.Name.Contains(term, StringComparison.OrdinalIgnoreCase)).AsEnumerable());
+
+    private Task<IEnumerable<CategoryDto>> FilterCategories(string term, CancellationToken ct) =>
+        Task.FromResult(_categories.Where(c => c.Name.Contains(term, StringComparison.OrdinalIgnoreCase)).AsEnumerable());
+
+    private void OnBrandSelChanged(BrandDto? value)
+    {
+        _brandFilter = value?.Id;
+        _pageNumber = 1;
+        _ = LoadAsync();
+    }
+
+    private void OnCatSelChanged(CategoryDto? value)
+    {
+        _categoryFilter = value?.Id;
+        _pageNumber = 1;
+        _ = LoadAsync();
+    }
+
     private bool _loading = true;
     private string? _error;
 
@@ -119,6 +143,8 @@ public sealed partial class ProductsPage
         _brandFilter = null;
         _categoryFilter = null;
         _visibilityFilter = null;
+        _brandSel = null;
+        _catSel = null;
         _pageNumber = 1;
         _ = LoadAsync();
     }

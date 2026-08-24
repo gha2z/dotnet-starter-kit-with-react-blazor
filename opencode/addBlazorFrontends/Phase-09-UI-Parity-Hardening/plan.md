@@ -20,14 +20,14 @@
       `IsUserOnline` + partner from `ChannelDto.Members`). — ✅ p1-rail-dm-avatars.png
 - [x] P1.3 Re-verify: probe-chat-realtime 16/0 + scroll assertions; rail screenshots desktop+mobile. — ✅ 264/264 bUnit
 
-### P2 — Products list — ☐
-- [ ] P2.1 Searchable combobox filters (brand/category) — type-to-narrow, clearable, React filter
-      variant styling; reuse in ProductEditorDialog.
-- [ ] P2.2 Row actions: hover-reveal edit/delete (desktop), always visible (mobile).
-- [ ] P2.3 Responsive columns: Brands + Categories lists hide slug/created on mobile, slug under
-      description (option A); Products keeps React's exact column set.
-- [ ] P2.4 Mobile card list (React MobileCard parity).
-- [ ] P2.5 Visual verification desktop + mobile.
+### P2 — Products list — ✅ (2026-08-24)
+- [x] P2.1 Searchable combobox filters (brand/category) — type-to-narrow, clearable, React filter
+      variant styling; reuse in ProductEditorDialog. — ✅ (list filters done; editor pickers land with P3.2)
+- [x] P2.2 Row actions: hover-reveal edit/delete (desktop), always visible (mobile). — ✅
+- [x] P2.3 Responsive columns: Brands + Categories lists hide slug/created on mobile, slug under
+      description (option A); Products keeps React's exact column set. — ✅
+- [x] P2.4 Mobile card list (React MobileCard parity). — ✅
+- [x] P2.5 Visual verification desktop + mobile. — ✅ probe-products-p2 11/0 + screenshots
 
 ### P3 — Product detail hero + catalog dialogs — ☐
 - [ ] P3.1 Hero → EntityDetailHero parity (avatar tile, title + Active/Hidden badge, SKU chip ·

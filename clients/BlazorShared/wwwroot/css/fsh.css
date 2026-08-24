@@ -1500,7 +1500,51 @@ body {
     align-items: center;
 }
 
-@media (max-width: 992px) {
+/* React parity (products.tsx DesktopRow): row actions are hidden until the row
+   is hovered (desktop); on touch devices they stay visible. */
+.fsh-list-row .fsh-row-actions {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.fsh-list-row:hover .fsh-row-actions,
+.fsh-list-row:focus-within .fsh-row-actions {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .fsh-list-row .fsh-row-actions {
+        opacity: 1 !important;
+    }
+}
+
+/* Mobile slug line (option A): slug moves under the description on small screens */
+.fsh-slug-mobile {
+    display: none;
+    font-family: var(--fsh-mono, monospace);
+    font-size: 11px;
+    color: var(--mud-palette-text-secondary);
+    margin-top: 2px;
+}
+
+/* Mobile product cards (React MobileCard parity) — hidden on md+ */
+.fsh-prod-cards { display: none; }
+
+.fsh-prod-card {
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 12px;
+    background: var(--mud-palette-surface);
+    padding: 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.fsh-prod-card:hover {
+    background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface));
+}
+
+@media (max-width: 959.98px) {
     .fsh-products-grid {
         grid-template-columns: 1fr 110px 64px;
     }
@@ -1508,6 +1552,32 @@ body {
     .fsh-products-grid .fsh-col-brand,
     .fsh-products-grid .fsh-col-price {
         display: none;
+    }
+
+    .fsh-products-desktop {
+        display: none !important;
+    }
+
+    .fsh-prod-cards {
+        display: block;
+    }
+
+    /* Option A: brands/categories — slug+created columns collapse on mobile,
+       slug re-appears under the description */
+    .fsh-brands-grid,
+    .fsh-categories-grid {
+        grid-template-columns: 1fr 64px;
+    }
+
+    .fsh-brands-grid .fsh-col-slug,
+    .fsh-brands-grid .fsh-col-created,
+    .fsh-categories-grid .fsh-col-slug,
+    .fsh-categories-grid .fsh-col-created {
+        display: none;
+    }
+
+    .fsh-slug-mobile {
+        display: block;
     }
 }
 

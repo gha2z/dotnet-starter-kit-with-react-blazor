@@ -39,3 +39,29 @@
 
 **Deviations**: none. **Lessons**: the probe login must fill Tenant first (copied from the
 canonical probe) — login-by-label without tenant silently never submits.
+
+## P2 — Products list (2026-08-24) — ✅
+
+**What changed**
+- `ProductsPage.razor`: brand/category filters are now **searchable comboboxes** (MudAutocomplete,
+  type-to-narrow, clearable — React Combobox parity) with `ValueChanged` → server refetch; desktop
+  table wrapped in `.fsh-products-desktop d-none d-md-block`; new **mobile card list**
+  (`.fsh-prod-cards d-md-none`, React MobileCard parity: image, name + hidden tag, SKU, brand
+  chip, category, price, stock chip, always-visible edit, chevron); row actions get
+  `.fsh-row-actions` (hover-reveal on desktop, always visible on touch).
+- `BrandsPage.razor` / `CategoriesPage.razor` (option A): slug/created cells get
+  `.fsh-col-slug`/`.fsh-col-created` (hidden <960px); slug moves under the description via
+  `.fsh-slug-mobile`; actions hover-reveal.
+- `fsh.css`: hover-reveal rules (+ `hover:none` touch exception), mobile card styles, responsive
+  grid collapses for brands/categories, `.fsh-slug-mobile`.
+
+**Evidence**
+- `walkthrough/probe-products-p2.mjs` — **11 PASS / 0 FAIL**: combobox narrows on typing;
+  actions opacity 0 → 1 on hover; 10 mobile cards render with desktop table hidden; edit always
+  visible on mobile; brands+categories slug/created hidden on mobile with slug under description.
+- Screenshots (vision-inspected): `desktop-hover.png` (hovered row shows actions, others hide),
+  `mobile-cards.png`, `mobile-brands.png`, `mobile-categories.png`.
+- bUnit **264/264**; build 0 warnings.
+
+**Deviations**: none. **Lessons**: same-element class selectors need `.a.b`, not `.a .b` — the
+probe timeout was a selector bug, not a product bug (verified via body-text dump).
