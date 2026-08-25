@@ -6,6 +6,7 @@ using FSH.BlazorShared.Models.Files;
 using FSH.BlazorShared.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.JSInterop;
 using MudBlazor;
 
 namespace FSH.Dashboard.Wasm.Pages.Catalog;
@@ -21,10 +22,10 @@ public sealed partial class ProductDetailPage
     [Inject] private IDialogService DialogService { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
 
     [Parameter] public string Id { get; set; } = string.Empty;
 
-    private MudFileUpload<IReadOnlyList<IBrowserFile>>? _fileUpload;
     private IReadOnlyList<IBrowserFile> _pickedFiles = [];
     private ProductDto? _product;
     private BrandDto? _brand;
@@ -241,10 +242,13 @@ public sealed partial class ProductDetailPage
 
     private async Task OpenImagePickerAsync()
     {
-        if (_fileUpload is not null)
-        {
-            await _fileUpload.OpenFilePickerAsync();
-        }
+        await JS.InvokeVoidAsync("fshOpenFilePicker", "detail-image-input");
+    }
+
+    private async Task HandleImageFilesChanged(InputFileChangeEventArgs e)
+    {
+        _pickedFiles = e.GetMultipleFiles();
+        await UploadImagesAsync();
     }
 
     private async Task UploadImagesAsync()

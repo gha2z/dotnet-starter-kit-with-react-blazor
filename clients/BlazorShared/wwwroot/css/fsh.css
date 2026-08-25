@@ -1444,10 +1444,40 @@ button.fsh-detail-stat:hover {
     gap: 4px;
 }
 
+.fsh-detail-subtitle {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.fsh-images-empty {
+    padding: 44px 16px;
+    text-align: center;
+    border: 1px dashed color-mix(in srgb, var(--mud-palette-text-secondary) 35%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--mud-palette-primary) 3%, transparent);
+    color: var(--mud-palette-text-secondary);
+    font-size: 13px;
+}
+
+.fsh-audit-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+@media (min-width: 640px) {
+    .fsh-audit-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+
 .fsh-btn-danger-outline:hover {
     border-color: var(--mud-palette-error) !important;
-    color: var(--mud-palette-error) !important;
-}
+    color: var(--mud-palette-error) !important;}
 
 /* React dialog form grids (ProductEditorDialog): Name|SKU and Brand|Category on
    one row; Price|Currency|Stock on three. Stack below 640px. */
@@ -2137,30 +2167,9 @@ button.fsh-detail-stat:hover {
     border-radius: 12px;
 }
 
-.fsh-detail-stat {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    min-width: 72px;
-    padding: 8px 14px;
-    border-radius: 10px;
-    background: color-mix(in srgb, var(--mud-palette-background-grey) 50%, transparent);
-}
-
-.fsh-detail-stat-value {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--mud-palette-text-primary);
-    line-height: 1.2;
-}
-
-.fsh-detail-stat-label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--mud-palette-text-secondary);
-}
+/* (stale column-style .fsh-detail-stat block removed — the React-parity pill
+   styles at ~line 1388 own this class now; the later definition here was
+   overriding them by cascade order and breaking the hero stats layout) */
 
 .fsh-def-list {
     margin: 0;
