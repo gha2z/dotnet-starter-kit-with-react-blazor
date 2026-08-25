@@ -1,6 +1,6 @@
 # Current Status
 
-Last Update: 2026-08-25 04:00, by: opencode (model: x-preview-f-free).
+Last Update: 2026-08-26 02:00, by: opencode (model: x-preview-f-free).
 
 ## Dashboard (living — update at every close-out)
 
@@ -11,6 +11,13 @@ Last Update: 2026-08-25 04:00, by: opencode (model: x-preview-f-free).
   render-stall class fix across 8 pages (`64db552f`) · P6 dialog standardization
   (`a8798d51`) · P4 files page parity + preview actions (`6cc1417e`) · P7 audits filters
   verified clean · P8 QA-entity cleanup + close-out.
+- **Follow-up (2026-08-25):** products combobox filters rebuilt as shared `FshCombobox`
+  (MudAutocomplete never rendered the selection / clear button) — `a5ba2ee0`, diag 13/0.
+- **Follow-up (2026-08-26):** product DETAIL page gap hunt (`c687e2d8`) — stale duplicate
+  `.fsh-detail-stat` CSS removed (pills now React-parity), MudFileUpload's default
+  BROWSE FILES button replaced with a plain InputFile (single UPLOAD IMAGES action),
+  images spacing (mt-4 to dashed empty box), plain subtitle + icon meta row, Description
+  Edit action, Audit 3-col. bUnit 264/264 · probe-actions 39/0 · visual shots p11-detail.
 - **Next task:** none queued — pick the next mission (human writes `spec.md` in a new
   `Phase-10-*` folder; agent writes `plan.md` for confirmation before build).
 - **Obstacles / known issues:** none blocking. Accepted demo-DB leftovers (documented in
@@ -18,8 +25,11 @@ Last Update: 2026-08-25 04:00, by: opencode (model: x-preview-f-free).
 - **Verification state (final):** bUnit 264/264 · probe-actions 39/0 · probe-filters-p5
   11/0 · probe-audits-p7 10/0 · probe-chat-realtime 16/0 · probe-chat-scroll 5/0 ·
   0 console errors across all probes.
-- **Follow-up (2026-08-25):** products combobox filters rebuilt as shared `FshCombobox`
-  (MudAutocomplete never rendered the selection / clear button) — `a5ba2ee0`, diag 13/0.
+- **Heads-up for the human:** the git index held pre-staged deletions not made by this
+  session (opencode/_tracks-template/*, workflows/neutral/tracks/_template/*,
+  docs/superpowers/specs/2026-05-28-*.md) plus unstaged edits to AGENTS.md /
+  CONTRIBUTING.md / HUMAN-GUIDE.md / opencode/AGENTIC-GUIDE.md / WORKFLOW-GUIDE.md.
+  They were left untouched (unstaged) — review and commit or discard them deliberately.
 - **Definition of done:** real-browser walkthrough (clicks/CRUD/resizes/device emulation,
   vision-inspected screenshots, 0 console errors) + regression battery.
 

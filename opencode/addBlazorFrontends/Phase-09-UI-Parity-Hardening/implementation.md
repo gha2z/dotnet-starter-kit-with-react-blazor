@@ -209,3 +209,35 @@ Final battery: probe-actions 39/0 - bUnit 264/264 - probe-filters-p5 11/0 -
 probe-audits-p7 10/0 - probe-chat-realtime 16/0 - probe-chat-scroll 5/0.
 Commits: 564de110 (P1) 411807ab (P2) 4b862c68 (P3) 64db552f (P5) a8798d51 (P6)
 6cc1417e (P4) + this docs/cleanup commit.
+
+## P11 - Product detail page gap hunt (2026-08-26) - DONE
+
+Side-by-side diff (shot-product-detail.mjs, React 5174 vs Blazor 5176, same product id,
+desktop+mobile) found four gaps:
+
+1. **Hero stat pills broken** - a STALE second `.fsh-detail-stat` block (column layout,
+   18px values, from an earlier wave) sat later in fsh.css and overrode the React-parity
+   pills from P3. Removed the stale block; pills now render inline with tone tints.
+   Diagnosed via diag-detail-css.mjs (served-CSS fetch + getComputedStyle).
+2. **Mystery BROWSE FILES button** - MudBlazor's `MudFileUpload` renders its own default
+   "Browse Files" filled button when used without an activator; `Hidden="true"` only hides
+   the native input. It duplicated the UPLOAD IMAGES action. Replaced with a plain
+   `<InputFile id="detail-image-input">` + `fshOpenFilePicker` JS (FileManagerPage pattern);
+   `OpenImagePickerAsync` invokes JS, `HandleImageFilesChanged` feeds `GetMultipleFiles()`
+   into the existing upload pipeline.
+3. **Images spacing** - upload row (filled button left, count caption right) now has mt-4
+   to a dashed rounded empty box / image grid; types caption moved to the header row.
+4. **Subtitle/meta/audit** - subtitle is plain (SKU chip - brand - category, no icons);
+   meta row carries the icons (brand/category/created/revised); Description section gained
+   an outlined EDIT action; Audit is a Created/Revised/Status 3-col grid.
+
+Verification: visual shots p11-detail/*.png (hero matches React at desktop AND mobile);
+bUnit 264/264; probe-actions 39/0; 0 console errors. Commit `c687e2d8` (recommitted clean
+after a soft reset - the index held pre-staged foreign deletions that the first commit
+swept in; unstaged and left for the user).
+
+Lessons: (a) duplicate CSS class definitions across waves silently override - grep the
+whole stylesheet, not just the section you added to; (b) MudFileUpload without
+ActivatorContent renders a visible default button - use plain InputFile for custom UIs;
+(c) check `git status` BEFORE committing - pre-staged foreign changes get swept into
+your commit.
