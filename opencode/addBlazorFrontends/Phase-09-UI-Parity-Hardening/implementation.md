@@ -141,6 +141,31 @@ bUnit **264/264**. Commit `a8798d51`.
 **Lesson:** after batch edits, grep-verify each landed — one of nine identical-looking edits
 silently missed and cost a rebuild+restart cycle to find.
 
+## P9 - Products combobox filters rebuilt (2026-08-25) - DONE
+
+**User report:** the MudAutocomplete brand/category filters never displayed the selected
+label (input stayed empty after picking) and showed no clear button — though the filter
+itself applied. Reproduced via diag-combobox.mjs (picked "Acme Goods" → input "").
+
+**Root cause:** MudBlazor MudAutocomplete does not render the selection's ToStringFunc when
+driven with `Value`/`ValueChanged` (no `@bind-Value`) — its internal Text stays at the
+search term; `Clearable` only shows when Text is non-empty, so the X never appeared.
+
+**Fix:** new shared `FshCombobox` (BlazorShared/Components) — React Combobox parity:
+bordered trigger showing the selected label (or placeholder) + chevron; popover with a
+search field narrowing options (check mark on the selected row); clear (X) with
+StopPropagation; MudPopover teleports to the root provider (locators must be page-level,
+not dialog-scoped). Applied to the products page filters AND the product editor dialog's
+brand/category pickers (same bug there).
+
+**Gotcha:** MudPopover content lives OUTSIDE `.mud-dialog` — dialog-scoped locators find
+nothing; use `.fsh-combobox-popover:visible` at page level.
+
+**Verification:** diag-combobox **13/0** (dropdown opens, search narrows 20→1, selected
+label renders, filter applies 10→3, clear resets + restores, dialog pickers, product
+saved); probe-actions **39/0** (D25 updated for the new pickers); bUnit **264/264**;
+visual `evidence/p10-combobox/final.png`. Commit `a5ba2ee0`.
+
 ## P4 — Files page parity — ✅ (2026-08-25)
 
 Side-by-side visual diff (`shot-files-both.mjs`, React 5174 vs Blazor 5176, desktop+mobile),

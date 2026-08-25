@@ -18,6 +18,8 @@ Last Update: 2026-08-25 04:00, by: opencode (model: x-preview-f-free).
 - **Verification state (final):** bUnit 264/264 · probe-actions 39/0 · probe-filters-p5
   11/0 · probe-audits-p7 10/0 · probe-chat-realtime 16/0 · probe-chat-scroll 5/0 ·
   0 console errors across all probes.
+- **Follow-up (2026-08-25):** products combobox filters rebuilt as shared `FshCombobox`
+  (MudAutocomplete never rendered the selection / clear button) — `a5ba2ee0`, diag 13/0.
 - **Definition of done:** real-browser walkthrough (clicks/CRUD/resizes/device emulation,
   vision-inspected screenshots, 0 console errors) + regression battery.
 
