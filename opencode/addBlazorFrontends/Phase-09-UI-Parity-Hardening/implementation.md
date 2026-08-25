@@ -120,3 +120,23 @@ polls 6s, D12 waits out the WASM cold boot, D17 uses the page search like D19). 
 
 **Lesson:** fire-and-forget data loads in Blazor event handlers are render-stall bugs — the
 completion render only happens for awaited handler paths.
+
+## P6 — Dialog standardization (2026-08-25) — ✅
+
+Shared `FshFormDialogHeader` (BlazorShared/Components): icon tone-tile + title + muted
+description — the React DialogHeader chrome. Applied to 10 dialogs: product, brand, category,
+ticket, group, role (dashboard + admin), user (dashboard), add-group-members, create-channel,
+webhook create. One CSS rule outlines the leading Cancel in every `.mud-dialog-actions`
+(React DialogFooter parity) — no per-file churn.
+
+**Single-title fix:** MudBlazor renders the ShowAsync title bar AND the in-body header →
+double title. Emptied the ShowAsync titles for the 9 scaffolded dialogs (CloseButton X
+remains). Gotcha: one edit (ProductsPage) silently didn't land — the diag probe
+(`diag-dialog-title.mjs`, dumps `.mud-dialog-title` innerText) caught it; re-applied.
+
+**Verification:** `probe-dialogs-p6` (Cancel border 1px = outlined, 0 console errors, single
+title; screenshots editor-product / dialog-ticket / confirm-delete); probe-actions **38/0**;
+bUnit **264/264**. Commit `a8798d51`.
+
+**Lesson:** after batch edits, grep-verify each landed — one of nine identical-looking edits
+silently missed and cost a rebuild+restart cycle to find.

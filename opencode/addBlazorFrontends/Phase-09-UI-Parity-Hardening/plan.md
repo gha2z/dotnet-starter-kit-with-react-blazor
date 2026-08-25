@@ -50,11 +50,14 @@
 - [x] P5.3 `probe-filters-p5.mjs` **11/0** (every ticket status/priority value + products
       visibility + brands search/clear). — ✅
 
-### P6 — Dialog standardization (all CRUD) — ☐
-- [ ] P6.1 Shared `FshFormDialog` scaffold (React Dialog chrome: header title+description, body,
-      footer Cancel→primary order, widths, radii, pending states) + styled `FshConfirmDialog` for
-      deletes, in BlazorShared.
-- [ ] P6.2 Refactor: product, brand, category, ticket, user, role, group, webhook, channel dialogs.
+### P6 — Dialog standardization (all CRUD) — ✅ (2026-08-25)
+- [x] P6.1 Shared `FshFormDialogHeader` (icon tile + title + description) in BlazorShared +
+      CSS chrome; leading Cancel outlined app-wide via one `.mud-dialog-actions` rule. — ✅
+- [x] P6.2 Refactored onto the header: product, brand, category, ticket, group, role (dash+admin),
+      user (dash), add-members, channel, webhook dialogs; ShowAsync titles emptied so the body
+      header is the single title (React parity); delete confirms unchanged (already consistent). — ✅
+      Verified: probe-dialogs-p6 (Cancel 1px outlined, 0 console errors, single title) +
+      probe-actions 38/0 + bUnit 264/264.
 
 ### P7 — Audits filters verification — ☐
 - [ ] P7.1 Drive every filter (range presets, event-type/severity chips, hide-system, source/user/
