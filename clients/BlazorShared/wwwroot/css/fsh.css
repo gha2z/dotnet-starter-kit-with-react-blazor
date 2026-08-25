@@ -1616,6 +1616,47 @@ button.fsh-detail-stat:hover {
     box-shadow: none;
 }
 
+/* ---------- files (React parity: my-files.tsx) ---------- */
+.fsh-file-tab { text-transform: none; font-weight: 600; }
+.fsh-file-tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    margin-left: 6px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--mud-palette-primary) 18%, transparent);
+    color: var(--mud-palette-primary);
+}
+.mud-button-root.fsh-file-tab .fsh-file-tab-count {
+    background: rgba(255, 255, 255, 0.25);
+    color: inherit;
+}
+.fsh-upload-tile {
+    display: inline-grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--mud-palette-primary) 10%, transparent);
+    color: var(--mud-palette-primary);
+}
+.fsh-file-dropzone-inner { cursor: pointer; text-align: center; }
+.fsh-file-icon-tile {
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
+    color: var(--mud-palette-primary);
+}
+
 /* ---------- catalog (React parity: catalog/*.tsx grids) ---------- */
 .fsh-brands-grid {
     display: grid;

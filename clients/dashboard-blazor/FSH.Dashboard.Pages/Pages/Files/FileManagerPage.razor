@@ -1,50 +1,73 @@
 @page "/files"
+@using FSH.BlazorShared.Formatting
 @using FSH.BlazorShared.Permissions
 @attribute [Authorize]
 
-<FshPageHeader Icon="@Icons.Material.Outlined.FolderOpen" Title="Files" Description="Manage your uploaded files and shared assets" />
+<FshPageHeader Icon="@Icons.Material.Outlined.FolderOpen" Title="Files"
+               Count="@(_loading ? null : _myFiles.Count)" Unit="file"
+               Description="Drop images, documents, or archives. Uploads are private to you by default; flip a file to public from its preview to make it visible to the rest of the tenant under Shared." />
 
-<MudTabs @bind-ActivePanelIndex="_activeTab" Class="mt-n2">
-    <MudTabPanel Text="My Files" Icon="@Icons.Material.Outlined.Folder" />
-    <MudTabPanel Text="Shared in Tenant" Icon="@Icons.Material.Outlined.People" />
-</MudTabs>
+@* React parity (my-files.tsx): rounded tab pills — My files carries a count badge. *@
+<div class="d-flex gap-2 mb-4">
+    <MudButton Variant="@(_activeTab == 0 ? Variant.Filled : Variant.Outlined)" Color="Color.Primary"
+               Size="Size.Small" Class="fsh-file-tab rounded-pill" StartIcon="@Icons.Material.Outlined.Folder"
+               OnClick="() => SwitchTab(0)">
+        My files @if (_myFiles.Count > 0)
+        {
+            <span class="fsh-file-tab-count">@_myFiles.Count</span>
+        }
+    </MudButton>
+    <MudButton Variant="@(_activeTab == 1 ? Variant.Filled : Variant.Outlined)" Color="Color.Primary"
+               Size="Size.Small" Class="fsh-file-tab rounded-pill" StartIcon="@Icons.Material.Outlined.People"
+               OnClick="() => SwitchTab(1)">
+        Shared in tenant
+    </MudButton>
+</div>
 
 @if (_activeTab == 0)
 {
-    @* Upload Zone *@
-    <MudPaper Class="@($"fsh-file-dropzone pa-6 mb-4 text-center{(_dragOver ? " dragover" : string.Empty)}")" Elevation="0">
-        <div id="fsh-dropzone" @ondragenter="OnDragEnter" @ondragenter:preventDefault
+    @* Upload zone — React parity: centered compact zone, whole area clickable. *@
+    <MudPaper Class="@($"fsh-file-dropzone pa-8 mb-4 text-center{(_dragOver ? " dragover" : string.Empty)}")" Elevation="0">
+        <div id="fsh-dropzone" class="fsh-file-dropzone-inner" @onclick="OpenFilePicker" @ondragenter="OnDragEnter" @ondragenter:preventDefault
              @ondragleave="OnDragLeave"
              @ondragover:preventDefault
              @ondrop="HandleDrop" @ondrop:preventDefault>
             <InputFile id="fileInput" OnChange="HandleFileSelect" multiple accept="@_acceptTypes" style="display:none;" />
-            <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Size="Size.Large" Color="Color.Secondary" Style="font-size: 48px;" />
-            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mt-2">Drag & drop files here</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">or</MudText>
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="mt-2" OnClick="OpenFilePicker">
-                Browse files
-            </MudButton>
+            <span class="fsh-upload-tile">
+                <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Size="Size.Small" />
+            </span>
+            <MudText Typo="Typo.body1" Class="mt-3" Style="font-weight: 500;">Drop a file or click to browse</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                Allowed: jpg, jpeg, png, webp, gif, ico, pdf, docx, xlsx, pptx, txt, csv, zip · up to 50.0 MB
+            </MudText>
             @if (_uploading)
             {
-                <MudProgressLinear Value="_uploadProgress" Color="Color.Primary" Class="mt-3" Striped />
+                <MudProgressLinear Value="_uploadProgress" Color="Color.Primary" Class="mt-3" Striped Style="max-width: 420px; margin-left: auto; margin-right: auto;" />
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">@_uploadStatus</MudText>
             }
         </div>
     </MudPaper>
 }
 
-@* Filter bar *@
-<div class="d-flex align-center gap-2 mb-3 flex-wrap">
-    <MudTextField @bind-Value="_search" Placeholder="Search files..." Adornment="Adornment.Start"
+@* Filter bar — React parity: search left, type pills with counts right. *@
+<div class="d-flex align-center gap-2 mb-3 flex-wrap justify-space-between">
+    <MudTextField @bind-Value="_search" Placeholder="Search by filename..." Adornment="Adornment.Start"
                   AdornmentIcon="@Icons.Material.Outlined.Search" IconSize="Size.Small" Immediate="true"
                   DebounceInterval="300" OnDebounceIntervalElapsed="LoadFiles"
-                  Margin="Margin.Dense" Variant="Variant.Outlined" Style="max-width: 300px;" />
-    @foreach (var filter in _typeFilters)
-    {
-        <MudChip T="string" Size="Size.Small" Variant="@(filter == _activeFilter ? Variant.Filled : Variant.Outlined)"
-                 Color="@(filter == _activeFilter ? Color.Primary : Color.Default)"
-                 OnClick="() => SetFilter(filter)">@filter</MudChip>
-    }
+                  Margin="Margin.Dense" Variant="Variant.Outlined" Style="max-width: 340px;" Class="flex-grow-1" />
+    <div class="d-flex gap-1 flex-wrap">
+        @foreach (var filter in _typeFilters)
+        {
+            var count = TypeCount(filter);
+            <MudChip T="string" Size="Size.Small" Variant="@(filter == _activeFilter ? Variant.Filled : Variant.Outlined)"
+                     Color="@(filter == _activeFilter ? Color.Primary : Color.Default)"
+                     OnClick="() => SetFilter(filter)">@filter @if (count > 0)
+            {
+                <span style="opacity: 0.65;">@count</span>
+            }
+            </MudChip>
+        }
+    </div>
 </div>
 
 @* File list *@
@@ -54,50 +77,43 @@
 }
 else if (FilteredFiles.Count == 0)
 {
-    <MudPaper Class="pa-8 text-center" Elevation="0">
-        <MudIcon Icon="@Icons.Material.Outlined.FolderOff" Size="Size.Large" Color="Color.Secondary" Style="font-size: 64px;" />
-        <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mt-4">
-            @(_activeTab == 0 ? "No files uploaded yet" : "No shared files")
-        </MudText>
-    </MudPaper>
+    <FshEmptyState Icon="@Icons.Material.Outlined.FolderOff"
+                   Title="@(_activeTab == 0 ? "No files uploaded yet" : "No shared files")"
+                   Description="@(_activeTab == 0 ? "Drop a file above to get started. Uploads stay private until you flip them to public." : "Files flipped to public by any tenant member appear here.")" />
 }
 else
 {
-    <MudTable Items="@FilteredFiles" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true" RowsPerPage="20">
+    <p class="fsh-muted-copy mb-2" style="font-size: 12px; font-weight: 500;">@FilteredFiles.Count file@(FilteredFiles.Count == 1 ? "" : "s")</p>
+    <MudTable Items="@FilteredFiles" Hover="true" Breakpoint="Breakpoint.Sm" Dense="true" RowsPerPage="20"
+              T="FileAssetDto" OnRowClick="@(e => e.Item is null ? Task.CompletedTask : PreviewFile(e.Item))" Style="cursor: pointer;">
         <HeaderContent>
-            <MudTh>Name</MudTh>
+            <MudTh>Filename</MudTh>
             <MudTh>Visibility</MudTh>
             <MudTh>Size</MudTh>
             <MudTh>Uploaded</MudTh>
-            <MudTh Class="text-right">Actions</MudTh>
+            <MudTh Class="text-right"></MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Name">
-                <div class="d-flex align-center gap-2">
-                    <MudIcon Icon="@FileIcon(context.ContentType)" Size="Size.Small" Color="Color.Secondary" />
-                    <MudText Typo="Typo.body2" Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px;">
+            <MudTd DataLabel="Filename">
+                <div class="d-flex align-center gap-3">
+                    <span class="fsh-file-icon-tile">
+                        <MudIcon Icon="@FileIcon(context.ContentType)" Size="Size.Small" />
+                    </span>
+                    <MudText Typo="Typo.body2" Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px;">
                         @context.OriginalFileName
                     </MudText>
                 </div>
             </MudTd>
             <MudTd DataLabel="Visibility">
                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                         Color="@(context.Visibility == FileVisibility.Public ? Color.Success : Color.Default)">
+                         Color="@(context.Visibility == FileVisibility.Public ? Color.Info : Color.Default)">
                     @(context.Visibility == FileVisibility.Public ? "Public" : "Private")
                 </MudChip>
             </MudTd>
-            <MudTd DataLabel="Size">@FormatBytes(context.SizeBytes)</MudTd>
-            <MudTd DataLabel="Uploaded">@FshFormat.DateRelative(context.CreatedAtUtc)</MudTd>
+            <MudTd DataLabel="Size" Style="font-variant-numeric: tabular-nums;">@FormatBytes(context.SizeBytes)</MudTd>
+            <MudTd DataLabel="Uploaded">@FshFormat.DateShort(context.CreatedAtUtc)</MudTd>
             <MudTd Class="text-right">
-                <MudIconButton Icon="@Icons.Material.Outlined.Visibility" Size="Size.Small"
-                               aria-label="Preview" OnClick="() => PreviewFile(context)" />
-                <MudIconButton Icon="@Icons.Material.Outlined.Download" Size="Size.Small"
-                               aria-label="Download" OnClick="() => DownloadFile(context)" />
-                @if (_activeTab == 0)
-                {
-                    <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small"
-                                   aria-label="Delete" OnClick="() => DeleteFile(context)" />
-                }
+                <MudIcon Icon="@Icons.Material.Outlined.ChevronRight" Size="Size.Small" Color="Color.Default" />
             </MudTd>
         </RowTemplate>
         <PagerContent>
@@ -124,8 +140,23 @@ else
 
     private const string _acceptTypes = ".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar";
 
-    private readonly string[] _typeFilters = ["All", "Images", "Documents", "Archives", "Other"];
+    private readonly string[] _typeFilters = ["All", "Images", "Documents", "Archives"];
     private string _activeFilter = "All";
+
+    /// <summary>React parity (my-files.tsx): type pills carry per-type counts.</summary>
+    private int TypeCount(string filter) => (_activeTab == 0 ? _myFiles : _sharedFiles).Count(f => filter switch
+    {
+        "Images" => f.ContentType.StartsWith("image/"),
+        "Documents" => f.ContentType is "application/pdf" or "application/msword" or "application/vnd.openxmlformats-officedocument.wordprocessingml.document" or "application/vnd.ms-excel" or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" or "text/plain",
+        "Archives" => f.ContentType is "application/zip" or "application/x-rar-compressed",
+        _ => true
+    });
+
+    private void SwitchTab(int tab)
+    {
+        _activeTab = tab;
+        _activeFilter = "All";
+    }
 
     private IReadOnlyList<FileAssetDto> FilteredFiles => (_activeTab == 0 ? _myFiles : _sharedFiles)
         .Where(f => _activeFilter switch
@@ -266,6 +297,7 @@ else
     {
         var parameters = new DialogParameters<FilePreviewDialog>();
         parameters.Add(d => d.File, file);
+        parameters.Add(d => d.OnChanged, EventCallback.Factory.Create(this, LoadFiles));
         await DialogService.ShowAsync<FilePreviewDialog>($"Preview: {file.OriginalFileName}", parameters);
     }
 

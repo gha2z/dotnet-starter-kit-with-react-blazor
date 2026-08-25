@@ -52,7 +52,18 @@
         </MudGrid>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close">Close</MudButton>
+        @* React parity (FilePreviewDialog): flip visibility + delete live in the preview. *@
+        @if (File.OwnerType == "MyFiles")
+        {
+            <MudButton Variant="Variant.Text" Color="Color.Info" OnClick="FlipVisibility" Disabled="_working">
+                @(File.Visibility == FileVisibility.Public ? "Make private" : "Make public")
+            </MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Error" StartIcon="@Icons.Material.Outlined.Delete"
+                       OnClick="DeleteFile" Disabled="_working" aria-label="Delete file">
+                Delete
+            </MudButton>
+        }
+        <MudButton Variant="Variant.Outlined" OnClick="Close" Disabled="_working">Close</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -60,10 +71,13 @@
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
     [Inject] private IFileService FileService { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
     [Parameter] public FileAssetDto File { get; set; } = default!;
+    [Parameter] public EventCallback OnChanged { get; set; }
 
     private string? _previewUrl;
+    private bool _working;
 
     protected override async Task OnInitializedAsync()
     {
@@ -86,6 +100,41 @@
     {
         var url = await FileService.GetFileDownloadUrlAsync(File.Id);
         await JS.InvokeVoidAsync("fshOpenDownload", url.Url.ToString());
+    }
+
+    private async Task FlipVisibility()
+    {
+        _working = true;
+        try
+        {
+            var target = File.Visibility == FileVisibility.Public ? FileVisibility.Private : FileVisibility.Public;
+            File = await FileService.ChangeVisibilityAsync(File.Id, target);
+            Snackbar.Add(File.Visibility == FileVisibility.Public ? "File is now public" : "File is now private", Severity.Success);
+            _previewUrl = null;
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed: {ex.Message}", Severity.Error);
+        }
+        finally { _working = false; }
+    }
+
+    private async Task DeleteFile()
+    {
+        _working = true;
+        try
+        {
+            await FileService.DeleteAsync(File.Id);
+            Snackbar.Add("File deleted", Severity.Success);
+            await OnChanged.InvokeAsync();
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed: {ex.Message}", Severity.Error);
+            _working = false;
+        }
     }
 
     private void Close() => MudDialog.Close();

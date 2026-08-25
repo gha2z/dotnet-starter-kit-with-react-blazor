@@ -37,9 +37,12 @@
       price/currency/stock create-only, visibility switch row, pending footer). — ✅
 - [ ] P3.3 Brand/Category editor dialogs restyle — folded into P6 (shared scaffold). — 🔄 moved
 
-### P4 — Files page parity — ☐
-- [ ] P4.1 Side-by-side visual diff (:5176 vs :5174) desktop+mobile → delta list.
-- [ ] P4.2 Fix deltas; real upload/rename/delete verification.
+### P4 — Files page parity — ✅ (2026-08-25)
+- [x] P4.1 Side-by-side visual diff (:5176 vs :5174) desktop+mobile → delta list. — ✅
+- [x] P4.2 Fixed deltas: header count chip, pill tabs w/ badge, centered upload zone, type
+      pills with counts, chevron rows (Actions → preview), icon tiles, absolute dates, blue
+      Public chip; **preview dialog gained flip-visibility + delete (React parity)**; real
+      upload/preview/delete verification. probe-actions 39/0. — ✅
 
 ### P5 — Tickets: filter bug + filters look — ✅ (2026-08-24)
 - [x] P5.1 Diagnosed: API was never at fault (all filters 200, <60ms) — root cause was the

@@ -140,3 +140,25 @@ bUnit **264/264**. Commit `a8798d51`.
 
 **Lesson:** after batch edits, grep-verify each landed — one of nine identical-looking edits
 silently missed and cost a rebuild+restart cycle to find.
+
+## P4 — Files page parity — ✅ (2026-08-25)
+
+Side-by-side visual diff (`shot-files-both.mjs`, React 5174 vs Blazor 5176, desktop+mobile),
+then reworked `FileManagerPage` to React my-files.tsx parity: header count chip + full
+description; MudTabs → pill tabs with count badge; centered compact upload zone (whole area
+clickable, allowed-types caption); type filter pills WITH live counts; table →
+Filename/Visibility/Size/Uploaded + chevron (Actions column removed — actions live in the
+preview, React parity); icon tiles; absolute dates; Public chip → info blue; row click opens
+preview.
+
+**Preview-dialog gap found + fixed:** React's preview owns flip-visibility + delete; the
+Blazor preview had only Close. Added Make public/private + Delete (owner-gated,
+`OnChanged` → page reload). D13's "file deleted" now passes through the preview.
+
+**Probe lesson (headless + Blazor async handler chain):** clicking the zone opens a NATIVE
+file chooser that BLOCKS the renderer — Playwright's chooser interception never engages
+through the async interop chain, so every later action times out ("performing click action"
+hangs; a JS-evaluate click hung the whole script = main-thread block proof). Fix: drive the
+hidden `#fileInput` directly via `setInputFiles` (diag-d13.mjs).
+
+**Verification:** probe-actions **39/0**; bUnit **264/264**; visual shots `p4-files/*.png`.
