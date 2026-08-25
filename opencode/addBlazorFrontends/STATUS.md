@@ -1,20 +1,23 @@
 # Current Status
 
-Last Update: 2026-08-24 18:20, by: opencode (model: x-preview-f-free).
+Last Update: 2026-08-25 04:00, by: opencode (model: x-preview-f-free).
 
 ## Dashboard (living — update at every close-out)
 
 - **Current mission:** [`Phase-09-UI-Parity-Hardening/`](./Phase-09-UI-Parity-Hardening/) —
-  chat UX, products parity, detail hero/dialogs, tickets filter BUG (fixed), CRUD dialog
-  standardization, files parity, audits filters verification.
-- **Progress:** P1 ✅ chat scroll + DM rail (`564de110`) · P2 ✅ products list (`411807ab`) ·
-  P3 ✅ detail hero + editor dialog (`4b862c68`) · P5 ✅ tickets filter bug + render-stall
-  class fix across 8 pages (`64db552f`). **Remaining: P6 → P4 → P7 → P8.**
-- **Next task:** P6.1 shared `FshFormDialog` scaffold in BlazorShared.
-- **Obstacles / known issues:** none blocking. Devserver cold-start emits MONO_WASM download
-  noise (probes filter it); QA-* demo entities accumulate (P8 cleanup probe).
-- **Verification state:** bUnit 264/264 · probe-filters-p5 11/0 · probe-actions 38/0 ·
-  probe-chat-realtime 16/0 · probe-chat-scroll 5/0.
+  **✅ COMPLETE (2026-08-25).** All waves landed:
+  P1 chat scroll + DM rail avatars/presence (`564de110`) · P2 products list parity
+  (`411807ab`) · P3 detail hero + editor dialog (`4b862c68`) · P5 tickets filter bug +
+  render-stall class fix across 8 pages (`64db552f`) · P6 dialog standardization
+  (`a8798d51`) · P4 files page parity + preview actions (`6cc1417e`) · P7 audits filters
+  verified clean · P8 QA-entity cleanup + close-out.
+- **Next task:** none queued — pick the next mission (human writes `spec.md` in a new
+  `Phase-10-*` folder; agent writes `plan.md` for confirmation before build).
+- **Obstacles / known issues:** none blocking. Accepted demo-DB leftovers (documented in
+  mission plan.md P8): 16 QA tickets, 2 QA tenants, QA users (no public delete paths).
+- **Verification state (final):** bUnit 264/264 · probe-actions 39/0 · probe-filters-p5
+  11/0 · probe-audits-p7 10/0 · probe-chat-realtime 16/0 · probe-chat-scroll 5/0 ·
+  0 console errors across all probes.
 - **Definition of done:** real-browser walkthrough (clicks/CRUD/resizes/device emulation,
   vision-inspected screenshots, 0 console errors) + regression battery.
 

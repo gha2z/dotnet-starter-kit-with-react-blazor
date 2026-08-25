@@ -162,3 +162,25 @@ hangs; a JS-evaluate click hung the whole script = main-thread block proof). Fix
 hidden `#fileInput` directly via `setInputFiles` (diag-d13.mjs).
 
 **Verification:** probe-actions **39/0**; bUnit **264/264**; visual shots `p4-files/*.png`.
+
+## P7 - Audits filters verification (2026-08-25) - DONE
+
+No product bugs. UI probe probe-audits-p7 10/0 (type/severity/search/hide-activity/range
+presets/advanced panel/clear-restores/0 console errors) + API-level verification
+(diag-audits-api): every filter returns only matching items - eventType/severity/FromUtc/
+ExcludeEventType all 0 mismatches; search matches Source/UserName/PayloadJson by design
+(confirmed via detail fetch - summary DTO does not show the payload). The P5 render-stall
+class never touched this page (all handlers awaited).
+
+## P8 - Leftovers + close-out (2026-08-25) - DONE
+
+probe-cleanup.mjs: 14 QA channels archived (DELETE = archive), 19 QA roles deleted
+(first pass); catalog/files already self-cleaned by the CRUD probes. Accepted leftovers
+(documented in plan.md): 16 QA tickets (no public delete endpoint), 2 QA tenants (delete
+404s - deactivate-only API), QA users (detail-page flow only). DM toast wording kept
+(title semantics match React channelTitle).
+
+Final battery: probe-actions 39/0 - bUnit 264/264 - probe-filters-p5 11/0 -
+probe-audits-p7 10/0 - probe-chat-realtime 16/0 - probe-chat-scroll 5/0.
+Commits: 564de110 (P1) 411807ab (P2) 4b862c68 (P3) 64db552f (P5) a8798d51 (P6)
+6cc1417e (P4) + this docs/cleanup commit.

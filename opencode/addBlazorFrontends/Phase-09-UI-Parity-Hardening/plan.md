@@ -69,13 +69,16 @@
       ExcludeEventType all 0 mismatches; `search` matches Source/UserName/**PayloadJson** by
       design, confirmed via detail fetch). No product bugs — the P5 render-stall class never
       touched this page (all handlers awaited). — ✅
-- [ ] P7.1 Drive every filter (range presets, event-type/severity chips, hide-system, source/user/
-      correlation/trace, tag masks, search) in a real browser; capture failures.
-- [ ] P7.2 Fix broken filters; re-verify with valid data.
 
-### P8 — Leftovers + close-out — ☐
-- [ ] P8.1 DM toast wording; QA-*/Visual-* demo-entity cleanup probe.
-- [ ] P8.2 Full regression battery + per-wave commits + STATUS.md/implementation.md updates.
+### P8 — Leftovers + close-out — ✅ (2026-08-25)
+- [x] P8.1 QA-entity cleanup probe (`probe-cleanup.mjs`): **14 QA channels archived**,
+      19 QA roles deleted (first pass); catalog/files already self-cleaned by the CRUD
+      probes. Accepted leftovers (documented): 16 QA tickets (no public delete endpoint),
+      2 QA tenants (delete 404s — deactivate-only API), QA users (detail-page flow only).
+      DM toast wording kept as-is (title semantics match React's channelTitle). — ✅
+- [x] P8.2 Full regression battery green (probe-actions 39/0, bUnit 264/264, probe-filters
+      11/0, probe-audits 10/0, probe-chat-realtime 16/0, probe-chat-scroll 5/0); per-wave
+      commits; STATUS.md dashboard + implementation.md current. — ✅
 
 ## Execution order
 
