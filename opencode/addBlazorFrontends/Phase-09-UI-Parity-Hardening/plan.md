@@ -59,7 +59,13 @@
       Verified: probe-dialogs-p6 (Cancel 1px outlined, 0 console errors, single title) +
       probe-actions 38/0 + bUnit 264/264.
 
-### P7 — Audits filters verification — ☐
+### P7 — Audits filters verification — ✅ (2026-08-25)
+- [x] P7.1 UI probe (probe-audits-p7 **10/0**: type/severity/search/hide-activity/range presets/
+      advanced panel/clear-restores/0 console errors) + API-level verification
+      (diag-audits-api: every filter returns only matching items — eventType/severity/FromUtc/
+      ExcludeEventType all 0 mismatches; `search` matches Source/UserName/**PayloadJson** by
+      design, confirmed via detail fetch). No product bugs — the P5 render-stall class never
+      touched this page (all handlers awaited). — ✅
 - [ ] P7.1 Drive every filter (range presets, event-type/severity chips, hide-system, source/user/
       correlation/trace, tag masks, search) in a real browser; capture failures.
 - [ ] P7.2 Fix broken filters; re-verify with valid data.
