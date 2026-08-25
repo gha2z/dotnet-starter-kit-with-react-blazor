@@ -5,13 +5,9 @@
 
 <MudDialog>
     <DialogContent>
-        <div class="d-flex align-center gap-2 mb-2">
-            <FshToneIconTile Icon="@Icons.Material.Filled.PersonAdd" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
-            <MudText Typo="Typo.h6" Style="margin: 0;">Add members</MudText>
-        </div>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
-            Search this tenant's users and pick the ones to add. Users already in the group are skipped.
-        </MudText>
+        <FshFormDialogHeader Icon="@Icons.Material.Filled.PersonAdd"
+                             Title="Add members"
+                             Description="Search this tenant's users and pick the ones to add. Users already in the group are skipped." />
 
         <MudTextField @bind-Value="_search"
                       @bind-Value:after="(async () => await OnSearchChangedAsync(_search))"

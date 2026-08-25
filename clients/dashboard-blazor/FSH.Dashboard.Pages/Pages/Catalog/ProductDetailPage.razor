@@ -206,21 +206,21 @@ else
                         @(_uploading ? "Uploading…" : "Upload images")
                     </MudButton>
                     <span class="fsh-muted-copy" style="font-size: 12px;">
-                        @_product.Images.Count image@(_product.Images.Count == 1 ? "" : "s") · JPG / PNG / WebP / GIF · up to 10 MB
+                        @(_product.Images?.Count ?? 0) image@((_product.Images?.Count ?? 0) == 1 ? "" : "s") · JPG / PNG / WebP / GIF · up to 10 MB
                     </span>
                 </div>
                 <MudFileUpload @ref="_fileUpload" T="IReadOnlyList<IBrowserFile>" @bind-Files="_pickedFiles"
                                Hidden="true" Accept=".jpg,.jpeg,.png,.webp,.gif"
                                OnFilesChanged="UploadImagesAsync" />
 
-                @if (_product.Images.Count == 0)
+                @if ((_product.Images?.Count ?? 0) == 0)
                 {
                     <div class="fsh-muted-copy" style="font-size: 13px;">No images yet — upload one to set the product's cover.</div>
                 }
                 else
                 {
                     <div class="fsh-prod-images">
-                        @foreach (var image in _product.Images.OrderBy(i => i.SortOrder))
+                        @foreach (var image in (_product.Images ?? []).OrderBy(i => i.SortOrder))
                         {
                             <div class="fsh-prod-image-tile">
                                 @if (image.IsThumbnail)

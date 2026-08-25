@@ -1,0 +1,26 @@
+// diag-dialog-title.mjs — what renders in .mud-dialog-title?
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+import { pathToFileURL } from 'node:url';
+import path from 'node:path';
+const CLIENTS = path.resolve(import.meta.dirname, '..', '..', '..', 'clients');
+const { chromium } = await import(pathToFileURL(path.join(CLIENTS, 'admin', 'node_modules', 'playwright', 'index.mjs')).href);
+const BASE = 'http://localhost:5176';
+const b = await chromium.launch({ ignoreHTTPSErrors: true });
+const p = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+await p.goto(`${BASE}/login`, { waitUntil: 'load' });
+await p.waitForTimeout(2500);
+await p.getByLabel('Tenant', { exact: false }).first().fill('acme');
+await p.getByLabel('Email', { exact: false }).first().fill('admin@acme.com');
+await p.getByLabel('Password', { exact: false }).first().fill('Password123!');
+await p.getByLabel('Password', { exact: false }).first().blur();
+await p.waitForTimeout(400);
+await p.getByRole('button', { name: /sign in/i }).first().click();
+await p.waitForURL((u) => !u.pathname.toLowerCase().includes('login'), { timeout: 25000 });
+await p.goto(`${BASE}/catalog/products`, { waitUntil: 'load' });
+await p.waitForTimeout(3500);
+await p.getByRole('button', { name: /new product/i }).first().click();
+await p.locator('.mud-dialog input').first().waitFor({ state: 'visible', timeout: 10000 });
+const title = await p.locator('.mud-dialog-title').first().innerText().catch(() => '(no .mud-dialog-title)');
+const titleCount = await p.locator('.mud-dialog-title').count();
+console.log(`mud-dialog-title count=${titleCount} text="${title.trim()}"`);
+await b.close();

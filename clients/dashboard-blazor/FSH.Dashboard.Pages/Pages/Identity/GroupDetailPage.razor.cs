@@ -148,7 +148,7 @@ public sealed partial class GroupDetailPage
             { x => x.GroupId, _group!.Id },
         };
         var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
-        var dialog = await DialogService.ShowAsync<AddGroupMembersDialog>("Add members", parameters, options);
+        var dialog = await DialogService.ShowAsync<AddGroupMembersDialog>(string.Empty, parameters, options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled && result.Data is AddUsersToGroupResult addResult)
         {

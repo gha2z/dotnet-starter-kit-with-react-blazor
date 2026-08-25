@@ -1,12 +1,10 @@
 @using FSH.BlazorShared.Models.Tickets
 
 <MudDialog @bind-Visible="Open" Options="DialogOptions">
-    <TitleContent>
-        <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber" Class="mr-3" /> Open a ticket
-        </MudText>
-    </TitleContent>
     <DialogContent>
+        <FshFormDialogHeader Icon="@Icons.Material.Filled.ConfirmationNumber"
+                             Title="Open a ticket"
+                             Description="Describe the issue or request. The desk triages by priority and status." />
         <MudTextField @bind-Value="_title"
                       Label="Title"
                       Placeholder="Briefly describe the issue or request"

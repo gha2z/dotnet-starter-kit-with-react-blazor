@@ -85,7 +85,7 @@ public sealed partial class RolesListPage
     private async Task OpenCreateDialogAsync()
     {
         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
-        var dialog = await DialogService.ShowAsync<RoleCreateDialog>("New role", options);
+        var dialog = await DialogService.ShowAsync<RoleCreateDialog>(string.Empty, options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled && result.Data is RoleDto role && role.Id is not null)
         {

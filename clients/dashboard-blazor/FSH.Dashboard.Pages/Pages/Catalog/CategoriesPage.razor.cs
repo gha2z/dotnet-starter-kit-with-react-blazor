@@ -120,7 +120,7 @@ public sealed partial class CategoriesPage
     {
         var parameters = new DialogParameters { { "Category", category } };
         var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
-        var dialog = await DialogService.ShowAsync<CategoryEditorDialog>(category is null ? "Add a category" : "Edit category", parameters, options);
+        var dialog = await DialogService.ShowAsync<CategoryEditorDialog>(string.Empty, parameters, options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled)
         {

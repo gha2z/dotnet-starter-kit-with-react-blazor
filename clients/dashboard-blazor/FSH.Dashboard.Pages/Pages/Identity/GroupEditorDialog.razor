@@ -5,13 +5,9 @@
 
 <MudDialog>
     <DialogContent>
-        <div class="d-flex align-center gap-2 mb-2">
-            <FshToneIconTile Icon="@Icons.Material.Filled.Groups" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
-            <MudText Typo="Typo.h6" Style="margin: 0;">New group</MudText>
-        </div>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
-            Groups bundle members and roles into reusable cohorts. Adding a user to a group grants every role attached to that group.
-        </MudText>
+        <FshFormDialogHeader Icon="@Icons.Material.Filled.Groups"
+                             Title="New group"
+                             Description="Groups bundle members and roles into reusable cohorts. Adding a user to a group grants every role attached to that group." />
 
         <MudForm @ref="_mudForm" Validation="@(new DataAnnotationsValidator())">
             <MudTextField @bind-Value="_form.Name"

@@ -175,7 +175,7 @@ public sealed partial class RoleDetailPage
             { x => x.Role, _role },
         };
         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
-        var dialog = await DialogService.ShowAsync<RoleEditorDialog>("Edit role", parameters, options);
+        var dialog = await DialogService.ShowAsync<RoleEditorDialog>(string.Empty, parameters, options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled && result.Data is RoleDto updated)
         {

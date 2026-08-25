@@ -158,7 +158,7 @@ public sealed partial class ProductDetailPage
             { "Categories", categories },
         };
         var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
-        var dialog = await DialogService.ShowAsync<ProductEditorDialog>("Edit product", parameters, options);
+        var dialog = await DialogService.ShowAsync<ProductEditorDialog>(string.Empty, parameters, options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled)
         {

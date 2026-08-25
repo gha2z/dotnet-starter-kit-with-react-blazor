@@ -1596,6 +1596,26 @@ button.fsh-detail-stat:hover {
     color: var(--mud-palette-text-primary);
 }
 
+/* ---------- shared CRUD dialog chrome (React parity: components/ui/dialog) ---------- */
+.fsh-form-dialog-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.fsh-form-dialog-header-text {
+    min-width: 0;
+}
+
+/* React parity (DialogFooter): the leading Cancel renders as an outline button;
+   the trailing primary stays filled. Applies to every MudBlazor dialog uniformly. */
+.mud-dialog .mud-dialog-actions > .mud-button-root:first-child {
+    border: 1px solid color-mix(in srgb, var(--mud-palette-text-secondary) 40%, transparent);
+    background: transparent;
+    box-shadow: none;
+}
+
 /* ---------- catalog (React parity: catalog/*.tsx grids) ---------- */
 .fsh-brands-grid {
     display: grid;

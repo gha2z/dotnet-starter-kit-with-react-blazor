@@ -5,15 +5,11 @@
 
 <MudDialog>
     <DialogContent>
-        <div class="d-flex align-center gap-2 mb-2">
-            <FshToneIconTile Icon="@Icons.Material.Filled.Inventory2" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
-            <MudText Typo="Typo.h6" Style="margin: 0;">@(Product is null ? "Add a product" : "Edit product")</MudText>
-        </div>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
-            @(Product is null
+        <FshFormDialogHeader Icon="@Icons.Material.Filled.Inventory2"
+                             Title="@(Product is null ? "Add a product" : "Edit product")"
+                             Description="@(Product is null
                 ? "Add a product to your catalog. Give it a brand, a category, an initial price, and a starting stock."
-                : $"Update {Product.Name}. Price and stock are changed separately so the ledger stays traceable.")
-        </MudText>
+                : $"Update {Product.Name}. Price and stock are changed separately so the ledger stays traceable.")" />
 
         @* React parity (ProductEditorDialog): Name | SKU on one row *@
         <div class="fsh-dialog-grid-2 mb-1">

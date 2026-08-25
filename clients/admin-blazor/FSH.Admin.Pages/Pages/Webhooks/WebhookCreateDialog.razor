@@ -4,15 +4,9 @@
 
 <MudDialog>
     <DialogContent>
-        <div class="d-flex align-center gap-2 mb-2">
-            <FshToneIconTile Icon="@Icons.Material.Filled.Hub" Tone="Color.Secondary" TileSize="32px" IconSize="Size.Small" />
-            <MudText Typo="Typo.h6" Style="margin: 0;">New webhook subscription</MudText>
-        </div>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
-            Your endpoint receives a JSON payload with the event details. We sign each request
-            with HMAC-SHA256 in the <code class="fsh-code-chip">X-FSH-Signature</code> header
-            using the secret below — store it on your side and verify before trusting the body.
-        </MudText>
+        <FshFormDialogHeader Icon="@Icons.Material.Filled.Hub" Tone="Color.Secondary"
+                             Title="New webhook subscription"
+                             Description="Your endpoint receives a JSON payload with the event details. We sign each request with HMAC-SHA256 in the X-FSH-Signature header using the secret below - store it on your side and verify before trusting the body." />
 
         <MudTextField T="string"
                       @bind-Value="_url"

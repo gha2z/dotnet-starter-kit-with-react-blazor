@@ -61,7 +61,7 @@ public sealed partial class WebhooksListPage
     private async Task OpenCreateAsync()
     {
         var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true, CloseButton = true };
-        var dialog = await DialogService.ShowAsync<WebhookCreateDialog>("New webhook subscription", options);
+        var dialog = await DialogService.ShowAsync<WebhookCreateDialog>(string.Empty, options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled)
         {

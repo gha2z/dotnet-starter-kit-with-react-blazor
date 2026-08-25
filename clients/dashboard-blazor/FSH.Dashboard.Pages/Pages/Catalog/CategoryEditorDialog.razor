@@ -5,15 +5,11 @@
 
 <MudDialog>
     <DialogContent>
-        <div class="d-flex align-center gap-2 mb-2">
-            <FshToneIconTile Icon="@Icons.Material.Filled.FolderShared" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
-            <MudText Typo="Typo.h6" Style="margin: 0;">@(Category is null ? "Add a category" : "Edit category")</MudText>
-        </div>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
-            @(Category is null
+        <FshFormDialogHeader Icon="@Icons.Material.Filled.FolderShared"
+                             Title="@(Category is null ? "Add a category" : "Edit category")"
+                             Description="@(Category is null
                 ? "Add a category to your catalog. The slug is generated automatically from the name."
-                : $"Update details for {Category.Name}. The slug is re-derived from the name.")
-        </MudText>
+                : $"Update details for {Category.Name}. The slug is re-derived from the name.")" />
 
         <MudTextField T="string"
                       @bind-Value="_name"

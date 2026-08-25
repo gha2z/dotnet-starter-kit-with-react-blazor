@@ -2,14 +2,9 @@
 
 <MudDialog MaxWidth="MaxWidth.Medium" FullWidth="true">
     <DialogContent>
-        <div class="d-flex align-center gap-3 mb-2">
-            <FshToneIconTile Icon="@Icons.Material.Filled.Shield" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
-            <div>
-                <MudText Typo="Typo.subtitle1" Class="font-weight-semibold" Style="margin: 0;">New role</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin: 0;">Roles group users for permission management. Assign roles to control what each team member can do.</MudText>
-            </div>
-        </div>
-        <div style="border-bottom: 1px solid var(--mud-palette-divider); margin-bottom: 16px;"></div>
+        <FshFormDialogHeader Icon="@Icons.Material.Filled.Shield"
+                             Title="New role"
+                             Description="Roles group users for permission management. Assign roles to control what each team member can do." />
 
         <MudForm @ref="_mudForm" Validation="@(new DataAnnotationsValidator())">
             <MudTextField @bind-Value="_form.Name"

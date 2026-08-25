@@ -86,7 +86,7 @@ public sealed partial class BrandsPage
     {
         var parameters = new DialogParameters { { "Brand", brand } };
         var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
-        var dialog = await DialogService.ShowAsync<BrandEditorDialog>(brand is null ? "Add a brand" : "Edit brand", parameters, options);
+        var dialog = await DialogService.ShowAsync<BrandEditorDialog>(string.Empty, parameters, options);
         var result = await dialog.Result;
         if (result is not null && !result.Canceled)
         {

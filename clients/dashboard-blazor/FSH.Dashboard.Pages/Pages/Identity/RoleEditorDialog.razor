@@ -5,15 +5,11 @@
 
 <MudDialog>
     <DialogContent>
-        <div class="d-flex align-center gap-2 mb-2">
-            <FshToneIconTile Icon="@Icons.Material.Filled.Shield" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
-            <MudText Typo="Typo.h6" Style="margin: 0;">@(Role is null ? "Create a role" : $"Edit {Role.Name}")</MudText>
-        </div>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
-            @(Role is null
+        <FshFormDialogHeader Icon="@Icons.Material.Filled.Shield"
+                             Title="@(Role is null ? "Create a role" : $"Edit {Role.Name}")"
+                             Description="@(Role is null
                 ? "Define a permission bundle. You'll pick the permission grants right after."
-                : "Update this role's name and description. Permissions are managed on the role page.")
-        </MudText>
+                : "Update this role's name and description. Permissions are managed on the role page.")" />
 
         <MudForm @ref="_mudForm" Validation="@(new DataAnnotationsValidator())">
             <MudTextField @bind-Value="_form.Name"
