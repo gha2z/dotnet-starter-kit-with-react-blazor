@@ -34,29 +34,14 @@
        it must stay reachable when a filter yields zero rows, otherwise you can't clear it. *@
     <FshFilterBar Caption="Filters">
         @* React parity (products.tsx FilterRow): searchable comboboxes — type to narrow,
-           clearable. *@
-        <MudAutocomplete T="BrandDto"
-                         Value="_brandSel"
-                         ValueChanged="OnBrandSelChanged"
-                         SearchFunc="FilterBrands"
-                         ToStringFunc="@(b => b?.Name ?? string.Empty)"
-                         Label="Brand"
-                         Variant="Variant.Text"
-                         Clearable="true"
-                         ResetValueOnEmptyText="true"
-                         MaxItems="8"
-                         Style="min-width: 200px;" />
-        <MudAutocomplete T="CategoryDto"
-                         Value="_catSel"
-                         ValueChanged="OnCatSelChanged"
-                         SearchFunc="FilterCategories"
-                         ToStringFunc="@(c => c?.Name ?? string.Empty)"
-                         Label="Category"
-                         Variant="Variant.Text"
-                         Clearable="true"
-                         ResetValueOnEmptyText="true"
-                         MaxItems="8"
-                         Style="min-width: 200px;" />
+           clearable. FshCombobox replaces MudAutocomplete (selected label never rendered
+           under Value/ValueChanged binding). *@
+        <FshCombobox Label="Brand" Placeholder="All brands" Class="fsh-filter-combobox"
+                     Options="@_brandOptions" Value="@_brandSelId" ValueChanged="OnBrandFilterChanged" />
+
+        <FshCombobox Label="Category" Placeholder="All categories" Class="fsh-filter-combobox"
+                     Options="@_categoryOptions" Value="@_categorySelId" ValueChanged="OnCategoryFilterChanged" />
+
         <div class="fsh-prod-filter-pill">
             <MudButton OnClick="() => SetVisibility(null)"
                        Class="@(_visibilityFilter == null ? "mud-button-root-active" : "")">

@@ -1,0 +1,99 @@
+@namespace FSH.BlazorShared.Components
+@using MudBlazor
+
+@* React parity (components/list Combobox): a trigger showing the selected label (or
+   placeholder) + chevron; a popover with a search field narrowing the options; an
+   optional clear (X) affordance. Replaces MudAutocomplete, whose Text display breaks
+   under Value/ValueChanged binding (selected label never renders). *@
+<div class="@($"fsh-combobox {Class}")">
+    <div class="@($"fsh-combobox-trigger {TriggerClass}")" @onclick="TogglePopover"
+         role="combobox" aria-haspopup="listbox" aria-expanded="@_open" tabindex="0">
+        <span class="@(HasValue ? "fsh-combobox-value" : "fsh-combobox-placeholder")">
+            @(HasValue ? DisplayLabel : (Placeholder ?? Label))
+        </span>
+        <span class="fsh-combobox-actions">
+            @if (HasValue && Clearable)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                               Class="fsh-combobox-clear" aria-label="Clear"
+                               OnClick="ClearAsync" StopPropagation="true" />
+            }
+            <MudIcon Icon="@(_open ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                     Size="Size.Small" Class="fsh-combobox-chevron" />
+        </span>
+    </div>
+    <MudPopover Open="@_open" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft"
+                Class="fsh-combobox-popover" Style="@PopoverStyle" CloseOnOutsideClick="true">
+        @if (Searchable)
+        {
+            <div class="fsh-combobox-search">
+                <MudTextField @bind-Value="_search" Placeholder="Search…"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              IconSize="Size.Small" Immediate="true" Variant="Variant.Text"
+                              Margin="Margin.Dense" />
+            </div>
+        }
+        <MudList T="string" Dense="true" Class="fsh-combobox-list" role="listbox">
+            @foreach (var opt in FilteredOptions)
+            {
+                var selected = opt.Value == Value;
+                <MudListItem T="string" @key="opt.Value" OnClick="@(async () => await SelectAsync(opt))"
+                             Class="@(selected ? "fsh-combobox-selected" : string.Empty)">
+                    <span class="fsh-combobox-option">@opt.Label</span>
+                    @if (selected)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="fsh-combobox-check" />
+                    }
+                </MudListItem>
+            }
+            @if (FilteredOptions.Count == 0)
+            {
+                <div class="fsh-combobox-empty">No matches</div>
+            }
+        </MudList>
+    </MudPopover>
+</div>
+
+@code {
+    private bool _open;
+    private string _search = string.Empty;
+
+    /// <summary>Label shown above nothing — used only as the trigger placeholder fallback.</summary>
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string Class { get; set; } = string.Empty;
+    [Parameter] public string TriggerClass { get; set; } = string.Empty;
+    [Parameter] public bool Clearable { get; set; } = true;
+    [Parameter] public bool Searchable { get; set; } = true;
+    [Parameter] public string PopoverStyle { get; set; } = "width: 280px;";
+    [Parameter] public IReadOnlyList<FshComboboxOption> Options { get; set; } = [];
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+
+    private bool HasValue => !string.IsNullOrEmpty(Value);
+
+    private string? DisplayLabel =>
+        Options.FirstOrDefault(o => o.Value == Value)?.Label;
+
+    private IReadOnlyList<FshComboboxOption> FilteredOptions =>
+        string.IsNullOrWhiteSpace(_search)
+            ? Options
+            : Options.Where(o => o.Label.Contains(_search, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    private void TogglePopover()
+    {
+        _open = !_open;
+        _search = string.Empty;
+    }
+
+    private async Task SelectAsync(FshComboboxOption option)
+    {
+        _open = false;
+        await ValueChanged.InvokeAsync(option.Value);
+    }
+
+    private async Task ClearAsync()
+    {
+        await ValueChanged.InvokeAsync(null);
+    }
+}

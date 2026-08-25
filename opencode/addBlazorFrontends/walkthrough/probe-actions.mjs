@@ -101,11 +101,13 @@ const actions = {
     await d.getByLabel('SKU', { exact: false }).fill(`QA-${ts}`);
     await d.getByLabel('Name', { exact: false }).fill(name);
     await d.getByLabel('Price', { exact: false }).fill('9.99');
-    // Brand + Category are required MudSelects — pick the first option of each
-    for (const selectLabel of ['Brand', 'Category']) {
-      await d.getByLabel(selectLabel, { exact: false }).click();
-      await page.locator('.mud-popover .mud-list-item').first().waitFor({ state: 'visible', timeout: 6000 }).catch(() => {});
-      await page.locator('.mud-popover .mud-list-item').first().click().catch(() => {});
+    // Brand + Category are FshCombobox pickers — trigger click opens a page-level
+    // popover (MudPopover teleports to the root provider, NOT inside .mud-dialog).
+    for (const i of [0, 1]) {
+      await d.locator('.fsh-combobox-trigger').nth(i).click();
+      await page.locator('.fsh-combobox-popover:visible .mud-list-item').first()
+        .waitFor({ state: 'visible', timeout: 6000 }).catch(() => {});
+      await page.locator('.fsh-combobox-popover:visible .mud-list-item').first().click().catch(() => {});
       await page.waitForTimeout(500);
     }
     await saveDialog(page, /add product|create|add|save/i);

@@ -36,30 +36,16 @@
 
         @* Brand | Category — searchable pickers (React Combobox parity) *@
         <div class="fsh-dialog-grid-2 mb-1">
-            <MudAutocomplete T="BrandDto"
-                             Value="_brandSel"
-                             ValueChanged="OnBrandSelChanged"
-                             SearchFunc="FilterBrands"
-                             ToStringFunc="@(b => b?.Name ?? string.Empty)"
-                             Label="Brand"
-                             Placeholder="Select a brand…"
-                             Variant="Variant.Outlined"
-                             Margin="Margin.Dense"
-                             Clearable="true"
-                             ResetValueOnEmptyText="true"
-                             MaxItems="8" />
-            <MudAutocomplete T="CategoryDto"
-                             Value="_catSel"
-                             ValueChanged="OnCatSelChanged"
-                             SearchFunc="FilterCategories"
-                             ToStringFunc="@(c => c?.Name ?? string.Empty)"
-                             Label="Category"
-                             Placeholder="Select a category…"
-                             Variant="Variant.Outlined"
-                             Margin="Margin.Dense"
-                             Clearable="true"
-                             ResetValueOnEmptyText="true"
-                             MaxItems="8" />
+            <div>
+                <div class="fsh-combobox-field-label">Brand*</div>
+                <FshCombobox Label="Brand" Placeholder="Select a brand…" Class="fsh-combobox-full"
+                             Options="@_brandOptions" Value="@_brandSelId" ValueChanged="OnBrandSelChanged" />
+            </div>
+            <div>
+                <div class="fsh-combobox-field-label">Category*</div>
+                <FshCombobox Label="Category" Placeholder="Select a category…" Class="fsh-combobox-full"
+                             Options="@_categoryOptions" Value="@_categorySelId" ValueChanged="OnCatSelChanged" />
+            </div>
         </div>
 
         @if (Product is null)
@@ -142,26 +128,26 @@
     private string? _error;
     private bool _isSubmitting;
 
-    // Searchable picker selections (React Combobox parity); the Guid ids derive from these.
-    private BrandDto? _brandSel;
-    private CategoryDto? _catSel;
+    // FshCombobox selections — string ids (React Combobox parity); the Guid ids derive from these.
+    private string? _brandSelId;
+    private string? _categorySelId;
 
-    private Task<IEnumerable<BrandDto>> FilterBrands(string term, CancellationToken ct) =>
-        Task.FromResult(Brands.Where(b => b.Name.Contains(term, StringComparison.OrdinalIgnoreCase)).AsEnumerable());
+    private IReadOnlyList<FshComboboxOption> _brandOptions =>
+        Brands.Select(b => new FshComboboxOption(b.Id.ToString(), b.Name)).ToList();
 
-    private Task<IEnumerable<CategoryDto>> FilterCategories(string term, CancellationToken ct) =>
-        Task.FromResult(Categories.Where(c => c.Name.Contains(term, StringComparison.OrdinalIgnoreCase)).AsEnumerable());
+    private IReadOnlyList<FshComboboxOption> _categoryOptions =>
+        Categories.Select(c => new FshComboboxOption(c.Id.ToString(), c.Name)).ToList();
 
-    private void OnBrandSelChanged(BrandDto? value)
+    private void OnBrandSelChanged(string? value)
     {
-        _brandSel = value;
-        _brandId = value?.Id;
+        _brandSelId = value;
+        _brandId = Guid.TryParse(value, out var brandId) ? brandId : null;
     }
 
-    private void OnCatSelChanged(CategoryDto? value)
+    private void OnCatSelChanged(string? value)
     {
-        _catSel = value;
-        _categoryId = value?.Id;
+        _categorySelId = value;
+        _categoryId = Guid.TryParse(value, out var categoryId) ? categoryId : null;
     }
 
     protected override void OnInitialized()
@@ -172,8 +158,8 @@
             _description = Product.Description ?? string.Empty;
             _brandId = Product.BrandId;
             _categoryId = Product.CategoryId;
-            _brandSel = Brands.FirstOrDefault(b => b.Id == Product.BrandId);
-            _catSel = Categories.FirstOrDefault(c => c.Id == Product.CategoryId);
+            _brandSelId = Product.BrandId.ToString();
+            _categorySelId = Product.CategoryId.ToString();
             _priceAmount = Product.Price.Amount;
             _currency = Product.Price.Currency;
             _stock = Product.Stock;

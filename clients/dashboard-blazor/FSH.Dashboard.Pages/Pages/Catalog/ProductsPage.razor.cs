@@ -26,28 +26,30 @@ public sealed partial class ProductsPage
     private Guid? _categoryFilter;
     private bool? _visibilityFilter;
 
-    // Searchable combobox selections (React Combobox parity); the Guid filters derive from these.
-    private BrandDto? _brandSel;
-    private CategoryDto? _catSel;
+    // FshCombobox selections — string ids (React Combobox parity: opaque value + label).
+    private string? _brandSelId;
+    private string? _categorySelId;
 
-    private Task<IEnumerable<BrandDto>> FilterBrands(string term, CancellationToken ct) =>
-        Task.FromResult(_brands.Where(b => b.Name.Contains(term, StringComparison.OrdinalIgnoreCase)).AsEnumerable());
+    private IReadOnlyList<FshComboboxOption> _brandOptions => _brands
+        .Select(b => new FshComboboxOption(b.Id.ToString(), b.Name)).ToList();
 
-    private Task<IEnumerable<CategoryDto>> FilterCategories(string term, CancellationToken ct) =>
-        Task.FromResult(_categories.Where(c => c.Name.Contains(term, StringComparison.OrdinalIgnoreCase)).AsEnumerable());
+    private IReadOnlyList<FshComboboxOption> _categoryOptions => _categories
+        .Select(c => new FshComboboxOption(c.Id.ToString(), c.Name)).ToList();
 
     // Awaited (not fire-and-forget): the completing handler triggers the re-render.
     // Fire-and-forget loads left the UI stuck on skeletons (see TicketsListPage lesson).
-    private async Task OnBrandSelChanged(BrandDto? value)
+    private async Task OnBrandFilterChanged(string? value)
     {
-        _brandFilter = value?.Id;
+        _brandSelId = value;
+        _brandFilter = Guid.TryParse(value, out var brandId) ? brandId : null;
         _pageNumber = 1;
         await LoadAsync();
     }
 
-    private async Task OnCatSelChanged(CategoryDto? value)
+    private async Task OnCategoryFilterChanged(string? value)
     {
-        _categoryFilter = value?.Id;
+        _categorySelId = value;
+        _categoryFilter = Guid.TryParse(value, out var categoryId) ? categoryId : null;
         _pageNumber = 1;
         await LoadAsync();
     }
@@ -145,8 +147,8 @@ public sealed partial class ProductsPage
         _brandFilter = null;
         _categoryFilter = null;
         _visibilityFilter = null;
-        _brandSel = null;
-        _catSel = null;
+        _brandSelId = null;
+        _categorySelId = null;
         _pageNumber = 1;
         await LoadAsync();
     }
