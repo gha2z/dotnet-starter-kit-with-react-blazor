@@ -1,44 +1,18 @@
-# Enhanced Workflow Guide — Task→Skill Map + Two-Mode Orchestration
+# Workflow Guide — Orchestration Modes + QA Gates
 
-> This guide maps **every common task** to the right skill/tool, and explains the **two orchestration modes**:
-> 1. **Swarm mode** (opencode-swarm plugin) — multi-agent parallel with authority rules + gates
-> 2. **Manual multi-session mode** (this protocol) — single agent, live docs, Kanban board, handoff
-
-Read `readme.md` first for protocol overview. This file is the detailed task→tool reference + new-project bootstrap.
+> This file explains the **two orchestration modes** and **QA gates** for this track.
+> Read `readme.md` first for protocol overview.
 
 ---
 
-## 1. Task → Skill Map (FSH-flavored)
+## 1. Task → Skill Map
 
-> **Canonical task→skill map: `workflows/current/task-skills.md`** (FSH recipes vs the dotnet-skills
-> plugin suite, FSH wins structurally) plus the repo's own `AGENTS.md` "Adding things" pointers.
-> The table below is retained for the Blazor/MAUI task families this track acts on; keep it in sync
-> with the canonical map, not the other way around.
-
-| Task | Skill | When to use |
-|---|---|---|
-| **Add API endpoint / business op** | `add-feature` | Vertical slice in existing module: command/query + handler + validator + endpoint |
-| **Add DB entity / table** | `add-entity` | New domain entity with EF config + migration in existing module |
-| **Add whole module (bounded context)** | `add-module` | New `Modules.{Name}` + `.Contracts` + `IModule` + DbContext + permissions + migrations |
-| **Add React page (list+create)** | `add-react-page` | API module → page → lazy route → (admin) permission gate → Playwright test |
-| **Add Blazor page (list+detail+create)** | `add-blazor-page` | Service → page → route → (admin) permission gate → bunit test |
-| **Add full slice (backend + React)** | `add-full-slice` | Composes `add-feature` + `add-react-page` |
-| **Add Blazor form (create/edit)** | `implement-blazor-form` | MudForm with validation on Blazor WASM page |
-| **Add Blazor list (paged/filterable/sortable)** | `implement-blazor-list` | MudTable list page |
-| **Create EF migration** | `create-migration` | After changing entities/EF config — central Migrations project |
-| **Publish cross-module event** | `add-integration-event` | Outbox + idempotent handler in another module |
-| **Add permission end-to-end** | `add-permission` | Server constant + endpoint gate + (admin) catalog + route guard |
-| **Mirror permission to C# + policy** | `add-permission-csharp` | Backend adds endpoint permission → C# constant + policy |
-| **Add MAUI native feature** | `add-maui-hybrid-feature` | Push, biometric, camera, offline queue, deep linking |
-| **Write tests** | `testing-guide` | xUnit + Shouldly + NSubstitute + AutoFixture, AAA naming |
-| **Implement read queries** | `query-patterns` | Paginated lists, search/filter/sort, single-entity fetches (DbContext LINQ) |
-| **Setup Blazor JWT auth** | `setup-blazor-auth` | ITokenStore (localStorage) + AuthStateProvider + DelegatingHandler + Permissions |
-| **Setup Blazor SignalR** | `setup-blazor-realtime` | HubConnection, notifications, chat |
-| **Setup Dashboard SSE** | `setup-blazor-sse` | Server-Sent Events for dashboard-blazor only |
+> **Canonical: `workflows/current/task-skills.md`**. Load the skill before the task, not during.
+> FSH skills are authoritative for structure; global dotnet-skills inform technique.
 
 ---
 
-## 2. Two Orchestration Modes
+## 2. Two-Mode Orchestration
 
 ### A. Swarm Mode (opencode-swarm plugin)
 
@@ -53,20 +27,12 @@ Read `readme.md` first for protocol overview. This file is the detailed task→t
 /swarm complete 1          # Phase complete: drift verify + evidence write
 ```
 
-**Agent roster (lean default)**: architect, coder, explorer, reviewer, test_engineer  
+**Agent roster (lean default)**: architect, coder, explorer, reviewer, test_engineer
 **Disabled by default**: sme, critic, docs, designer — enable in config if needed.
 
 **Authority rules** (in `.opencode/opencode-swarm.json`):
 - coder: write-scoped to `src/Modules/**`, `clients/**`, `opencode/**`, `.agents/**`, `deploy/**`
 - coder: DENY `src/BuildingBlocks/**`, `src/Host/**` (architect-only)
-
-**Gates** (ordered):
-1. Build + typecheck (`dotnet build` / `dotnet test --no-build`)
-2. Lint (`dotnet format --verify-no-changes` + project linters)
-3. SAST (Semgrep + built-in)
-4. Mutation test (80% kill rate — opt-in via QA profile)
-5. Drift verify (`critic_drift_verifier` agent)
-6. Review council (`reviewer` + `test_engineer` minimum)
 
 ---
 
@@ -78,152 +44,56 @@ Read `readme.md` first for protocol overview. This file is the detailed task→t
 
 | Step | Command / Action | Artifact updated |
 |---|---|---|
-| **Start** | `coordination.ps1 -Start` → read `STATUS.md` + all `live/*.md` + latest `00_summary/` | Context loaded |
-| **Heartbeat** | `coordination.ps1 -Heartbeat` — **every user turn**, not only task boundaries | Heartbeat stamped |
-| **Work** | Code → build → verify → stage | Working tree |
-| **Close-out** | Write `00_summary/implementation-summary-<ts>-<sid>.md` (with `## Lessons`) + append one line to `STATUS.md` + update board row Status cell | Single tracking artifact + append-only ledger |
-| **Gate** | `coordination.ps1 -CloseOut` → stage explicit paths → show `git diff --cached --stat` → wait for approval | Blocks commit until all artifacts pass |
-
-**Session log template** (`live/_template.md`):
-```markdown
-## Session N — YYYY-MM-DD — <title>
-
-### Context
-- Branch: `feature/xyz`
-- Base: `main` @ <sha>
-- Goal: <one sentence>
-
-### Work
-- [ ] Task 1.1 — <desc> — <status>
-- [ ] Task 1.2 — <desc> — <status>
-
-### Decisions
-- <decision> — <rationale>
-
-### Blockers / Follow-ups
-- <blocker> → <action>
-
-### Next session
-- Pick up: <task id>
-```
-```
-
-**Wave DAG + Critical Path** (every new build phase `plan.md` opens with a wave block):
-
-```markdown
-## Wave DAG
-Nodes = task IDs · edges = `depends` · waves = topological partitions (serial by convention)
-mermaid:
-  flowchart LR
-    t1.1 --> t1.3 --> t1.5
-    t1.2 --> t1.3
-    t1.4 --> t1.6
-Waves: W1 [t1.1,t1.2,t1.4] → W2 [t1.3] → W3 [t1.5,t1.6]
-Critical path: t1.1 → t1.3 → t1.5   (longest dependency chain — gate here first)
-```
-
-- "Parallel-safe" requires **disjoint owned files** per the `coordination.ps1` overlap check — never
-  inferred from the DAG alone.
-- The critical path is where gate risk concentrates: if a wave on it slips, downstream waves absorb
-  the delay. Check the critical-path task (`-Gate` + per-unit verify) before parallel satellites.
+| Start session | Agent reads protocol + STATUS + live/ (self-starting) | `live/sess-<id>.md` |
+| Heartbeat | `coordination.ps1 -Heartbeat` (every turn) | `live/sess-<id>.md` timestamp |
+| Claim task | Agent writes to `live/board.md` | `board.md` |
+| Build + test | `dotnet build` + `dotnet test --no-build` | terminal |
+| Stage for review | `git add <explicit paths>` + show diff | staged diff |
+| Wave close-out | `coordination.ps1 -CloseOut` + STATUS.md append | `STATUS.md`, `00_summary/` |
+| Lessons | `coordination.ps1 -Lesson "..."` | `live/lessons.md` |
 
 ---
 
-## 3. Plugin Roster + Token Policy
+## 3. QA Gates & Orchestrator Integration
 
-### `.opencode/opencode.json` — installed plugins
+| Gate | Tool | When | Block |
+|---|---|---|---|
+| **Clean build** | `dotnet build` | After every code change | hard |
+| **Tests pass** | `dotnet test --no-build` | After every code change | hard |
+| **Blazor WASM verify** | `verify.ps1` | Before wave close-out | hard |
+| **MAUI verify** | `verify-hybrid.ps1` | Before wave close-out (MAUI only) | hard |
+| **bUnit tests** | `dotnet test` (Blazor projects) | After every Blazor change | hard |
+| **Playwright probe** | `walkthrough/run-probes.mjs` | After UI changes | advisory |
+| **SAST scan** | `pre_check_batch` / Semgrep | Phase boundaries | hard (new findings) |
+| **Drift verify** | `critic_drift_verifier` | Phase completion | advisory |
+| **Coordination gate** | `coordination.ps1 -Gate` | Before staging | hard |
 
-| Plugin | Version | Purpose |
+### Decision flowchart
+
+```
+Code changed?
+├─ YES → dotnet build → dotnet test
+│         ├─ FAIL → fix → retry
+│         └─ PASS → wave complete?
+│                   ├─ YES → verify.ps1 → coordination.ps1 -CloseOut → stage for review
+│                   └─ NO → next task
+└─ NO → idle (heartbeat only)
+```
+
+---
+
+## 4. File Inventory
+
+| File | Purpose | Updated by |
 |---|---|---|
-| `opencode-autotitle` | 0.1.3 | Auto session titles from first user message |
-| `opencode-notify` | 0.3.1 | Desktop notifications on completion / input wait |
-| `envsitter-guard` | 0.0.4 | Blocks secret leaks in `.env` / config |
-| `@gotgenes/opencode-agent-identity` | 3.1.1 | Persistent agent identity across sessions |
-| `opencode-context-analysis-plugin` | local | `/context` command — blast radius, dependency graph |
-
-### Model allocation
-
-| Tier | Models | Agents | Max tokens/session |
-|---|---|---|---|
-| **Reasoning** | `auto/smart` (omniroute, unresolved — verify fresh per session) | architect, critic | 200k |
-| **Standard** | `auto/coding` (omniroute, unresolved) | coder, reviewer, test_engineer, explorer | 128k |
-| **Lite** | gemini-flash / gpt-4o-mini | docs, summarization, grep | 64k |
-
-Configure in `.opencode/opencode-swarm.json` → `agents.<name>.model`.
-
----
-
-## 4. QA Gates (Enforced)
-
-| Gate | Tool | Trigger | Failure = |
-|---|---|---|---|
-| Build + typecheck | `dotnet build` / `dotnet test --no-build` | Pre-commit / pre-PR | Block commit |
-| Lint | `dotnet format --verify-no-changes` + linters | Pre-commit | Block commit |
-| SAST | `sast_scan` (Semgrep + built-in) | Phase complete | Block phase |
-| Mutation test | `mutation_test` (80% kill) | Phase complete (opt-in) | Warn / Block |
-| Drift verify | `critic_drift_verifier` agent | Phase complete | Block phase |
-| **Browser walkthrough** | Playwright driver in `walkthrough/` (real clicks, console/network/visual checks) | Any Blazor/Hybrid page added or changed | Block commit — bUnit is necessary but not sufficient (AGENTS.md GR#11) |
-| Review council | `reviewer` + `test_engineer` (min) | Phase complete | Block phase |
-| **Summary close-out** | `coordination.ps1 -CloseOut` (manual mode) | Wave/phase complete | Block commit |
-
----
-
-## 5. New SaaS Project (From This Repo — no standalone)
-
-There is **no standalone workflow repository** — it was retired by user decision. To seed a new
-SaaS, use `opencode/init-saas-workflow.ps1`, which clones **this** repo as its source:
-
-```powershell
-pwsh opencode/init-saas-workflow.ps1 -Name AcmeSaaS -WorkDir C:\dev\AcmeSaaS -FromClone C:\repos\dotnet-starter-kit-with-react-blazor-main
-```
-
-What it does (each step prints + can be skipped with a switch):
-
-1. **Clone/copy** the source repo into `-WorkDir` (fresh `.git`, no history baggage).
-2. **Rename ritual** — replacement map over file names, `.csproj`, `.slnx`, namespaces, appsettings,
-   `config.json`, CSS/JS, test names: `FSH.Starter`→`AcmeSaaS.Starter`, `FSH.`→`AcmeSaaS.` (project
-   namespaces), `FSH`→`AcmeSaaS` (remaining identifiers), `FullStackHero`→`AcmeSaaS` (brand). Then a
-   **verification sweep**: grep residual references + full build + `Architecture.Tests` → prints a
-   residual report for manual review.
-3. **Strip** (guided prompts) — `-StripReact`, `-StripMaui`, `-StripModules Catalog,Billing,…`.
-4. **Clean** — remove project-private dirs (`opencode/addBlazorFrontends/`, `.swarm/`, …).
-5. **Wire workflow** — `.opencode/opencode-swarm.json`, `.opencode/skill-routing.yaml`, `.gitignore`
-   entries, slim `AGENTS.md`.
-6. **Restore + build gate** — fails loudly with the fix list if the rename broke something.
-7. **First commit + session bootstrap** — clean-clone commit, `opencode/live/` skeleton + `STATUS.md`.
-8. **Print next steps** — the exact commands to open the first session.
-
-Full detail lives in `opencode/AGENTIC-GUIDE.md` §4 (template + clone paths). The `{{PLACEHOLDERS}}`
-parameterization is replaced by the rename ritual above; the protocol core
-(`AGENTIC-GUIDE.md`, `_tracks-template/`, this workflow) is copied by hand from this repo when needed.
-
----
-
-## 6. File Inventory (Protocol Core)
-
-> The **tool-agnostic protocol core now ships in `workflows/`** — `workflows/current/`
-> (this environment's canonical package: session-protocol, coordination.ps1 v2, task-skills,
-> verify contract, adapt bridges) and `workflows/neutral/` (same, for the original repo / any
-> tool). This track's files below are its working instance of the same protocol.
-
-| File | Purpose |
-|---|---|
-| `readme.md` | Protocol overview + quick start |
-| `WORKFLOW-GUIDE.md` | **This file** — task→skill, modes, tokens, gates, new-project bootstrap |
-| `coordination.ps1` | Zone map + session commands (board, index, live, status, handoff) |
-| `verify.ps1` | Build + test + smoke publish (FSH defaults) |
-| `verify-hybrid.ps1` | MAUI Hybrid + PWA verification |
-| `live/_template.md` | Session log template |
-| `live/README.md` | Session file index |
-| `live/board.md` | Kanban board template |
-| `live/sess-main.md` | Main session log |
-| `00-Index.md` | Task registry + phase summary |
-| `00_summary/_template.md` | Wave summary template (incl. `## Lessons / Process Improvements`) |
-| `STATUS.md` | One-line handoff state |
-| `99-Glossary.md` | Project terms |
-| `00-Setup.md` | Environment setup checklist |
-| `AGENTIC-GUIDE.md` | Standalone user guide (repo-level; protocol details canonical in `workflows/current/session-protocol.md`) |
-
----
-
-*Version: see git tag / `00-Setup.md`. Source: this repo (workflow is repo-local — no standalone).*
+| `STATUS.md` | Dashboard (current/next/obstacles) + append-only ledger | agent |
+| `live/sess-<id>.md` | Per-session identity, heartbeat, focus, lessons | agent |
+| `live/board.md` | Kanban: backlog → in-progress → done | agent |
+| `live/lessons.md` | Failure-pattern registry + chronological log | agent |
+| `live/locks/verify.lock` | Mutex for verify.ps1 execution | agent |
+| `00-Index.md` | Roadmap: all phases + status | agent |
+| `plan.md` | Phase plan with task status markers | agent |
+| `implementation.md` | Wave-level implementation log | agent |
+| `00_summary/implementation-summary-*.md` | Wave close-out evidence | agent |
+| `readme.md` | Track reference (scope, dev servers, DoD) | human |
+| `PROJECT.md` | Project facts and pointers | human |

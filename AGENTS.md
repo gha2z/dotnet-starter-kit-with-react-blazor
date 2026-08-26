@@ -13,15 +13,9 @@ relevant rule file before working in that area** (see the index below). Keep thi
 Any coding agent, any tool (opencode, Claude Code, Copilot, Cursor, Gemini CLI, Codex), any
 session (fresh or resumed after compaction): because you read this file, you run the session
 protocol on **every task** — nobody reminds you. Canonical protocol:
-`workflows/current/session-protocol.md`. The short version: read the protocol + the track's
-`START-HERE.md` + `STATUS.md` (top dashboard) + the current mission folder → identify as
-`sess-<id>` in `live/sess-<id>.md` (verify your tool/model identity fresh each session) →
-`pwsh workflows/current/coordination.ps1 -Session <sid> -Start` → heartbeat every turn + one
-lesson line per turn → close-out (summary + `## Lessons` + STATUS refresh + `-CloseOut`,
-fail-closed) → stage by explicit paths, never `-A`, never push. Track for this repo:
-`opencode/addBlazorFrontends/` — `zones.md` there is the ownership authority the gate parses.
-A tool-neutral variant of the same package (for the original `fullstackhero/dotnet-starter-kit`
-repo) lives at `workflows/neutral/`.
+`workflows/{current,neutral}/session-protocol.md`. Short version: read the protocol → the
+track's `STATUS.md` → identify as `sess-<id>` in `live/sess-<id>.md` → heartbeat every turn
++ one lesson per turn → close-out → stage by explicit paths, never `-A`, never push.
 
 ## Workflow artifacts (mission convention)
 
@@ -187,8 +181,8 @@ records for DTOs/events/value objects · `default!` for required non-nullable st
 
 ## AI tooling resources
 
-- **Rules** — `.agents/rules/*.md` (indexed above). Read on demand.
-- **Skills** — `.agents/skills/*/SKILL.md`: step-by-step task recipes. Scaffolders: `add-feature`, `add-entity`, `add-module`, `add-react-page`, `add-full-slice`, `add-blazor-page`. Ops: `create-migration`, `add-integration-event`, `add-permission`, `add-permission-csharp`. Reference: `query-patterns`, `testing-guide`, `mediator-reference`. Blazor/MAUI: `setup-blazor-auth`, `setup-blazor-realtime`, `setup-blazor-sse`, `implement-blazor-form`, `implement-blazor-list`, `add-maui-hybrid-feature`.
-- **Workflows** — `.agents/workflows/*.md`: task playbooks (`code-reviewer`, `feature-scaffolder`, `module-creator`, `architecture-guard`, `migration-helper`).
-- **Session protocol** — `workflows/current/` is the canonical package: `session-protocol.md` (full ritual), `coordination.ps1` (zones.md-driven gate, heartbeat, lessons, close-out; defaults to the `opencode/addBlazorFrontends` track), `task-skills.md` (task→skill map, FSH recipes vs dotnet plugin suite), `adapt/` (AGENTS.md + developer-tooling.md bridges). Read `session-protocol.md` fully on your first session; `task-skills.md` when picking recipes.
-- **Enhanced workflow** — `opencode/addBlazorFrontends/WORKFLOW-GUIDE.md`: the track-flavored task→skill map for Blazor/MAUI parity work; §4 = the mandatory real-browser walkthrough QA gate (GR 11). FSH recipes win on overlap; plugins fill gaps.
+- **Session protocol** — `workflows/{current,neutral}/session-protocol.md`. Read on first session.
+- **Task → skill map** — `workflows/{current,neutral}/task-skills.md`. Load the skill before the task, not during.
+- **Skills** — `.agents/skills/*/SKILL.md`. Recipes for specific tasks (read before acting).
+- **Rules** — `.agents/rules/*.md`. Conventions per area (read before working in that area).
+- **Workflows** — `.agents/workflows/*.md`. Task playbooks (human-readable references).

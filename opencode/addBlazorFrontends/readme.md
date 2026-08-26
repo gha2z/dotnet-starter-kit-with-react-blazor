@@ -21,22 +21,8 @@ After completing a feature:
 4. Then commit
 5. **Never `git push`** — pushes are user-managed; independent pushes break coordination
 
-Also run the staging gate first: `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid>`
-(validates your session file, heartbeat, file ownership and the touched-files overlap check —
-see "Coordination Gate Script" below).
-
----
-
-## Session Start Ritual
-
-**Canonical: [`workflows/current/session-protocol.md`](../../workflows/current/session-protocol.md)
-§1.** Short version: read `START-HERE.md` → `STATUS.md` dashboard → the current mission folder
-(`spec.md` / `plan.md` / `implementation.md`) → identify in `live/sess-<id>.md` (fresh model
-identity) → `coordination.ps1 -Session <sid> -Start` → lessons-ledger tail check → overlap
-check → verify baseline. During work: heartbeat + one lesson line every turn. Close-out:
-summary to `00_summary/` (with `## Lessons`) + STATUS refresh + `-CloseOut` + explicit-path
-staging. Load relevant skills from `.agents/skills/` and the task→skill map in
-`WORKFLOW-GUIDE.md` before starting.
+Also run the staging gate first: `pwsh workflows/current/coordination.ps1 -Session <sid> -TrackRoot opencode/addBlazorFrontends`
+(validates your session file, heartbeat, file ownership and the touched-files overlap check).
 
 ---
 
@@ -147,49 +133,10 @@ live/
     - `-Gate` fails closed while the ledger is missing; `-CloseOut` already requires the `## Lessons` section
       in the wave summary. A session that never records a lesson cannot stage.
 
-## Coordination Gate Script
+## Coordination Gate
 
-`opencode/addBlazorFrontends/coordination.ps1` turns rules 1/7/8/9 into a mechanical gate — run it
-at session start, before staging, and before any shared-checkout build:
-
-```powershell
-# session start: validates session file + stamps a fresh heartbeat
-pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Start
-
-# before staging: ownership + touched-files + heartbeat checks (exit code 1 on violations)
-pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Gate
-
-# build/verify lock (rule 9) — create before verify.ps1 / verify-hybrid.ps1, delete after
-pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -LockVerify
-pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -UnlockVerify
-
-# stamp heartbeat on every user turn
-pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Heartbeat
-
-# wave close-out (Stage A): summary + ## Lessons section + refreshed STATUS.md (exit code 1 = block commit)
-pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -CloseOut
-
-# continuous improvement (rule 13): read the ledger at turn start, append one line at turn end
-pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Lessons
-pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Lesson "<failure -> root cause -> remedy -> proof>"
-```
-
-The zone→session map lives at the top of the script (keep it in sync with `Scope Restriction`
-below — the script fails closed: any path outside your zones blocks staging).
-
-## AI Memory & Knowledge Tools (API reference)
-
-The three stores are often conflated — use the exact tool for each:
-
-| Store | Tool(s) | Actions / usage |
-|---|---|---|
-| **Project memory** (per-session durable facts, visible as `<project-memory>`) | `ctx_memory` | `write` · `update` · `archive` · `merge` · `get (ids)` · `list` — id-based CRUD only |
-| **Conversation & doc recall** (full session history, indexed git commits) | `ctx_search` | semantic search across memories, git commits, message history; expand hits via `ctx_expand(start, end)` |
-| **Swarm knowledge base** (`.swarm/knowledge.jsonl`) | `knowledge_recall` / `knowledge_query` | semantic (`recall`) or filter-based (`query`) retrieval across swarm/hive tiers |
-
-There is **no** `ctx_memory(action="query"/"recall")` — those verbs live on `knowledge_*` and
-`ctx_search`. A session that answers "where is project memory?" correctly: `ctx_memory` for
-facts, `ctx_search` for history, `knowledge_recall` for the swarm KB.
+Canonical: `workflows/current/coordination.ps1`. Run `coordination.ps1 --help` for the full command list.
+Always pass `-TrackRoot opencode/addBlazorFrontends -Session <sid>`.
 
 ## Subagent Dispatch Protocol
 
@@ -320,7 +267,7 @@ Modify ONLY:
 - `./README.md` — root project docs (announce the edit on `live/board.md` first)
 - `./.agents/rules/frontend/{blazor-shared,blazor-admin,blazor-dashboard,maui-hybrid}.md` — OUR docs
 - `./.agents/skills/{add-blazor-page,add-maui-hybrid-feature,add-permission-csharp,implement-blazor-form,implement-blazor-list,setup-blazor-auth,setup-blazor-realtime,setup-blazor-sse}/SKILL.md` — OUR skills
-- `./opencode/AGENTIC-GUIDE.md` · `./opencode/_tracks-template/` · `./docs/spec/` · `./HUMAN-GUIDE.md` — workflow-authoring paths (track model + requirements home, user-approved); additive edits only, board-announced. Workflow is **repo-local** — the standalone `workflow/` publish/sync machinery was retired (user-approved)
+- `./opencode/AGENTIC-GUIDE.md` · `./workflows/_tracks-template/` · `./docs/spec/` · `./HUMAN-GUIDE.md` — workflow-authoring paths (track model + requirements home, user-approved); additive edits only, board-announced. Workflow is **repo-local** — the standalone `workflow/` publish/sync machinery was retired (user-approved)
 
 NEVER modify (upstream baseline / React reference):
 

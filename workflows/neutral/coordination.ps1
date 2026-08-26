@@ -14,6 +14,9 @@
 #   pwsh coordination.ps1 -Session <sid> -CloseOut       # wave close-out gate (summary + Lessons + STATUS)
 #   pwsh coordination.ps1 -Session <sid> -Lessons        # print the lessons-ledger tail (turn start)
 #   pwsh coordination.ps1 -Session <sid> -Lesson "..."   # append one lesson line (turn end)
+#   pwsh coordination.ps1 -Session <sid> -Patterns        # print the failure-pattern registry (top of lessons.md)
+#   pwsh coordination.ps1 -Session <sid> -PatternStats    # count [RECUR] occurrences per pattern tag
+#   pwsh coordination.ps1 -Session <sid> -LessonQuery "X" # grep lessons.md for a keyword (case-insensitive)
 #
 # Exit code 1 on any violation. Run from the repo root. zones.md format: one "owner: prefix" per
 # line; "#" comments allowed; owner is the session id without the "sess-" prefix.
@@ -31,6 +34,8 @@ param(
     [switch]$CloseOut,
     [switch]$Lessons,
     [string]$Lesson,
+    [switch]$Patterns,
+    [switch]$PatternStats,
     [int]$LessonCount = 10,
     [int]$StaleHours = 12
 )
@@ -159,6 +164,37 @@ function Test-PathTouchedByOthers([string]$path) {
 # ---------------------------------------------------------------------------
 
 Load-ZoneMap
+
+# --- Patterns / PatternStats / Lessons query: no session file needed ---
+if ($Patterns -or $PatternStats) {
+    $lessonsPath = Join-Path $liveDir 'lessons.md'
+    if (-not (Test-Path $lessonsPath)) {
+        Write-Host "ERROR: $lessonsPath not found." -ForegroundColor Red; exit 1
+    }
+    $content = Get-Content $lessonsPath -Raw
+    if ($Patterns) {
+        $lines = $content -split "`n"
+        $matched = $lines | Where-Object { $_ -match '^#  \[' }
+        if ($matched.Count -eq 0) { Write-Host "No patterns found in lessons.md" }
+        else { Write-Host "`n=== Failure Pattern Registry ===" -ForegroundColor Cyan; $matched | ForEach-Object { Write-Host $_ } }
+        exit 0
+    }
+    if ($PatternStats) {
+        $lines = $content -split "`n"
+        $matched = $lines | Where-Object { $_ -match '\[RECUR\]' }
+        if ($matched.Count -eq 0) { Write-Host "No [RECUR] tags found in lessons.md" }
+        else {
+            Write-Host "`n=== Pattern Recurrence Stats ===" -ForegroundColor Cyan
+            $matched | ForEach-Object {
+                if ($_ -match '\[(\w[\w-]*)\]') { $Matches[1] }
+            } | Group-Object | Sort-Object Count -Descending | ForEach-Object {
+                Write-Host ("  [{0}] — {1} occurrences" -f $_.Name, $_.Count)
+            }
+            Write-Host "`nTotal [RECUR] events: $($matched.Count)"
+        }
+        exit 0
+    }
+}
 
 if (-not (Test-Path $liveDir)) {
     Write-Host "ERROR: $liveDir does not exist - are you in the repo root, or is -TrackRoot wrong?" -ForegroundColor Red

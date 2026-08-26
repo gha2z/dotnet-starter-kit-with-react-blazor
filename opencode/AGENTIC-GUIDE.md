@@ -17,8 +17,8 @@ to `FR-###` ids from those files. Never invent requirements in a session; read t
 
 A **track** is a work-stream with its own owner, disjoint zone, roadmap (`00-Index.md`), status
 (`STATUS.md`), live session state, and spec (`docs/spec/NNN-<name>.md`). The active track today is
-`opencode/addBlazorFrontends/` (React→Blazor→MAUI parity to zero gaps). Future tracks (erp, pos,
-consumer, operator) start from `opencode/_tracks-template/`.
+`opencode/addBlazorFrontends/` (React→Blazor→MAUI parity to zero gaps). Future tracks start from
+`workflows/_tracks-template/`.
 
 > **New track = new owner + disjoint zone + (spec | index | status | live).** If any of those isn't
 > real, it's a **phase**, not a track.
@@ -51,45 +51,26 @@ structured logging, docs travel with the change (Golden Rule 10).
 # Environment check (once per machine)
 dotnet --version                 # 10.x required
 node --version                   # 20+ for React apps
-opencode --version
 git status                       # clean or expected in-progress work
 
 # Workflow check (once per repo)
 Test-Path .opencode/opencode-swarm.json     # Swarm config present
 Test-Path .agents/skills/                   # FSH skill catalog present
-pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Start   # manual-mode gate
+pwsh workflows/current/coordination.ps1 -Session <sid> -TrackRoot opencode/addBlazorFrontends -Start
 ```
 
 - **Session identity:** the user names each session (`sess-main`, `sess-maui`, …). If unnamed, ask.
 - **Model identity:** never guess/copy. Read the raw-message JSON for `modelID`/`providerID`.
   `auto/*` combos resolve through the omniroute gateway logs — if unverifiable, write
   `model: <modelID> (unresolved)`. See `readme.md` → "Model Identity Convention".
-- **AI memory & knowledge tools:** this stack keeps cross-session state in three places — (1)
-  magic-context project memory: `ctx_memory` (durable facts), `ctx_search` (history/git recall) —
-  (2) swarm knowledge base: `knowledge_recall` / `knowledge_query` (semantic + filtered lookup),
-  `knowledge_add` (new lessons), stored locally in `.swarm/knowledge.jsonl` (gitignored, never
-  committed) — (3) session notes: `ctx_note`. Before re-asking the user something that may already
-  be known, search these. They are agent-side state; docs and specs remain the human-side truth.
 - **Read-fresh ceremony:** re-read `STATUS.md`, all `live/*.md`, and the phase plan **fresh**
   every session — never from memory. State moves fast in this repo.
 
-### 2.1 Self-starting session ritual — run this automatically on every task
+### 2.1 Session ritual — you don't remind agents
 
-**When you receive any task prompt, do the following BEFORE starting work. No human reminder needed.**
-
-> **Canonical protocol: `workflows/current/session-protocol.md`** — read it + the track's
-> `STATUS.md` + `live/*.md` fresh, then run `pwsh workflows/current/coordination.ps1 -Session <sid> -Start`.
-> For this repo's active track (`opencode/addBlazorFrontends/`), use that track's
-> `coordination.ps1` with the same flags.
-
-Key rules baked into the ritual (enforced by the canonical protocol + `coordination.ps1`):
-- Verification numbers in docs ALWAYS come from a real run THIS SESSION — never from memory.
-- Summary file in `00_summary/` is the **single tracking artifact** per wave (carries Lessons, file diff, verification).
-- `STATUS.md` is an **append-only one-line ledger** — never edit existing rows; append one line per wave.
-- `board.md` rows are for **cross-session coordination only** — single-session work does not add rows.
-- Whole-file reads only — no offset-tunneling (causes pattern-escalation stops).
-- Heartbeat every user turn; one lesson line per turn; close-out is fail-closed (`-CloseOut`).
-- Stage by explicit paths only — never `git add -A`; never `git push`.
+The full session ritual is canonical in `workflows/current/session-protocol.md`. It covers
+heartbeat, lessons, close-out, verify lock, and stage-by-explicit-path. Agents read it
+automatically because `AGENTS.md` points there. This file only summarizes for humans.
 
 ---
 
@@ -105,29 +86,11 @@ Key rules baked into the ritual (enforced by the canonical protocol + `coordinat
 | Lazy loading + PWA | Done both apps (Pages RCLs + `resources.lazyAssembly`, manifest + SW + offline page) |
 | ✅ Release-publish | **RESOLVED (wave 19, 2026-08-09)** — the Mono boot crash was a stale-publish artifact; clean publish (delete `obj/Release` first) boots to login ~4.3 s, 0 errors, no code change. Deployment-zone CDN config (`.br`/`.gz` + 103 Early Hints) remains guidance only. |
 
-### 3.2 Remaining work items — session recipes
+### 3.2 Remaining work items
 
-| # | Item | Mode | Session recipe |
-|---|---|---|---|
-| 6.x | PWA HTTPS-staging check, preload hints, infinite scroll | Swarm (dashboard zone = sess-main) | Load `add-blazor-page` + `query-patterns` skills; architect → coder → reviewer/test_engineer; verify with `verify.ps1`; bUnit test per change |
-| 6.7 | Root README + migration guide | Manual (shared zone) | Announce on `live/board.md` first; docs-only session |
-| 7.x | Parity re-audit against React (`clients/admin`, `clients/dashboard` — READ-ONLY reference) | Swarm + explore subagent | Audit convention: subagent writes full findings to a temp file, returns severity-ranked list |
-| 5.4/5.8/5.10 | Push, IAP, signing/CI | Manual (sess-maui) | External deps (Firebase, Apple, signing certs). Work in `clients/FSH.Hybrid/` only; use `verify-hybrid.ps1` |
-
-**Every page/feature recipe (Swarm):**
-
-1. **Scope it** — one cohesive chunk: a page + its service + route + permission + test. Never "Phase 5".
-2. **Load the skill** — `add-blazor-page` (new screen), `implement-blazor-list` / `implement-blazor-form`
-   (page building blocks), `add-permission-csharp` (new endpoint permission), `add-feature` (backend slice).
-3. **Pre-flight** — read an existing working page in the same project first (API conventions, component
-   availability). Confirmed by `readme.md` "Pre-Flight Convention".
-4. **Dispatch** — architect plans → critic gates → coder implements (in-zone only) → reviewer →
-   test_engineer runs bUnit.
-5. **Verify** — `pwsh opencode/addBlazorFrontends/verify.ps1` (clean obj/bin → 0-warning builds → both
-   suites → icon audit). Take the verify lock first: `coordination.ps1 -LockVerify` / `-UnlockVerify`.
-6. **DoD** — service + DI exist (no invented DTOs), bUnit asserts specific behavior, 0 warnings,
-   manual steps flagged if not testable, docs use freshly-verified model identity. **Stage by explicit
-   path** (`git add <paths>`, never `-A`), show `git diff --cached --stat`, wait for approval.
+Track-specific task lists live in each track's `WORKFLOW-GUIDE.md` (e.g.,
+`opencode/addBlazorFrontends/WORKFLOW-GUIDE.md`). The human driving loop is described in
+`HUMAN-GUIDE.md` (six verbs: spec → plan → approve → build → approve stage → audit).
 
 ### 3.3 Manual multi-session protocol (sess-main / sess-maui)
 
@@ -219,7 +182,7 @@ What it does (each step prints + can be skipped with a switch):
    `.gitignore` entries (`.swarm/`, `opencode/temp/`, `opencode/live/`). `AGENTS.md` + `.agents/`
    are **carried over as-is** from the source (no slimming) — the rename pass already rewrote
    references.
-5b. **Seed the first track** — copies `opencode/_tracks-template/` → `opencode/<Name>/` with
+5b. **Seed the first track** — copies `workflows/_tracks-template/` → `opencode/<Name>/` with
    `*-template.md` files renamed to their real names (`00-Index.md`, `STATUS.md`, `readme.md`,
    `zones.md`, `plan.md`), plus `live/` skeleton (`board.md`, `locks/`, session stubs) and a
    starter `STATUS.md` — so the first agentic session starts clean. No phase docs yet.
@@ -242,49 +205,26 @@ What it does (each step prints + can be skipped with a switch):
 
 ---
 
-## 5. Skill catalog quick reference
-
-> **Canonical task→skill map: `workflows/current/task-skills.md`** (FSH recipes vs dotnet-skills
-> plugin suite, with the conflict rule). The table below is the historical quick view — add new
-> skills only to the canonical map.
-
-| Skill | Use for | Source |
-|---|---|---|
-| `add-module` | New bounded context (runtime + Contracts + registration) | `.agents/skills/` |
-| `add-feature` / `query-patterns` | Vertical-slice backend feature / paged queries | `.agents/skills/` |
-| `add-entity` + `create-migration` | New EF entity + the FSH-way migration | `.agents/skills/` |
-| `add-permission` / `add-permission-csharp` | New endpoint permission (React/Blazor mirrors) | `.agents/skills/` |
-| `add-blazor-page` / `implement-blazor-list` / `implement-blazor-form` | Blazor screens | `.agents/skills/` |
-| `setup-blazor-auth` / `setup-blazor-realtime` / `setup-blazor-sse` | Blazor wiring | `.agents/skills/` |
-| `add-react-page` / `add-full-slice` / `add-integration-event` | React screens / full API+UI slice / cross-module events | `.agents/skills/` |
-| `testing-guide` / `mediator-reference` | FSH test conventions / Mediator source-gen API | `.agents/skills/` |
-| dotnet-skills (`optimizing-ef-core-queries`, `run-tests`, …) | Technique-level guidance — **never override FSH structure rules** | global `~/.config/opencode/dotnet-skills/` |
-
-**Conflict rule (FSH wins on structure, dotnet-skill informs technique):** when a dotnet-skill
-pattern would violate an FSH rule (module boundaries, mediator style, validation, tenant isolation,
-Golden Rules), FSH wins. dotnet-skills may inform *how* (query shape, test commands) but never
-*what* the structure must be.
-
----
-
-## 6. Script reference — what to execute when
+## 5. Script reference — what to execute when
 
 | You want to… | Run |
 |---|---|
 | Check the workflow is wired | `Test-Path .opencode/opencode-swarm.json; Test-Path .agents/skills` |
-| Start a manual-mode session | `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Start` |
-| Stamp heartbeat (every turn) | `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Heartbeat` |
-| Pre-stage gate | `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -Gate` |
-| Close out a wave (summary + Lessons + STATUS refresh; blocks commit) | `pwsh opencode/addBlazorFrontends/coordination.ps1 -Session <sid> -CloseOut` |
+| Start a manual-mode session | `pwsh workflows/current/coordination.ps1 -Session <sid> -TrackRoot opencode/addBlazorFrontends -Start` |
+| Stamp heartbeat (every turn) | `pwsh workflows/current/coordination.ps1 -Session <sid> -TrackRoot opencode/addBlazorFrontends -Heartbeat` |
+| Pre-stage gate | `pwsh workflows/current/coordination.ps1 -Session <sid> -TrackRoot opencode/addBlazorFrontends -Gate` |
+| Close out a wave (summary + Lessons + STATUS refresh; blocks commit) | `pwsh workflows/current/coordination.ps1 -Session <sid> -TrackRoot opencode/addBlazorFrontends -CloseOut` |
+| Print failure-pattern registry | `pwsh workflows/current/coordination.ps1 -Session <sid> -Patterns` |
+| Grep lessons for a keyword | `pwsh workflows/current/coordination.ps1 -Session <sid> -LessonQuery "MudBlazor"` |
 | Verify both WASM apps | `pwsh opencode/addBlazorFrontends/verify.ps1` |
 | Verify MAUI | `pwsh opencode/addBlazorFrontends/verify-hybrid.ps1` |
-| Scaffold a new SaaS | `pwsh opencode/init-saas-workflow.ps1 -Name <Name>` (clone — recommended) or `fsh new <Name>` (template, workflow included) |
+| Scaffold a new SaaS | `pwsh opencode/init-saas-workflow.ps1 -Name <Name>` |
 | Build everything | `dotnet build src/FSH.Starter.slnx` |
 | Run the stack | `dotnet run --project src/Host/FSH.Starter.AppHost` |
 
 ---
 
-## 7. FAQ / troubleshooting
+## 6. FAQ / troubleshooting
 
 - **"Cannot provide a value for property 'XService'"** — service not registered in the WASM app's
   `Program.cs` `AddScoped` block. Add it (pattern: the 9 services fixed in Phase 7).
@@ -303,7 +243,7 @@ Golden Rules), FSH wins. dotnet-skills may inform *how* (query shape, test comma
 
 ---
 
-## 8. Docs & changelog
+## 7. Docs & changelog
 
 - User-facing changes (feature, endpoint, config, infra, breaking change) require the separate
   docs repo (`github.com/fullstackhero/docs`) update + changelog entry (Golden Rule 10).

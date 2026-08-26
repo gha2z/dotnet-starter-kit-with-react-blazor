@@ -1,6 +1,6 @@
 # init-saas-workflow.ps1 — One-command SaaS bootstrap from the FullStackHero .NET Starter Kit.
 # Clone/copy -> rename (FSH.* -> <Name>.*) -> optional strip -> workflow wiring -> first-track
-# seed (opencode/_tracks-template) -> build gate -> first commit -> next-steps. Designed so you
+# seed (workflows/_tracks-template) -> build gate -> first commit -> next-steps. Designed so you
 # can focus on the new SaaS's domain, not ceremonies.
 #
 # Usage:
@@ -321,7 +321,7 @@ Write-Step "4/7 Cleaning project-private directories"
 foreach ($p in @('opencode\addBlazorFrontends', 'opencode\Next apps', 'opencode\other', 'opencode\temp', '.swarm', 'superpowers', 'templates')) {
     if (Test-Path $p) { Remove-Item -Recurse -Force $p; Write-Ok "removed $p" }
 }
-Write-Ok "kept: opencode/init-saas-workflow.ps1, opencode/AGENTIC-GUIDE.md, .opencode/, .agents/"
+Write-Ok "kept: opencode/init-saas-workflow.ps1, opencode/AGENTIC-GUIDE.md, workflows/, .opencode/, .agents/"
 
 # ---------------------------------------------------------------------------
 # 5. Wire the agentic workflow
@@ -358,8 +358,8 @@ Write-Ok "AGENTS.md + .agents/ carried over from source (rename pass already rew
 # ---------------------------------------------------------------------------
 # 5b. Seed the first track from _tracks-template
 # ---------------------------------------------------------------------------
-Write-Step "5b/7 Seeding first track (opencode/_tracks-template -> opencode/$Name)"
-$tracksTemplate = Join-Path $scriptRoot '_tracks-template'
+Write-Step "5b/7 Seeding first track (workflows/_tracks-template -> opencode/$Name)"
+$tracksTemplate = Join-Path (Resolve-Path (Join-Path $scriptRoot '..')).Path 'workflows\_tracks-template'
 $trackDir = Join-Path $WorkDir "opencode\$Name"
 if (Test-Path $tracksTemplate) {
     if (Test-Path $trackDir) {
@@ -385,7 +385,7 @@ if (Test-Path $tracksTemplate) {
         Write-Ok "first track seeded: opencode/$Name/ (00-Index.md, STATUS.md, readme.md, zones.md, plan.md, live/, 00_summary/)"
     }
 } else {
-    Write-Warn "opencode/_tracks-template not found - first track must be created manually"
+    Write-Warn "workflows/_tracks-template not found - first track must be created manually"
 }
 
 # ---------------------------------------------------------------------------
@@ -449,7 +449,8 @@ Write-Host @"
     #    opencode   # then: "Read AGENTS.md + opencode/AGENTIC-GUIDE.md, then scaffold the
     #              #  domain module for <your domain> using the add-module skill."
     #    Track skeleton ready at opencode/$Name/ (00-Index.md, STATUS.md, readme.md, zones.md,
-    #    live/, 00_summary/) - read those first; fill zones.md + STATUS.md before claiming work.
+    #    live/, 00_summary/) - read workflows/current/session-protocol.md first; fill zones.md
+    #    + STATUS.md before claiming work.
     # 3. Run the stack: dotnet run --project src/Host/$Name.AppHost
     # 4. Future re-runs: pwsh opencode/init-saas-workflow.ps1 -Name $Name -WorkDir $WorkDir -SkipClone -SkipBuild
 
@@ -457,7 +458,7 @@ Write-Host @"
     .agents/skills/  (add-module, add-feature, add-blazor-page, create-migration, ...)
     .agents/workflows/ + .opencode/  (Swarm + skill routing)
     opencode/init-saas-workflow.ps1 + opencode/AGENTIC-GUIDE.md  (origin tooling - reusable)
-    opencode/_tracks-template/ + opencode/$Name/  (track harness + first seeded track)
+    workflows/_tracks-template/ (template) + opencode/$Name/ (first seeded track)
     AGENTS.md (renamed, still the canonical guide)
 "@
 exit 0

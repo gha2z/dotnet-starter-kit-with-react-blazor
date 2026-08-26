@@ -41,7 +41,7 @@ development survive context limits:
    (neutral package also ships a `CLAUDE.md` bridge). Paths in the snippet are placeholders —
    resolve them to your package location.
 4. **Seed a track** — copy `tracks/_template/` (neutral) or use the repo's existing track /
-   `opencode/_tracks-template/` (current) to create your first work-stream: `opencode/<track>/`
+   `workflows/_tracks-template/` (shared) to create your first work-stream: `opencode/<track>/`
    with `STATUS.md`, `00-Index.md`, `zones.md`, `live/`.
 5. **Open the first session and give one task** — the agent self-starts the ritual, heartbeats,
    works, verifies, and closes out with a summary + lessons line. You review the staged diff.

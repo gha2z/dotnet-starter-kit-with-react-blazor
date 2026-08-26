@@ -6,7 +6,7 @@
 > a different tool resumes here in one read.
 >
 > Package: `workflows/current/`. Applies to the live track `opencode/addBlazorFrontends/` and any
-> track seeded from `opencode/_tracks-template/`.
+> track seeded from `workflows/_tracks-template/`.
 
 ---
 
@@ -66,6 +66,9 @@ markers.** Three reads, always current. "Why was X done?" → mission `implement
 4. At turn end append **exactly one line** to the lesson ledger:
    `coordination.ps1 -Session <sid> -Lesson "<failure -> root cause -> remedy -> proof>"`.
    If nothing failed, write one improvement or one verified pattern. No empty turns.
+   Tag lessons with a category when relevant: `[MUD]` `[SIGNALR]` `[WASM]` `[PLAYWRIGHT]`
+   `[BUILD]` `[ARCH]` `[AUTH]` `[EF]` `[REDIS]` `[MINIO]`. After every5 turns with
+   `[RECUR]` matches, re-evaluate section 6 — the process may need to evolve.
 
 ## 3. Wave Close-Out (after each verified unit of work)
 

@@ -41,7 +41,9 @@ but never contradict the disk.
 3. Zone check (ritual step 5); drifting out of zone stops the task and re-routes.
 4. At turn end append **exactly one line**: `coordination.ps1 -Session <sid> -Lesson "<failure ->
    root cause -> remedy -> proof>"`. If nothing failed, write one improvement or one verified
-   pattern. No empty turns.
+   pattern. No empty turns. Tag lessons with a category when relevant: `[MUD]` `[SIGNALR]`
+   `[WASM]` `[PLAYWRIGHT]` `[BUILD]` `[ARCH]` `[AUTH]` `[EF]` `[REDIS]` `[MINIO]`. After
+   every5 turns with `[RECUR]` matches, re-evaluate section 6 — the process may need to evolve.
 
 ## 3. Wave Close-Out (after each verified unit of work)
 
