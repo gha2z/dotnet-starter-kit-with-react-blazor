@@ -32,6 +32,7 @@ public sealed partial class ProductDetailPage
     private CategoryDto? _category;
     private bool _loading = true;
     private bool _uploading;
+    private string? _uploadStatus;
     private string? _error;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
@@ -44,6 +45,13 @@ public sealed partial class ProductDetailPage
         : _product.Stock <= 0 ? "danger"
         : _product.Stock < 10 ? "warning"
         : "";
+
+    private string InventoryTone => StockTone switch
+    {
+        "danger" => "is-danger",
+        "warning" => "is-warning",
+        _ => "",
+    };
 
     private string StockLabel => _product is null ? ""
         : _product.Stock <= 0 ? "out of stock"
@@ -221,9 +229,29 @@ public sealed partial class ProductDetailPage
         }
     }
 
-    private async Task DeleteImageAsync(ProductImageDto image)
+    private async Task ConfirmRemoveImageAsync(ProductImageDto image)
     {
         if (_product is null)
+        {
+            return;
+        }
+
+        // React parity (ProductImageManager.RemoveDialog): detaching asks first,
+        // and warns when the image being removed is the current cover.
+        var message = "The image is removed from this product."
+            + (image.IsThumbnail
+                ? " It's currently the cover — another image will be promoted automatically."
+                : string.Empty);
+        var parameters = new DialogParameters
+        {
+            { "Message", message },
+            { "ConfirmText", "Remove" },
+            { "CancelText", "Cancel" },
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<FshConfirmDialogContent>("Detach this image?", parameters, options);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled)
         {
             return;
         }
@@ -238,6 +266,13 @@ public sealed partial class ProductDetailPage
         {
             Snackbar.Add($"Could not remove image: {ex.Message}", Severity.Error);
         }
+    }
+
+    private async Task PreviewImageAsync(ProductImageDto image)
+    {
+        var parameters = new DialogParameters { { "Image", image } };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+        await DialogService.ShowAsync<ProductImagePreviewDialog>(string.Empty, parameters, options);
     }
 
     private async Task OpenImagePickerAsync()
@@ -263,8 +298,11 @@ public sealed partial class ProductDetailPage
         var uploaded = 0;
         try
         {
-            foreach (var entry in entries)
+            for (var i = 0; i < entries.Count; i++)
             {
+                var entry = entries[i];
+                _uploadStatus = $"Uploading {entry.Name} ({i + 1} of {entries.Count})…";
+                StateHasChanged();
                 try
                 {
                     var extension = Path.GetExtension(entry.Name).ToLowerInvariant();
@@ -328,6 +366,7 @@ public sealed partial class ProductDetailPage
         finally
         {
             _uploading = false;
+            _uploadStatus = null;
         }
 
         if (uploaded > 0)

@@ -14,6 +14,15 @@ window.fshOpenDownload = function (url) {
     window.open(url, '_blank');
 };
 
+// Plain-browser GET of a presigned URL. MUST bypass the app's HttpClient — its
+// delegating handlers add Authorization/tenant headers, which corrupt the S3
+// signature and make storage return 400.
+window.fshFetchText = async function (url) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    return await response.text();
+};
+
 window.fshOpenFilePicker = function (id) {
     const el = document.getElementById(id);
     if (el) el.click();

@@ -3,6 +3,8 @@
 @using FSH.BlazorShared.Services
 @using MudBlazor
 
+@* React parity (product-detail.tsx StockDialog): current→becomes preview with delta
+   coloring, minus/plus stepper, negative-stock guard banner, domain-event copy. *@
 <MudDialog>
     <DialogContent>
         <div class="d-flex align-center gap-2 mb-2">
@@ -10,28 +12,41 @@
             <MudText Typo="Typo.h6" Style="margin: 0;">Adjust stock</MudText>
         </div>
         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
-            Adjust the on-hand quantity of <span style="font-weight: 500; color: var(--mud-palette-text-primary);">@Product.Name</span>.
-            Use a positive delta for stock in, a negative delta for stock out or write-offs.
+            <span style="font-weight: 500; color: var(--mud-palette-text-primary);">@Product.Name</span>
+            — add or remove units. Emits a <code class="fsh-sku-chip">ProductStockAdjusted</code> event.
         </MudText>
 
-        <div class="d-flex align-center gap-3 mb-2">
-            <MudIconButton Icon="@Icons.Material.Filled.Remove" Color="Color.Default" Variant="Variant.Outlined"
-                           aria-label="Decrease stock by 1"
-                           Disabled="_isSubmitting" OnClick="() => Adjust(-1)" />
-            <MudTextField T="int" @bind-Value="_delta"
-                          Adornment="@Adornment.Start"
-                          AdornmentText="@DeltaSign"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Style="min-width: 140px;" />
-            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Default" Variant="Variant.Outlined"
-                           aria-label="Increase stock by 1"
-                           Disabled="_isSubmitting" OnClick="() => Adjust(1)" />
+        <div class="fsh-was-becomes mb-4">
+            <div>
+                <div class="fsh-mono-label">current</div>
+                <div class="fsh-was-becomes-value">@Product.Stock</div>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Color="Color.Secondary" Class="fsh-was-becomes-arrow" />
+            <div style="text-align: right;">
+                <div class="fsh-mono-label" style="color: var(--mud-palette-primary);">becomes</div>
+                <div class="fsh-was-becomes-value @BecomesTone">@NewStock</div>
+            </div>
         </div>
-        <MudText Typo="Typo.caption" Color="Color.Secondary">
-            Current <span style="font-variant-numeric: tabular-nums; color: var(--mud-palette-text-primary);">@Product.Stock</span>
-            → new <span style="font-variant-numeric: tabular-nums; font-weight: 500; color: var(--mud-palette-text-primary);">@(Product.Stock + _delta)</span>
-        </MudText>
+
+        <div class="d-flex align-center gap-2">
+            <MudIconButton Icon="@Icons.Material.Filled.Remove" Variant="Variant.Outlined" Size="Size.Small"
+                           aria-label="Decrease by 1" Disabled="_isSubmitting" OnClick="@( () => Adjust(-1) )" />
+            <MudTextField T="string" Value="_delta" ValueChanged="SetDelta" Variant="Variant.Outlined"
+                          Margin="Margin.Dense" Immediate="true" Class="fsh-delta-input" />
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Variant="Variant.Outlined" Size="Size.Small"
+                           aria-label="Increase by 1" Disabled="_isSubmitting" OnClick="@( () => Adjust(1) )" />
+        </div>
+
+        @if (WillGoNegative)
+        {
+            <div class="fsh-negative-guard mt-3">
+                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Size="Size.Small" Class="flex-shrink-0 mt-1" />
+                <span>
+                    Stock cannot go negative. The maximum decrement here is
+                    <span style="font-family: var(--fsh-mono, monospace); font-weight: 600;">@Product.Stock</span>.
+                </span>
+            </div>
+        }
 
         @if (!string.IsNullOrEmpty(_error))
         {
@@ -41,10 +56,10 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Disabled="_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel" Disabled="_isSubmitting">Cancel</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync"
-                   Disabled="_isSubmitting || _delta == 0">
-            @(_isSubmitting ? "Saving…" : "Apply adjustment")
+                   Disabled="@(_isSubmitting || !IsValid || WillGoNegative)">
+            @(_isSubmitting ? "Adjusting…" : "Adjust stock")
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -55,21 +70,37 @@
 
     [Parameter] public ProductDto Product { get; set; } = default!;
 
-    private int _delta = 1;
+    private string _delta = "0";
     private string? _error;
     private bool _isSubmitting;
 
-    private string DeltaSign => _delta >= 0 ? "+" : "-";
+    private int? ParsedDelta => int.TryParse(_delta, out var v) ? v : null;
 
-    private void Adjust(int step) => _delta = Math.Clamp(_delta + step, -9999, 9999);
+    private bool IsValid => ParsedDelta is not null && ParsedDelta.Value != 0;
+
+    private int NewStock => Product.Stock + (ParsedDelta ?? 0);
+
+    private bool WillGoNegative => NewStock < 0;
+
+    private string BecomesTone => ParsedDelta is null ? ""
+        : WillGoNegative ? "is-down" : ParsedDelta.Value > 0 ? "is-up" : ParsedDelta.Value < 0 ? "is-warn" : "";
+
+    private void SetDelta(string value) => _delta = value.TrimStart('+');
+
+    private void Adjust(int step) => _delta = ((ParsedDelta ?? 0) + step).ToString();
 
     private async Task SubmitAsync()
     {
+        if (!IsValid || WillGoNegative)
+        {
+            return;
+        }
+
         _isSubmitting = true;
         _error = null;
         try
         {
-            await Catalog.AdjustProductStockAsync(Product.Id, new AdjustProductStockRequest(_delta));
+            await Catalog.AdjustProductStockAsync(Product.Id, new AdjustProductStockRequest(ParsedDelta!.Value));
             Dialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)

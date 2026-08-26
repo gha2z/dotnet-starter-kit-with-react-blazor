@@ -177,8 +177,8 @@ public sealed class ProductDetailPageTests : TestSetup
         cut.WaitForAssertion(() =>
         {
             cut.Markup.ShouldContain("Upload images");
-            cut.Markup.ShouldContain("JPG / PNG / WebP / GIF");
-            cut.Markup.ShouldContain("up to 10 MB");
+            cut.Markup.ShouldContain("Drop more to add");
+            cut.Markup.ShouldContain("Star one to make it the cover");
         });
     }
 

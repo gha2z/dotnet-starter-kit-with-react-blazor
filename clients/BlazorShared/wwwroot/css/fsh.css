@@ -1676,6 +1676,249 @@ button.fsh-detail-stat:hover {
 .fsh-combobox-full { display: flex; }
 .fsh-combobox-full .fsh-combobox-trigger { width: 100%; }
 
+/* ---------- file preview dialog (React parity: file-preview-dialog.tsx) ---------- */
+.fsh-file-preview-frame {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid var(--mud-palette-divider);
+    background: var(--mud-palette-background-grey);
+    min-height: 30vh;
+}
+
+.fsh-file-preview-frame img {
+    max-height: 48vh;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.fsh-file-preview-pdf {
+    width: 100%;
+    height: 60vh;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 12px;
+    background: var(--mud-palette-background-grey);
+}
+
+.fsh-file-preview-text {
+    max-height: 55vh;
+    overflow: auto;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 12px;
+    background: var(--mud-palette-background-grey);
+    padding: 16px;
+    font-family: var(--fsh-mono, monospace);
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.fsh-file-preview-note {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-align: center;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 12px;
+    background: var(--mud-palette-background-grey);
+    padding: 40px 16px;
+    font-size: 13px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.fsh-file-preview-skeleton {
+    display: grid;
+    place-items: center;
+    min-height: 30vh;
+    border: 1px dashed var(--mud-palette-divider);
+    border-radius: 12px;
+    background: var(--mud-palette-background-grey);
+}
+
+.fsh-file-meta-card {
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 12px;
+    background: var(--mud-palette-background-grey);
+    padding: 14px 16px;
+}
+
+.fsh-file-meta-visibility {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 12px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--mud-palette-divider) 50%, transparent);
+}
+
+.fsh-file-meta-visibility-value {
+    margin-top: 2px;
+    font-size: 13.5px;
+    font-weight: 500;
+}
+
+.fsh-file-meta-visibility-value.is-public {
+    color: var(--mud-palette-primary);
+}
+
+.fsh-readonly-badge {
+    flex-shrink: 0;
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--mud-palette-text-secondary);
+}
+
+.fsh-file-meta-rows {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px 24px;
+    margin: 0;
+}
+
+@media (min-width: 640px) {
+    .fsh-file-meta-rows { grid-template-columns: 1fr 1fr; }
+}
+
+.fsh-file-meta-rows > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+}
+
+.fsh-file-meta-rows dt {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--mud-palette-text-secondary);
+}
+
+.fsh-file-meta-rows dd {
+    margin: 0;
+    font-size: 12.5px;
+    min-width: 0;
+}
+
+.fsh-file-preview-actions {
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+/* ---------- price/stock dialogs (React parity: was→becomes preview) ---------- */
+.fsh-was-becomes {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 12px;
+    background: var(--mud-palette-background-grey);
+    padding: 12px 16px;
+}
+
+.fsh-was-becomes-arrow {
+    transform: rotate(90deg);
+    flex-shrink: 0;
+}
+
+.fsh-was-becomes-value {
+    margin-top: 4px;
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    font-family: var(--fsh-display, inherit);
+}
+
+.fsh-was-becomes-value.is-up { color: var(--mud-palette-success); }
+.fsh-was-becomes-value.is-down { color: var(--mud-palette-error); }
+.fsh-was-becomes-value.is-warn { color: var(--mud-palette-warning); }
+
+.fsh-currency-input { max-width: 110px; }
+.fsh-delta-input { max-width: 140px; }
+.fsh-delta-input input { text-align: center; font-family: var(--fsh-mono, monospace); font-size: 15px; }
+
+.fsh-negative-guard {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--mud-palette-error) 8%, transparent);
+    color: var(--mud-palette-error);
+    padding: 8px 12px;
+    font-size: 12.5px;
+}
+
+/* ---------- product detail behavioral polish ---------- */
+.fsh-spin {
+    animation: fsh-rotate 0.9s linear infinite;
+}
+
+@keyframes fsh-rotate {
+    to { transform: rotate(360deg); }
+}
+
+.fsh-detail-meta-link {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.fsh-detail-meta-link:hover {
+    color: var(--mud-palette-text-primary);
+}
+
+.fsh-balance-amount.is-danger { color: var(--mud-palette-error); }
+.fsh-balance-amount.is-warning { color: var(--mud-palette-warning); }
+
+.fsh-stock-caption.is-danger { color: var(--mud-palette-error); }
+.fsh-stock-caption.is-warning { color: var(--mud-palette-warning); }
+
+.fsh-notfound-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 12px;
+    background: var(--mud-palette-background-grey);
+    padding: 64px 32px;
+}
+
+.fsh-notfound-icon {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, transparent);
+    color: var(--mud-palette-primary);
+    margin-bottom: 20px;
+}
+
+.fsh-notfound-title {
+    margin: 0 0 6px;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.fsh-notfound-copy {
+    margin: 0 0 24px;
+    font-size: 13px;
+    color: var(--mud-palette-text-secondary);
+}
+
 .fsh-combobox-field-label {
     font-size: 11.5px;
     font-weight: 600;
@@ -1937,18 +2180,77 @@ button.fsh-detail-stat:hover {
 
 .fsh-prod-image-tile .fsh-prod-image-actions {
     position: absolute;
-    inset: 0;
+    inset: auto 0 0 0;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 4px;
-    background: color-mix(in srgb, var(--mud-palette-dark) 55%, transparent);
+    justify-content: flex-end;
+    gap: 2px;
+    padding: 4px 6px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.65), transparent);
     opacity: 0;
     transition: opacity 0.15s ease;
 }
 
-.fsh-prod-image-tile:hover .fsh-prod-image-actions {
+.fsh-prod-image-tile:hover .fsh-prod-image-actions,
+.fsh-prod-image-tile:focus-within .fsh-prod-image-actions {
     opacity: 1;
+}
+
+@media (hover: none) {
+    .fsh-prod-image-tile .fsh-prod-image-actions { opacity: 1; }
+}
+
+.fsh-prod-image-tile.is-cover {
+    border-color: var(--mud-palette-primary);
+    box-shadow: 0 0 0 1px var(--mud-palette-primary);
+}
+
+.fsh-prod-image-hit {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.fsh-prod-image-hit img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.fsh-prod-image-action {
+    color: #fff;
+}
+
+.fsh-prod-image-action:hover {
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+}
+
+.fsh-prod-image-action.fsh-prod-image-remove:hover {
+    background: var(--mud-palette-error);
+    color: #fff;
+}
+
+.fsh-image-preview-frame {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid var(--mud-palette-divider);
+    background: var(--mud-palette-background-grey);
+    min-height: 30vh;
+}
+
+.fsh-image-preview-frame img {
+    max-height: 70vh;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
 }
 
 .fsh-prod-image-tile .fsh-prod-thumb-badge {

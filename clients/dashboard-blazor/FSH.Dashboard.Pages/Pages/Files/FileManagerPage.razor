@@ -298,7 +298,10 @@ else
         var parameters = new DialogParameters<FilePreviewDialog>();
         parameters.Add(d => d.File, file);
         parameters.Add(d => d.OnChanged, EventCallback.Factory.Create(this, LoadFiles));
-        await DialogService.ShowAsync<FilePreviewDialog>($"Preview: {file.OriginalFileName}", parameters);
+        // The dialog renders its own header (mime icon + name + type·size) — an empty
+        // ShowAsync title avoids the double-title bar; CloseButton=true keeps the X.
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Large };
+        await DialogService.ShowAsync<FilePreviewDialog>(string.Empty, parameters, options);
     }
 
     private async Task DownloadFile(FileAssetDto file)

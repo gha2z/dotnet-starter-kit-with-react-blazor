@@ -1,8 +1,11 @@
 @namespace FSH.Dashboard.Wasm.Pages.Catalog
 @using FSH.BlazorShared.Models.Catalog
 @using FSH.BlazorShared.Services
+@using FSH.BlazorShared.Formatting
 @using MudBlazor
 
+@* React parity (product-detail.tsx PriceDialog): was→becomes preview with live delta
+   coloring, free-text currency (auto-uppercase, max 3), domain-event copy. *@
 <MudDialog>
     <DialogContent>
         <div class="d-flex align-center gap-2 mb-2">
@@ -10,29 +13,27 @@
             <MudText Typo="Typo.h6" Style="margin: 0;">Change price</MudText>
         </div>
         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4" Style="display: block;">
-            Update the price of <span style="font-weight: 500; color: var(--mud-palette-text-primary);">@Product.Name</span>.
-            The old price (@CurrentPrice) is kept in the price history.
+            <span style="font-weight: 500; color: var(--mud-palette-text-primary);">@Product.Name</span>
+            — emits a <code class="fsh-sku-chip">ProductPriceChanged</code> domain event.
         </MudText>
 
-        <div class="d-flex gap-3 mb-4 flex-wrap">
-            <MudTextField T="decimal" @bind-Value="_amount"
-                          Label="New price"
-                          Adornment="@Adornment.Start"
-                          AdornmentText="@_currency"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Style="min-width: 180px;">
-            </MudTextField>
-            <MudSelect T="string" @bind-Value="_currency"
-                       Label="Currency"
-                       Variant="Variant.Outlined"
-                       Margin="Margin.Dense"
-                       Style="min-width: 140px;">
-                @foreach (var currency in Currencies)
-                {
-                    <MudSelectItem T="string" Value="@currency">@currency</MudSelectItem>
-                }
-            </MudSelect>
+        <div class="fsh-was-becomes mb-4">
+            <div>
+                <div class="fsh-mono-label">was</div>
+                <div class="fsh-was-becomes-value">@FshFormat.Money(Product.Price.Amount, Product.Price.Currency)</div>
+            </div>
+            <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Size="Size.Small" Color="Color.Secondary" Class="fsh-was-becomes-arrow" />
+            <div style="text-align: right;">
+                <div class="fsh-mono-label" style="color: var(--mud-palette-primary);">becomes</div>
+                <div class="fsh-was-becomes-value @DeltaTone">@BecomesText</div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-3 flex-wrap">
+            <MudTextField T="string" @bind-Value="_amount" Label="New amount" Variant="Variant.Outlined"
+                          Margin="Margin.Dense" Immediate="true" Class="flex-grow-1" Style="min-width: 160px;" />
+            <MudTextField T="string" Value="_currency" ValueChanged="SetCurrency" Label="Currency" Variant="Variant.Outlined"
+                          Margin="Margin.Dense" Immediate="true" Class="fsh-currency-input" />
         </div>
 
         @if (!string.IsNullOrEmpty(_error))
@@ -43,42 +44,62 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Disabled="_isSubmitting">Cancel</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel" Disabled="_isSubmitting">Cancel</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SubmitAsync"
-                   Disabled="_isSubmitting || _amount < 0">
-            @(_isSubmitting ? "Saving…" : "Save price")
+                   Disabled="@(_isSubmitting || !IsValid)">
+            @(_isSubmitting ? "Saving…" : "Change price")
         </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    private static readonly string[] Currencies = ["USD", "EUR", "GBP"];
-
     [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
     [Inject] private ICatalogService Catalog { get; set; } = default!;
 
     [Parameter] public ProductDto Product { get; set; } = default!;
 
-    private decimal _amount;
-    private string _currency = "USD";
+    private string _amount = string.Empty;
+    private string _currency = string.Empty;
     private string? _error;
     private bool _isSubmitting;
 
-    private string CurrentPrice => FSH.BlazorShared.Formatting.FshFormat.Money(Product.Price.Amount, Product.Price.Currency);
+    private decimal? ParsedAmount => decimal.TryParse(_amount, out var v) && v >= 0 ? v : null;
+
+    private bool IsValid => ParsedAmount is not null && _currency.Trim().Length == 3;
+
+    private decimal Delta => ParsedAmount is null ? 0 : ParsedAmount.Value - Product.Price.Amount;
+
+    private string DeltaTone => ParsedAmount is null ? ""
+        : Delta > 0 ? "is-up" : Delta < 0 ? "is-down" : "";
+
+    private string BecomesText => ParsedAmount is null
+        ? "—"
+        : FshFormat.Money(ParsedAmount.Value, string.IsNullOrWhiteSpace(_currency) ? Product.Price.Currency : _currency.Trim().ToUpperInvariant());
 
     protected override void OnInitialized()
     {
-        _amount = Product.Price.Amount;
+        _amount = Product.Price.Amount.ToString("0.##");
         _currency = Product.Price.Currency;
+    }
+
+    private void SetCurrency(string value)
+    {
+        var upper = value.ToUpperInvariant();
+        _currency = upper.Length > 3 ? upper[..3] : upper;
     }
 
     private async Task SubmitAsync()
     {
+        if (!IsValid)
+        {
+            return;
+        }
+
         _isSubmitting = true;
         _error = null;
         try
         {
-            await Catalog.ChangeProductPriceAsync(Product.Id, new ChangeProductPriceRequest(_amount, _currency));
+            await Catalog.ChangeProductPriceAsync(Product.Id, new ChangeProductPriceRequest(ParsedAmount!.Value, _currency.Trim().ToUpperInvariant()));
             Dialog.Close(DialogResult.Ok(true));
         }
         catch (Exception ex)

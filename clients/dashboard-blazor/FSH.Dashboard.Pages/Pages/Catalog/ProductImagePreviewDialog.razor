@@ -1,0 +1,32 @@
+@namespace FSH.Dashboard.Wasm.Pages.Catalog
+@using FSH.BlazorShared.Models.Catalog
+@using MudBlazor
+
+@* React parity (ProductImageManager.PreviewDialog): click-to-preview modal. *@
+<MudDialog>
+    <DialogContent>
+        <div class="d-flex align-center gap-2 mb-2">
+            <FshToneIconTile Icon="@Icons.Material.Filled.Image" Tone="Color.Primary" TileSize="32px" IconSize="Size.Small" />
+            <div>
+                <MudText Typo="Typo.h6" Style="margin: 0;">Image preview</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="display: block;">
+                    @(Image.IsThumbnail ? "Current cover image." : "Click outside to close.")
+                </MudText>
+            </div>
+        </div>
+        <div class="fsh-image-preview-frame">
+            <img src="@Image.Url" alt="Product image" referrerpolicy="no-referrer" />
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = default!;
+
+    [Parameter] public ProductImageDto Image { get; set; } = default!;
+
+    private void Close() => Dialog.Close();
+}

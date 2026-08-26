@@ -1,0 +1,47 @@
+@using Microsoft.JSInterop
+
+@* Text/* preview for the file dialog: fetches the presigned URL with PLAIN browser
+   fetch (fshFetchText) — the app's HttpClient would add auth headers and break the
+   S3 signature. Body capped at 64 KiB like the React preview. *@
+@if (_error is not null)
+{
+    <FshErrorBand Message="@($"Couldn't fetch text body: {_error}")" />
+}
+else if (_text is null)
+{
+    <div class="fsh-file-preview-skeleton">
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+    </div>
+}
+else
+{
+    <pre class="fsh-file-preview-text">@_text</pre>
+}
+
+@code {
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    [Parameter] public string? Url { get; set; }
+
+    private string? _text;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(Url))
+        {
+            _error = "No preview URL available.";
+            return;
+        }
+
+        try
+        {
+            var body = await JS.InvokeAsync<string>("fshFetchText", Url);
+            _text = body.Length <= 64 * 1024 ? body : body[..(64 * 1024)];
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+}
