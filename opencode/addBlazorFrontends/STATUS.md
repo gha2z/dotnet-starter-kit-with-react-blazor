@@ -1,35 +1,39 @@
 # Current Status
 
-Last Update: 2026-08-26 02:00, by: opencode (model: x-preview-f-free).
+Last Update: 2026-08-26 18:40, by: opencode (model: x-preview-f-free).
 
 ## Dashboard (living — update at every close-out)
 
-- **Current mission:** [`Phase-09-UI-Parity-Hardening/`](./Phase-09-UI-Parity-Hardening/) —
-  **✅ COMPLETE (2026-08-25).** All waves landed:
-  P1 chat scroll + DM rail avatars/presence (`564de110`) · P2 products list parity
-  (`411807ab`) · P3 detail hero + editor dialog (`4b862c68`) · P5 tickets filter bug +
-  render-stall class fix across 8 pages (`64db552f`) · P6 dialog standardization
-  (`a8798d51`) · P4 files page parity + preview actions (`6cc1417e`) · P7 audits filters
-  verified clean · P8 QA-entity cleanup + close-out.
-- **Follow-up (2026-08-25):** products combobox filters rebuilt as shared `FshCombobox`
-  (MudAutocomplete never rendered the selection / clear button) — `a5ba2ee0`, diag 13/0.
-- **Follow-up (2026-08-26):** product DETAIL page gap hunt (`c687e2d8`) — stale duplicate
-  `.fsh-detail-stat` CSS removed (pills now React-parity), MudFileUpload's default
-  BROWSE FILES button replaced with a plain InputFile (single UPLOAD IMAGES action),
-  images spacing (mt-4 to dashed empty box), plain subtitle + icon meta row, Description
-  Edit action, Audit 3-col. bUnit 264/264 · probe-actions 39/0 · visual shots p11-detail.
+- **Current mission:** [`Phase-10-Detail-Behavior-Parity/`](./Phase-10-Detail-Behavior-Parity/) —
+  **✅ COMPLETE (2026-08-26).** P12 landed in one commit: product-detail image behaviors
+  (detach confirm, click-preview modal, cover ring + hover overlay, upload progress) ·
+  FilePreviewDialog rebuild (uploader gate via CreatedByUserId — root cause of the missing
+  delete button — single-column layout, visibility switch, two-step delete; plus the
+  presigned-URL 400 fix: text previews now fetched via plain-browser `fshFetchText`) ·
+  behavioral matrix (stock delta-0 init + negative guard, price was→becomes + free-text
+  currency, refresh spin, meta links, ID chips, inventory tone, Listed-price caption,
+  not-found panel). Plan confirmed by human 2026-08-26.
 - **Next task:** none queued — pick the next mission (human writes `spec.md` in a new
-  `Phase-10-*` folder; agent writes `plan.md` for confirmation before build).
+  `Phase-11-*` folder; agent writes `plan.md` for confirmation before build).
 - **Obstacles / known issues:** none blocking. Accepted demo-DB leftovers (documented in
-  mission plan.md P8): 16 QA tickets, 2 QA tenants, QA users (no public delete paths).
-- **Verification state (final):** bUnit 264/264 · probe-actions 39/0 · probe-filters-p5
-  11/0 · probe-audits-p7 10/0 · probe-chat-realtime 16/0 · probe-chat-scroll 5/0 ·
-  0 console errors across all probes.
-- **Heads-up for the human:** the git index held pre-staged deletions not made by this
-  session (opencode/_tracks-template/*, workflows/neutral/tracks/_template/*,
-  docs/superpowers/specs/2026-05-28-*.md) plus unstaged edits to AGENTS.md /
-  CONTRIBUTING.md / HUMAN-GUIDE.md / opencode/AGENTIC-GUIDE.md / WORKFLOW-GUIDE.md.
-  They were left untouched (unstaged) — review and commit or discard them deliberately.
+  Phase-09 plan.md P8): 16 QA tickets, 2 QA tenants, QA users (no public delete paths).
+- **Verification state (Phase-10 final):** bUnit 264/264 · probe-p12 14/0 · probe-p12b
+  18/0 · probe-p12c 8/0 (non-uploader role: switch/delete hidden on other users' files) ·
+  probe-actions 39/0 · 0 console errors across all probes.
+- **Previous mission:** [`Phase-09-UI-Parity-Hardening/`](./Phase-09-UI-Parity-Hardening/) —
+  **✅ COMPLETE (2026-08-25).** P1 chat scroll + DM rail (`564de110`) · P2 products list
+  (`411807ab`) · P3 detail hero + editor (`4b862c68`) · P5 tickets filter bug + render-stall
+  class fix (`64db552f`) · P6 dialog standardization (`a8798d51`) · P4 files page parity
+  (`6cc1417e`) · P7 audits verified clean (`72ee8b18`) · P8 cleanup + close-out (`4f7ce867`);
+  follow-ups: FshCombobox (`a5ba2ee0`), detail gap hunt (`c687e2d8`).
+- **Verification state (Phase-09 final):** bUnit 264/264 · probe-actions 39/0 ·
+  probe-filters-p5 11/0 · probe-audits-p7 10/0 · probe-chat-realtime 16/0 ·
+  probe-chat-scroll 5/0 · 0 console errors across all probes.
+- **Heads-up for the human:** unrelated working-tree changes remain uncommitted (not made
+  by this session): template relocation drafts (opencode/_tracks-template/* +
+  workflows/_tracks-template/*), AGENTS.md / CONTRIBUTING.md / HUMAN-GUIDE.md /
+  opencode/AGENTIC-GUIDE.md / WORKFLOW-GUIDE.md / readme.md edits, workflow-protocol edits,
+  init-saas-workflow.ps1. Review and commit or discard them deliberately.
 - **Definition of done:** real-browser walkthrough (clicks/CRUD/resizes/device emulation,
   vision-inspected screenshots, 0 console errors) + regression battery.
 

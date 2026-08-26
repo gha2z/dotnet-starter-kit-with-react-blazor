@@ -1,11 +1,12 @@
 # sess-main
 
-identity: opencode/x-preview-f-free (verified fresh 2026-08-24) | started: 2026-08-06 | state: active | heartbeat: 2026-08-24 16:30
+identity: opencode/x-preview-f-free (verified fresh 2026-08-26) | started: 2026-08-06 | state: active | heartbeat: 2026-08-26 18:40
 
 ## Current focus
 
-Phase-09-UI-Parity-Hardening — starting P1.1 (render-aware chat scroll). Mission state lives in
-`Phase-09-UI-Parity-Hardening/{spec,plan,implementation}.md` — NOT in this file.
+Idle — Phase-10-Detail-Behavior-Parity complete (2026-08-26). Next mission awaits a human
+`spec.md` in a new `Phase-11-*` folder. Mission state lives in each mission folder
+(`{spec,plan,implementation}.md`) — NOT in this file.
 
 ## Completed missions (evidence in mission folders + 00_summary/)
 
@@ -22,5 +23,6 @@ Phase-09-UI-Parity-Hardening — starting P1.1 (render-aware chat scroll). Missi
 - Delegating-handler TryAddWithoutValidation breaks explicit per-request header overrides.
 - MudBlazor 9: MudDialog CloseOnEscapeKey defaults false; MudAvatar has no Image param.
 - SignalR client wrappers must never blind-rebuild the connection (handlers orphan silently).
+- Never send Authorization headers to presigned S3 URLs — fetch via plain-browser fetch; any injected header breaks SigV4 (400).
 
-Next: Phase-09 P1.1
+Next: idle — awaiting human Phase-11 spec
